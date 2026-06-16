@@ -3,192 +3,158 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>ThreatGuard — Automated Threat Modelling</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<title>Automated Threat Modeler — AI-powered security for engineering teams</title>
+<meta name="description" content="STRIDE, DREAD, LINDDUN, PASTA and OWASP Top 10 threat modeling with Claude AI. Open source, self-hostable."/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#08090E;--surface:#0D1016;--card:#12161F;--border:#1C2133;
-  --green:#22C55E;--green-bg:#0A2014;--green-glow:rgba(34,197,94,.2);
-  --blue:#3B82F6;--blue-bg:#0C1830;
-  --red:#EF4444;--red-bg:#280C0C;
-  --amber:#F59E0B;--amber-bg:#281C05;
-  --purple:#A855F7;--purple-bg:#1C1030;
-  --text:#E2E8F0;--muted:#64748B;--faint:#1E2535;
+  --bg:#08090E;--surf:#0D1016;--card:#12161F;--border:#1C2133;
+  --green:#22C55E;--green-d:#0A2014;
+  --blue:#3B82F6;--blue-d:#0C1830;
+  --purple:#A855F7;--purple-d:#1C1030;
+  --amber:#F59E0B;--amber-d:#281C05;
+  --red:#EF4444;
+  --txt:#E2E8F0;--mu:#64748B;--faint:#1E2535;
+  --mono:'IBM Plex Mono',monospace;
 }
 html{scroll-behavior:smooth}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--txt);line-height:1.6;overflow-x:hidden}
 a{color:var(--green);text-decoration:none}
-a:hover{opacity:.8}
-code,pre{font-family:'IBM Plex Mono',monospace}
 
-/* NAV */
-nav{position:sticky;top:0;z-index:100;background:rgba(8,9,14,.92);backdrop-filter:blur(12px);
-    border-bottom:1px solid var(--border);padding:0 5%;display:flex;align-items:center;
+/* ── NAV ── */
+nav{position:sticky;top:0;z-index:100;background:rgba(8,9,14,.94);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border);padding:0 6%;display:flex;align-items:center;
     justify-content:space-between;height:58px}
-.nav-logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
-.nav-dot{width:9px;height:9px;border-radius:50%;background:var(--green);
-         animation:pulse 2s infinite;box-shadow:0 0 8px var(--green)}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
-.nav-links{display:flex;gap:28px;font-size:13px;color:var(--muted)}
-.nav-links a{color:var(--muted);transition:color .2s}
-.nav-links a:hover{color:var(--text)}
-.nav-cta{background:var(--green);color:#fff;padding:7px 16px;border-radius:8px;
-         font-size:13px;font-weight:500;transition:opacity .2s}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--green);
+           animation:pulse-dot 2s ease-in-out infinite;box-shadow:0 0 8px var(--green)}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
+.nav-links{display:flex;gap:24px;font-size:13px}
+.nav-links a{color:var(--mu);transition:color .2s}.nav-links a:hover{color:var(--txt)}
+.nav-cta{background:var(--green);color:#000;padding:7px 18px;border-radius:8px;
+          font-size:13px;font-weight:600;transition:opacity .2s;display:flex;align-items:center;gap:6px}
+.nav-cta:hover{opacity:.85}
 
-/* HERO */
-.hero{text-align:center;padding:96px 5% 80px;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;top:-40%;left:50%;transform:translateX(-50%);
-  width:900px;height:600px;border-radius:50%;
-  background:radial-gradient(ellipse,rgba(34,197,94,.08) 0%,transparent 70%);
-  pointer-events:none}
-.hero-badge{display:inline-flex;align-items:center;gap:7px;background:var(--green-bg);
-  border:1px solid var(--green);border-radius:20px;padding:5px 14px;
-  font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--green);
-  letter-spacing:.06em;margin-bottom:24px}
-.hero h1{font-size:clamp(36px,5vw,64px);font-weight:700;line-height:1.1;
-  background:linear-gradient(135deg,#fff 0%,#94A3B8 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;margin-bottom:20px}
-.hero h1 span{background:linear-gradient(135deg,var(--green),#86EFAC);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero p{font-size:18px;color:var(--muted);max-width:620px;margin:0 auto 40px}
+/* ── HERO ── */
+.hero{text-align:center;padding:100px 6% 80px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-30%;left:50%;transform:translateX(-50%);
+              width:700px;height:700px;border-radius:50%;
+              background:radial-gradient(circle,rgba(34,197,94,.07) 0%,transparent 70%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:7px;background:var(--green-d);
+            border:1px solid rgba(34,197,94,.3);border-radius:99px;padding:5px 14px;
+            font-size:12px;font-weight:600;color:var(--green);margin-bottom:24px}
+h1{font-size:clamp(32px,5vw,58px);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:20px}
+h1 span{background:linear-gradient(135deg,var(--green),#4ade80);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{font-size:clamp(14px,2vw,18px);color:var(--mu);max-width:600px;margin:0 auto 36px}
 .hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.btn-primary{background:var(--green);color:#fff;padding:13px 28px;border-radius:10px;
-  font-weight:600;font-size:14px;transition:all .2s;
-  box-shadow:0 0 24px var(--green-glow)}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 0 36px var(--green-glow)}
-.btn-secondary{background:transparent;color:var(--text);padding:13px 28px;border-radius:10px;
-  font-weight:500;font-size:14px;border:1px solid var(--border);transition:all .2s}
-.btn-secondary:hover{border-color:var(--green);color:var(--green)}
+.btn-primary{background:var(--green);color:#000;padding:12px 28px;border-radius:10px;
+              font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px;transition:opacity .2s}
+.btn-primary:hover{opacity:.85}
+.btn-outline{background:transparent;color:var(--txt);padding:12px 28px;border-radius:10px;
+              font-weight:600;font-size:14px;border:1px solid var(--border);
+              display:inline-flex;align-items:center;gap:8px;transition:all .2s}
+.btn-outline:hover{border-color:var(--green);color:var(--green)}
 
-/* STATS BAR */
-.stats-bar{display:flex;justify-content:center;gap:48px;padding:40px 5%;
-  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
-  background:var(--surface);flex-wrap:wrap}
-.stat{text-align:center}
-.stat-val{font-size:28px;font-weight:700;color:var(--green)}
-.stat-label{font-size:12px;color:var(--muted);margin-top:2px}
+/* ── METHODOLOGY STRIP ── */
+.method-strip{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:32px 6%;
+              border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.m-pill{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:700;letter-spacing:.05em}
+.m-stride{background:var(--blue-d);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.m-dread{background:var(--purple-d);color:var(--purple);border:1px solid rgba(168,85,247,.3)}
+.m-linddun{background:var(--green-d);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.m-pasta{background:var(--amber-d);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.m-owasp{background:#1c0010;color:#f472b6;border:1px solid rgba(244,114,182,.3)}
 
-/* SECTION */
-section{padding:80px 5%}
-.section-label{font-size:11px;font-family:'IBM Plex Mono',monospace;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--green);margin-bottom:12px}
-.section-title{font-size:clamp(24px,3vw,36px);font-weight:700;margin-bottom:16px}
-.section-sub{font-size:16px;color:var(--muted);max-width:560px}
+/* ── QUICK START ── */
+.section{padding:72px 6%}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--green);margin-bottom:12px}
+h2{font-size:clamp(22px,3vw,32px);font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+.section-sub{color:var(--mu);font-size:14px;margin-bottom:36px}
 
-/* SCREENSHOTS */
-.screenshots{background:var(--surface)}
-.screenshot-tabs{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap}
-.tab-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:7px 16px;
-  border-radius:8px;border:1px solid var(--border);background:transparent;
-  color:var(--muted);cursor:pointer;transition:all .2s;letter-spacing:.04em}
-.tab-btn.active{background:var(--green-bg);border-color:var(--green);color:var(--green)}
-.screenshot-wrap{border-radius:16px;border:1px solid var(--border);overflow:hidden;
-  box-shadow:0 24px 64px rgba(0,0,0,.6)}
-.screenshot-wrap img{width:100%;display:block}
-.tab-panel{display:none}
-.tab-panel.active{display:block}
+.setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:700px){.setup-grid{grid-template-columns:1fr}}
 
-/* FEATURES GRID */
-.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:48px}
-.feat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;
-  transition:border-color .25s,transform .25s}
-.feat-card:hover{border-color:var(--green);transform:translateY(-2px)}
-.feat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;
-  justify-content:center;font-size:20px;margin-bottom:16px}
-.feat-title{font-size:15px;font-weight:600;margin-bottom:8px}
-.feat-desc{font-size:13px;color:var(--muted);line-height:1.6}
+.setup-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.setup-card-head{padding:16px 20px;border-bottom:1px solid var(--border);
+                  display:flex;align-items:center;gap:10px}
+.setup-step-num{width:26px;height:26px;border-radius:6px;background:var(--green-d);
+                color:var(--green);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.setup-card-title{font-size:13px;font-weight:600}
+.setup-card-desc{font-size:11px;color:var(--mu);margin-top:2px}
+pre.code-block{background:#000;border:none;padding:16px 20px;
+               font-family:var(--mono);font-size:12px;color:#a5b4fc;
+               overflow-x:auto;line-height:1.7;position:relative}
+.copy-btn{position:absolute;top:10px;right:10px;background:var(--faint);border:1px solid var(--border);
+          color:var(--mu);font-size:10px;padding:3px 8px;border-radius:4px;cursor:pointer;
+          font-family:var(--mono);}
+.copy-btn:hover{color:var(--txt)}
+.c-g{color:#4ade80}.c-c{color:#6b7280;font-style:italic}.c-v{color:#fbbf24}.c-u{color:#67e8f9}
 
-/* METHODOLOGY CARDS */
-.method-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:40px}
-.method-card{border-radius:12px;padding:20px;border:1px solid}
-.method-stride{background:var(--blue-bg);border-color:var(--blue)}
-.method-dread{background:var(--green-bg);border-color:var(--green)}
-.method-pasta{background:var(--amber-bg);border-color:var(--amber)}
-.method-linddun{background:var(--purple-bg);border-color:var(--purple)}
-.method-name{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;margin-bottom:8px}
-.method-full{font-size:11px;color:var(--muted);margin-bottom:10px}
-.method-items{list-style:none;font-size:12px;color:var(--muted)}
-.method-items li{padding:2px 0}
-.method-items li::before{content:"→ ";opacity:.5}
+/* ── FEATURES GRID ── */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.feat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+           padding:20px;transition:border-color .2s,transform .2s}
+.feat-card:hover{border-color:rgba(34,197,94,.4);transform:translateY(-2px)}
+.feat-icon{font-size:24px;margin-bottom:10px}
+.feat-title{font-size:14px;font-weight:700;margin-bottom:6px}
+.feat-desc{font-size:12px;color:var(--mu);line-height:1.6}
+.feat-new{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;
+          background:var(--green-d);color:var(--green);border:1px solid rgba(34,197,94,.3);
+          font-weight:700;margin-top:8px}
 
-/* HOW IT WORKS */
-.how-bg{background:var(--surface)}
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0;margin-top:48px;position:relative}
-.steps::before{content:'';position:absolute;top:28px;left:15%;right:15%;height:1px;
-  background:linear-gradient(90deg,transparent,var(--green),var(--green),transparent);opacity:.3}
-.step{text-align:center;padding:0 16px}
-.step-num{width:56px;height:56px;border-radius:50%;background:var(--green-bg);border:1px solid var(--green);
-  display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;
-  color:var(--green);margin:0 auto 20px;position:relative;z-index:1}
-.step-title{font-size:14px;font-weight:600;margin-bottom:8px}
-.step-desc{font-size:12px;color:var(--muted);line-height:1.6}
+/* ── BRANCH CARD ── */
+.branch-card{background:var(--card);border:1px solid var(--border);border-radius:16px;
+             padding:32px;display:grid;grid-template-columns:1fr 1fr;gap:32px}
+@media(max-width:680px){.branch-card{grid-template-columns:1fr}}
+.branch-badge{display:inline-flex;align-items:center;gap:6px;background:var(--faint);
+              border:1px solid var(--border);border-radius:99px;padding:4px 12px;
+              font-family:var(--mono);font-size:11px;color:var(--mu);margin-bottom:12px}
+.branch-badge .dot{width:6px;height:6px;border-radius:50%}
+.branch-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.branch-desc{font-size:12px;color:var(--mu);line-height:1.6;margin-bottom:16px}
+.stat-row{display:flex;gap:16px;flex-wrap:wrap}
+.stat-item{text-align:center}
+.stat-n{font-size:22px;font-weight:800;font-family:var(--mono)}
+.stat-l{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.05em}
 
-/* INSTALL TABS */
-.install-section{}
-.install-tabs{display:flex;gap:6px;margin-bottom:0;border-bottom:1px solid var(--border)}
-.itab{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:10px 18px;border:none;
-  background:transparent;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;
-  transition:all .2s;letter-spacing:.04em}
-.itab.active{color:var(--green);border-bottom-color:var(--green)}
-.iblock{display:none;margin-top:0}
-.iblock.active{display:block}
-.code-block{background:var(--card);border:1px solid var(--border);border-radius:0 0 12px 12px;
-  padding:20px 24px;overflow-x:auto}
-.code-block pre{font-size:13px;line-height:1.7;color:#94A3B8}
-.code-block .c{color:var(--muted)}
-.code-block .k{color:var(--green)}
-.code-block .s{color:#86EFAC}
-.code-block .cmd{color:var(--text)}
-.code-block .h{color:var(--blue)}
+/* ── API ENDPOINTS ── */
+.ep-list{display:flex;flex-direction:column;gap:1px;background:var(--border);border-radius:10px;overflow:hidden}
+.ep{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--card);font-size:12px}
+.ep-method{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;width:50px;text-align:center;flex-shrink:0}
+.m-get{background:var(--green-d);color:var(--green)}
+.m-post{background:var(--blue-d);color:var(--blue)}
+.m-del{background:#1c0000;color:var(--red)}
+.ep-path{font-family:var(--mono);font-size:11px;color:#93c5fd;min-width:260px}
+.ep-desc{color:var(--mu);flex:1}
+.ep-new-badge{font-size:9px;padding:1px 6px;background:var(--green-d);color:var(--green);
+              border:1px solid rgba(34,197,94,.3);border-radius:3px;font-weight:700;flex-shrink:0}
 
-/* ROLES TABLE */
-.roles-table{width:100%;border-collapse:collapse;margin-top:32px;font-size:14px}
-.roles-table th{text-align:left;color:var(--muted);font-weight:500;font-size:12px;
-  letter-spacing:.06em;text-transform:uppercase;padding:10px 16px;
-  border-bottom:1px solid var(--border)}
-.roles-table td{padding:12px 16px;border-bottom:1px solid var(--faint);color:var(--text)}
-.roles-table tr:last-child td{border-bottom:none}
-.roles-table tr:hover td{background:var(--card)}
-.check{color:var(--green);font-weight:700}
-.cross{color:var(--muted)}
-.role-badge{font-size:11px;padding:2px 10px;border-radius:12px;font-weight:500;
-  font-family:'IBM Plex Mono',monospace}
-.rb-admin{background:var(--red-bg);color:var(--red);border:1px solid var(--red)}
-.rb-mgmt{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue)}
-.rb-user{background:var(--green-bg);color:var(--green);border:1px solid var(--green)}
+/* ── TROUBLESHOOT ── */
+.trouble-list{display:flex;flex-direction:column;gap:10px}
+.trouble-item{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.trouble-head{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none}
+.trouble-head:hover{background:var(--faint)}
+.trouble-icon{font-size:14px;flex-shrink:0}
+.trouble-title{font-size:13px;font-weight:500;flex:1}
+.trouble-chev{font-size:10px;color:var(--mu);transition:transform .2s}
+.trouble-chev.open{transform:rotate(180deg)}
+.trouble-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.trouble-body.open{max-height:400px}
+.trouble-inner{padding:0 16px 14px;border-top:1px solid var(--border)}
+.trouble-inner p{font-size:12px;color:var(--mu);margin:10px 0 6px;line-height:1.6}
 
-/* API TABLE */
-.api-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:32px}
-.api-table th{text-align:left;color:var(--muted);font-weight:500;font-size:11px;
-  letter-spacing:.06em;text-transform:uppercase;padding:8px 14px;
-  border-bottom:1px solid var(--border);background:var(--card)}
-.api-table td{padding:10px 14px;border-bottom:1px solid var(--faint);font-family:'IBM Plex Mono',monospace;font-size:12px}
-.api-table tr:hover td{background:var(--card)}
-.method{padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700}
-.m-get{background:#0C3020;color:#34D399}.m-post{background:#0C1830;color:#60A5FA}
-.m-put{background:#281C05;color:#FCD34D}.m-del{background:#280C0C;color:#F87171}
-.auth-req{color:var(--green);font-size:11px}
-.auth-no{color:var(--muted);font-size:11px}
+/* ── FOOTER ── */
+footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
+       align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.footer-left{font-size:13px;color:var(--mu)}
+.footer-links{display:flex;gap:20px;font-size:12px}
+.footer-links a{color:var(--mu)}.footer-links a:hover{color:var(--txt)}
 
-/* FOOTER */
-footer{background:var(--surface);border-top:1px solid var(--border);
-  padding:40px 5%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}
-.footer-logo{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
-.footer-links{display:flex;gap:24px;font-size:13px;color:var(--muted)}
-.footer-links a{color:var(--muted)}
-.footer-links a:hover{color:var(--green)}
-
-/* DIVIDER */
-.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:0 5%}
-
-/* RESPONSIVE */
-@media(max-width:768px){
-  .nav-links{display:none}
-  .stats-bar{gap:28px}
-  .steps::before{display:none}
-  footer{flex-direction:column;text-align:center}
+@media(max-width:600px){
+  nav .nav-links{display:none}
+  .ep-path{min-width:150px}
+  .ep-desc{display:none}
 }
 </style>
 </head>
@@ -196,448 +162,383 @@ footer{background:var(--surface);border-top:1px solid var(--border);
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo">
-    <div class="nav-dot"></div>
-    ThreatGuard
-    <span style="color:var(--muted);font-weight:400;font-size:12px;font-family:'IBM Plex Mono',monospace">v2.0</span>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Automated Threat Modeler
   </div>
   <div class="nav-links">
+    <a href="#quickstart">Quick start</a>
     <a href="#features">Features</a>
-    <a href="#screenshots">Screenshots</a>
-    <a href="#install">Install</a>
     <a href="#api">API</a>
-    <a href="#testing">Testing</a>
+    <a href="#troubleshoot">Troubleshoot</a>
   </div>
-  <a class="nav-cta" href="https://github.com/rootabhi1/Automated-Threat-Modelling">View on GitHub ↗</a>
+  <a class="nav-cta" href="https://github.com/rootabhi1/Automated-Threat-Modelling" target="_blank">
+    ⭐ GitHub
+  </a>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge">✦ AI-Powered · STRIDE · DREAD · PASTA · LINDDUN</div>
-  <h1>Automated<br/><span>Threat Modelling</span></h1>
-  <p>Describe your system in plain English. Get a complete, structured threat model — with diagrams, DREAD scores, and mitigation guidance — in seconds.</p>
+  <div class="hero-badge">🛡 Open source · Self-hostable · Claude AI</div>
+  <h1>AI-powered<br/><span>threat modeling</span><br/>for engineering teams</h1>
+  <p class="hero-sub">STRIDE, DREAD, LINDDUN, PASTA and OWASP Top 10 in one tool. Paste a description, upload a diagram, or build a DFD — get a prioritized threat list in seconds.</p>
   <div class="hero-btns">
-    <a class="btn-primary" href="#install">Get Started Free →</a>
-    <a class="btn-secondary" href="https://github.com/rootabhi1/Automated-Threat-Modelling">View Source Code</a>
+    <a class="btn-primary" href="#quickstart">🚀 Run locally</a>
+    <a class="btn-outline" href="https://github.com/rootabhi1/Automated-Threat-Modelling/tree/feature/enhancements" target="_blank">📦 feature/enhancements branch</a>
+    <a class="btn-outline" href="https://github.com/rootabhi1/Automated-Threat-Modelling" target="_blank">⭐ View on GitHub</a>
   </div>
 </section>
 
-<!-- STATS -->
-<div class="stats-bar">
-  <div class="stat"><div class="stat-val">4</div><div class="stat-label">Methodologies</div></div>
-  <div class="stat"><div class="stat-val">3</div><div class="stat-label">User Roles (RBAC)</div></div>
-  <div class="stat"><div class="stat-val">3</div><div class="stat-label">Export Formats</div></div>
-  <div class="stat"><div class="stat-val">JWT</div><div class="stat-label">Auth Method</div></div>
-  <div class="stat"><div class="stat-val">SVG</div><div class="stat-label">Auto DFD Generator</div></div>
-  <div class="stat"><div class="stat-val">Azure</div><div class="stat-label">Cloud Ready</div></div>
+<!-- METHODOLOGY STRIP -->
+<div class="method-strip">
+  <span class="m-pill m-stride">STRIDE</span>
+  <span class="m-pill m-dread">DREAD</span>
+  <span class="m-pill m-linddun">LINDDUN</span>
+  <span class="m-pill m-pasta">PASTA</span>
+  <span class="m-pill m-owasp">OWASP Top 10 ✦ new</span>
 </div>
 
-<!-- SCREENSHOTS -->
-<section class="screenshots" id="screenshots">
-  <div style="max-width:1100px;margin:0 auto">
-    <div class="section-label">Screenshots</div>
-    <h2 class="section-title">See it in action</h2>
-    <p class="section-sub">From system description to full threat catalogue — entirely automated.</p>
+<!-- BRANCHES -->
+<section class="section">
+  <div class="section-label">Branches</div>
+  <h2>Where to find everything</h2>
+  <p class="section-sub">The repo has two active branches — main (original) and feature/enhancements (all new features).</p>
 
-    <div class="screenshot-tabs" style="margin-top:32px">
-      <button class="tab-btn active" onclick="showTab('dash',this)">Dashboard</button>
-      <button class="tab-btn" onclick="showTab('new',this)">New Threat Model</button>
-      <button class="tab-btn" onclick="showTab('threats',this)">Threat Catalogue</button>
-    </div>
-
-    <div class="tab-panel active" id="tab-dash">
-      <div class="screenshot-wrap">
-        <img src="docs/screenshots/atm_dashboard.png" alt="ThreatGuard Dashboard — threat models, STRIDE coverage, DFD preview"/>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="branch-card" style="grid-template-columns:1fr">
+      <div>
+        <div class="branch-badge"><span class="dot" style="background:#64748b"></span> main</div>
+        <div class="branch-title">Original application</div>
+        <div class="branch-desc">The clean, unmodified original codebase. STRIDE, DREAD, LINDDUN, PASTA. Interactive DFD builder, project management, auth, reports.</div>
+        <div class="stat-row">
+          <div class="stat-item"><div class="stat-n" style="color:#64748b">4</div><div class="stat-l">Frameworks</div></div>
+          <div class="stat-item"><div class="stat-n" style="color:#64748b">~800</div><div class="stat-l">app.py lines</div></div>
+        </div>
+        <a class="btn-outline" style="margin-top:16px;display:inline-flex" href="https://github.com/rootabhi1/Automated-Threat-Modelling/tree/main" target="_blank">View main →</a>
       </div>
-      <p style="font-size:13px;color:var(--muted);margin-top:12px;text-align:center">
-        Dashboard showing all threat models, real-time STRIDE coverage bars, and auto-generated data flow diagram preview.
-      </p>
     </div>
-    <div class="tab-panel" id="tab-new">
-      <div class="screenshot-wrap">
-        <img src="docs/screenshots/atm_newmodel.png" alt="New Threat Model form — text input, methodology selector, Claude AI toggle"/>
+    <div class="branch-card" style="grid-template-columns:1fr;border-color:rgba(34,197,94,.3)">
+      <div>
+        <div class="branch-badge"><span class="dot" style="background:var(--green)"></span> feature/enhancements</div>
+        <div class="branch-title">All enhancements ✦</div>
+        <div class="branch-desc">OWASP Top 10, MITRE ATT&CK mapping, CVSS 4.0, compliance controls, custom rules, dark mode, keyboard shortcuts, share links, AI code fixes, PostgreSQL, health checks, CI/CD, and more.</div>
+        <div class="stat-row">
+          <div class="stat-item"><div class="stat-n" style="color:var(--green)">5</div><div class="stat-l">Frameworks</div></div>
+          <div class="stat-item"><div class="stat-n" style="color:var(--green)">+15</div><div class="stat-l">New features</div></div>
+          <div class="stat-item"><div class="stat-n" style="color:var(--green)">+7</div><div class="stat-l">New endpoints</div></div>
+          <div class="stat-item"><div class="stat-n" style="color:var(--green)">78</div><div class="stat-l">Total files</div></div>
+        </div>
+        <a class="btn-primary" style="margin-top:16px;display:inline-flex" href="https://github.com/rootabhi1/Automated-Threat-Modelling/tree/feature/enhancements" target="_blank">View feature branch →</a>
       </div>
-      <p style="font-size:13px;color:var(--muted);margin-top:12px;text-align:center">
-        Paste a plain-text system description, select your methodologies, and optionally enable Claude AI enrichment.
-      </p>
-    </div>
-    <div class="tab-panel" id="tab-threats">
-      <div class="screenshot-wrap">
-        <img src="docs/screenshots/atm_threats.png" alt="Threat catalogue with DREAD scores and status tracking"/>
-      </div>
-      <p style="font-size:13px;color:var(--muted);margin-top:12px;text-align:center">
-        Full threat catalogue with ID, STRIDE category, description, DREAD score, severity, and per-threat status tracking.
-      </p>
     </div>
   </div>
 </section>
 
-<div class="divider"></div>
+<!-- QUICK START -->
+<section class="section" id="quickstart" style="background:var(--surf);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="section-label">Quick start</div>
+  <h2>Run locally in 4 steps</h2>
+  <p class="section-sub">Uses the <strong>feature/enhancements</strong> branch. Python 3.11+ required.</p>
+
+  <div class="setup-grid">
+    <div class="setup-card">
+      <div class="setup-card-head">
+        <div class="setup-step-num">1</div>
+        <div>
+          <div class="setup-card-title">Clone the feature branch</div>
+          <div class="setup-card-desc">Get only the enhancements branch</div>
+        </div>
+      </div>
+      <pre class="code-block"><button class="copy-btn" onclick="cp(this)">copy</button><span class="c-g">git clone</span> --branch feature/enhancements \
+  https://github.com/rootabhi1/\
+  Automated-Threat-Modelling
+<span class="c-g">cd</span> Automated-Threat-Modelling/threat-modeler</pre>
+    </div>
+
+    <div class="setup-card">
+      <div class="setup-card-head">
+        <div class="setup-step-num">2</div>
+        <div>
+          <div class="setup-card-title">Create virtual env + install</div>
+          <div class="setup-card-desc">Isolate dependencies</div>
+        </div>
+      </div>
+      <pre class="code-block"><button class="copy-btn" onclick="cp(this)">copy</button><span class="c-c"># Mac / Linux</span>
+<span class="c-g">python3 -m venv</span> .venv
+<span class="c-g">source</span> .venv/bin/activate
+<span class="c-g">pip install</span> -r requirements.txt
+
+<span class="c-c"># Windows</span>
+<span class="c-g">python -m venv</span> .venv
+.venv\Scripts\activate
+<span class="c-g">pip install</span> -r requirements.txt</pre>
+    </div>
+
+    <div class="setup-card">
+      <div class="setup-card-head">
+        <div class="setup-step-num">3</div>
+        <div>
+          <div class="setup-card-title">Set environment variables</div>
+          <div class="setup-card-desc">3 required · rest are optional</div>
+        </div>
+      </div>
+      <pre class="code-block"><button class="copy-btn" onclick="cp(this)">copy</button><span class="c-c"># Required</span>
+<span class="c-g">export</span> <span class="c-v">INITIAL_ADMIN_EMAIL</span>=admin@example.com
+<span class="c-g">export</span> <span class="c-v">INITIAL_ADMIN_PASSWORD</span>=changeme123
+<span class="c-g">export</span> <span class="c-v">JWT_SECRET</span>=$(python3 -c \
+  "import secrets; print(secrets.token_urlsafe(48))")
+
+<span class="c-c"># Optional — enables Claude AI features</span>
+<span class="c-g">export</span> <span class="c-v">ANTHROPIC_API_KEY</span>=sk-ant-...</pre>
+    </div>
+
+    <div class="setup-card">
+      <div class="setup-card-head">
+        <div class="setup-step-num">4</div>
+        <div>
+          <div class="setup-card-title">Start the server</div>
+          <div class="setup-card-desc">Visit http://localhost:8000</div>
+        </div>
+      </div>
+      <pre class="code-block"><button class="copy-btn" onclick="cp(this)">copy</button><span class="c-c"># Option A — launcher script</span>
+<span class="c-g">chmod +x</span> run.sh && ./run.sh
+
+<span class="c-c"># Option B — Python directly</span>
+<span class="c-g">python</span> app.py
+
+<span class="c-c"># Option C — with auto-reload</span>
+<span class="c-g">uvicorn</span> app:app --reload --port 8000
+
+<span class="c-c"># Option D — Docker</span>
+<span class="c-g">docker compose up</span> --build</pre>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;background:var(--green-d);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:16px 20px;font-size:13px;color:var(--green)">
+    ✓ <strong>Verify it's working:</strong>
+    <code style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.3);padding:1px 6px;border-radius:3px;margin:0 4px">curl http://localhost:8000/healthz</code>
+    → should return <code style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.3);padding:1px 6px;border-radius:3px">{"status":"ok","version":"2.1"}</code>
+    &nbsp;·&nbsp; Then open <a href="http://localhost:8000/docs" style="color:var(--green);font-weight:600">http://localhost:8000/docs</a> for the interactive API explorer.
+  </div>
+</section>
 
 <!-- FEATURES -->
-<section id="features" style="background:var(--bg)">
-  <div style="max-width:1100px;margin:0 auto">
-    <div class="section-label">Features</div>
-    <h2 class="section-title">Everything a security team needs</h2>
-    <p class="section-sub">From small startups to enterprise teams — all in one self-hosted tool.</p>
+<section class="section" id="features">
+  <div class="section-label">Features</div>
+  <h2>What's in the feature branch</h2>
+  <p class="section-sub">All features on top of the original — nothing removed or broken.</p>
 
-    <div class="features-grid">
-      <div class="feat-card">
-        <div class="feat-icon" style="background:var(--green-bg)">📝</div>
-        <div class="feat-title">Text-to-Threat-Model</div>
-        <div class="feat-desc">Paste any plain-English system description. The engine auto-extracts components, data flows, and trust boundaries — no diagram drawing required.</div>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon" style="background:var(--blue-bg)">🔍</div>
-        <div class="feat-title">4 Methodologies in Parallel</div>
-        <div class="feat-desc">Run STRIDE, DREAD, PASTA, and LINDDUN simultaneously on the same system. Each methodology surfaces different classes of threats.</div>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon" style="background:var(--purple-bg)">✦</div>
-        <div class="feat-title">Claude AI Enhancement</div>
-        <div class="feat-desc">Optional — connect your Anthropic API key for context-specific threat reasoning, smarter trust boundaries, and richer mitigation strategies.</div>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon" style="background:var(--red-bg)">👥</div>
-        <div class="feat-title">Full RBAC</div>
-        <div class="feat-desc">Admin, Management, and User roles. Feature-level access control. Admins manage users and releases. Users work within assigned features.</div>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon" style="background:var(--amber-bg)">📊</div>
-        <div class="feat-title">Auto-Generated DFDs</div>
-        <div class="feat-desc">SVG data flow diagrams auto-rendered from your extracted components. Shows Internet / DMZ / App / Data trust zone boundaries.</div>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon" style="background:var(--green-bg)">📄</div>
-        <div class="feat-title">Export Reports</div>
-        <div class="feat-desc">One-click export to PDF (for stakeholders), HTML (interactive), or Markdown (version-controlled docs, Confluence). Also exportable via REST API.</div>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon" style="background:var(--blue-bg)">🔐</div>
-        <div class="feat-title">JWT Auth + Audit Log</div>
-        <div class="feat-desc">Access and refresh tokens with secure rotation. Every action — logins, status changes, user role updates — written to a tamper-evident audit log.</div>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon" style="background:var(--card)">🐳</div>
-        <div class="feat-title">Docker Ready</div>
-        <div class="feat-desc">Multi-stage Dockerfile using python:3.12-slim (~160MB). SQLite persisted via volume mount. Health check endpoint included. One command to run.</div>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon" style="background:var(--blue-bg)">☁️</div>
-        <div class="feat-title">Azure Deployable</div>
-        <div class="feat-desc">Bicep infrastructure-as-code templates + GitHub Actions CI/CD pipeline included. Deploy to Azure App Service with one script. ~$18/month.</div>
-      </div>
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-icon">🎯</div>
+      <div class="feat-title">OWASP Top 10 2021</div>
+      <div class="feat-desc">10 categories, 22 threats covering A01 Broken Access Control through A10 SSRF. Auto-registered — just tick the checkbox.</div>
+      <span class="feat-new">NEW</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⚡</div>
+      <div class="feat-title">MITRE ATT&CK mapping</div>
+      <div class="feat-desc">Every threat now shows its ATT&CK Technique ID and tactic. Clickable badge links directly to attack.mitre.org.</div>
+      <span class="feat-new">NEW</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📋</div>
+      <div class="feat-title">Compliance controls</div>
+      <div class="feat-desc">SOC2, ISO 27001, and PCI-DSS control IDs mapped from CWE per threat. Shown in expanded threat cards and CSV export.</div>
+      <span class="feat-new">NEW</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔧</div>
+      <div class="feat-title">AI code fix generator</div>
+      <div class="feat-desc">Click Fix on any threat — Claude generates a before/after code snippet in your stack. Copy to clipboard.</div>
+      <span class="feat-new">NEW</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⚙️</div>
+      <div class="feat-title">Custom threat rules</div>
+      <div class="feat-desc">Define domain-specific threats in the UI. They persist to DB and run alongside built-in analysis every time.</div>
+      <span class="feat-new">NEW</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔗</div>
+      <div class="feat-title">Share link</div>
+      <div class="feat-desc">Generate a 7-day read-only URL. Stakeholders can view the interactive report with no login required.</div>
+      <span class="feat-new">NEW</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🌙</div>
+      <div class="feat-title">Dark / light mode</div>
+      <div class="feat-desc">Toggle in the header. Preference saved to localStorage. Full dark theme with CSS variables.</div>
+      <span class="feat-new">NEW</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⌨️</div>
+      <div class="feat-title">Keyboard shortcuts</div>
+      <div class="feat-desc"><code>n</code> component · <code>f</code> flow · <code>b</code> boundary · <code>a</code> auto-layout · <code>Ctrl+S</code> save · <code>?</code> help overlay.</div>
+      <span class="feat-new">NEW</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📊</div>
+      <div class="feat-title">Release diff view</div>
+      <div class="feat-desc">Compare two saved threat models: new threats, resolved, severity changes, and attack surface delta.</div>
+      <span class="feat-new">NEW</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🖼️</div>
+      <div class="feat-title">Diagram upload</div>
+      <div class="feat-desc">Drop an architecture PNG/JPG/WebP. Claude Vision extracts components, flows, and trust boundaries automatically.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📐</div>
+      <div class="feat-title">5 system templates</div>
+      <div class="feat-desc">SaaS Web App, Mobile + API, Microservices, Data Pipeline, IoT. Load in one click and edit before analyzing.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📄</div>
+      <div class="feat-title">Executive report</div>
+      <div class="feat-desc">Claude writes the narrative — Executive Summary, Top Risks, Actions. Download as HTML or PDF (WeasyPrint).</div>
     </div>
   </div>
 </section>
 
-<div class="divider"></div>
+<!-- API -->
+<section class="section" id="api" style="background:var(--surf);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="section-label">API reference</div>
+  <h2>All 22 endpoints</h2>
+  <p class="section-sub">Full Swagger docs at <code style="font-family:var(--mono);font-size:12px">http://localhost:8000/docs</code> after starting the server.</p>
 
-<!-- METHODOLOGIES -->
-<section style="background:var(--surface)">
-  <div style="max-width:1100px;margin:0 auto">
-    <div class="section-label">Methodologies</div>
-    <h2 class="section-title">Industry-standard threat frameworks</h2>
-    <p class="section-sub">Run any combination simultaneously — each surface different risk dimensions.</p>
-    <div class="method-grid">
-      <div class="method-card method-stride">
-        <div class="method-name" style="color:#60A5FA">STRIDE</div>
-        <div class="method-full" >Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege</div>
-        <ul class="method-items">
-          <li>Identity threats</li><li>Data integrity</li><li>Accountability gaps</li>
-          <li>Data exposure</li><li>Availability attacks</li><li>Privilege abuse</li>
-        </ul>
-      </div>
-      <div class="method-card method-dread">
-        <div class="method-name" style="color:#4ADE80">DREAD</div>
-        <div class="method-full">Damage, Reproducibility, Exploitability, Affected Users, Discoverability</div>
-        <ul class="method-items">
-          <li>0–10 risk scoring</li><li>Prioritisation aid</li><li>Stakeholder comms</li>
-          <li>Critical path focus</li><li>CVSS-inspired</li><li>Per-threat scores</li>
-        </ul>
-      </div>
-      <div class="method-card method-pasta">
-        <div class="method-name" style="color:#FCD34D">PASTA</div>
-        <div class="method-full">Process for Attack Simulation and Threat Analysis</div>
-        <ul class="method-items">
-          <li>Attacker-centric</li><li>Business risk focus</li><li>7-stage process</li>
-          <li>Attack tree analysis</li><li>Risk-based output</li><li>Compliance-ready</li>
-        </ul>
-      </div>
-      <div class="method-card method-linddun">
-        <div class="method-name" style="color:#C084FC">LINDDUN</div>
-        <div class="method-full">Linkability, Identifiability, Non-repudiation, Detectability, Disclosure, Unawareness, Non-compliance</div>
-        <ul class="method-items">
-          <li>Privacy-focused</li><li>GDPR alignment</li><li>PII threat mapping</li>
-          <li>Data minimisation</li><li>User rights analysis</li><li>Compliance gaps</li>
-        </ul>
-      </div>
-    </div>
+  <div class="ep-list">
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/auth/login</span><span class="ep-desc">Get JWT token</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/analyze</span><span class="ep-desc">Run threat model (dedup + custom rules + notify)</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/extract-from-text</span><span class="ep-desc">Text description → components</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/extract-from-diagram</span><span class="ep-desc">Claude Vision → components</span></div>
+    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/templates</span><span class="ep-desc">5 built-in system templates</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/custom-rules</span><span class="ep-desc">Create custom threat rule</span><span class="ep-new-badge">NEW</span></div>
+    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/custom-rules</span><span class="ep-desc">List your custom rules</span><span class="ep-new-badge">NEW</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat-status</span><span class="ep-desc">Set per-threat remediation status</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat-status/bulk</span><span class="ep-desc">Bulk update multiple statuses</span><span class="ep-new-badge">NEW</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/share/:id</span><span class="ep-desc">Generate 7-day read-only share link</span><span class="ep-new-badge">NEW</span></div>
+    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/share/:token</span><span class="ep-desc">View shared report (no auth)</span><span class="ep-new-badge">NEW</span></div>
+    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/releases/:a/diff/:b</span><span class="ep-desc">Compare two saved threat models</span><span class="ep-new-badge">NEW</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat/fix</span><span class="ep-desc">AI before/after code fix (Claude)</span><span class="ep-new-badge">NEW</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/report/csv</span><span class="ep-desc">Download risk register CSV</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/report/executive</span><span class="ep-desc">Claude-narrated executive HTML/PDF</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/create-ticket</span><span class="ep-desc">Create GitHub Issue or Jira ticket</span></div>
+    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/healthz</span><span class="ep-desc">Liveness probe</span><span class="ep-new-badge">NEW</span></div>
+    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/readyz</span><span class="ep-desc">Readiness probe — pings DB</span><span class="ep-new-badge">NEW</span></div>
   </div>
 </section>
 
-<div class="divider"></div>
+<!-- TROUBLESHOOT -->
+<section class="section" id="troubleshoot">
+  <div class="section-label">Troubleshooting</div>
+  <h2>Common issues</h2>
+  <p class="section-sub">Most problems are solved by setting the 3 required env vars and activating the venv.</p>
 
-<!-- HOW IT WORKS -->
-<section class="how-bg" id="how">
-  <div style="max-width:1100px;margin:0 auto">
-    <div class="section-label">How it works</div>
-    <h2 class="section-title">From description to threat model in 4 steps</h2>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-title">Describe Your System</div>
-        <div class="step-desc">Write a plain-English description of your architecture — components, data flows, users, and any sensitive data handled.</div>
+  <div class="trouble-list">
+    <div class="trouble-item">
+      <div class="trouble-head" onclick="tog(this)">
+        <span class="trouble-icon">🔴</span>
+        <span class="trouble-title">Server starts but LLM features show "disabled"</span>
+        <span class="trouble-chev">▼</span>
       </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-title">Engine Extracts Components</div>
-        <div class="step-desc">The text extractor identifies services, databases, APIs, users, and auto-assigns them to trust zones (Internet / DMZ / App / Data).</div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-title">Threats Are Generated</div>
-        <div class="step-desc">STRIDE/DREAD/PASTA/LINDDUN rules fire against each component and data flow. Claude AI optionally adds context-specific threats.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-title">Review, Track & Export</div>
-        <div class="step-desc">Triage threats by severity, update statuses, view the auto-generated DFD, and export a full report as PDF, HTML, or Markdown.</div>
-      </div>
+      <div class="trouble-body"><div class="trouble-inner">
+        <p>Set <code>ANTHROPIC_API_KEY=sk-ant-...</code> — the app works without it (rules-based analysis runs, diagram upload returns a stub), but Claude Vision, AI fixes, and executive report narration need the key.</p>
+        <pre class="code-block"><span class="c-g">export</span> <span class="c-v">ANTHROPIC_API_KEY</span>=sk-ant-...</pre>
+      </div></div>
     </div>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- INSTALL -->
-<section id="install" style="background:var(--bg)">
-  <div style="max-width:900px;margin:0 auto">
-    <div class="section-label">Installation</div>
-    <h2 class="section-title">Three ways to run ThreatGuard</h2>
-
-    <div style="margin-top:32px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
-      <div class="install-tabs">
-        <button class="itab active" onclick="showInstall('docker',this)">🐳 Docker</button>
-        <button class="itab" onclick="showInstall('python',this)">🐍 Python</button>
-        <button class="itab" onclick="showInstall('script',this)">⚡ Script</button>
+    <div class="trouble-item">
+      <div class="trouble-head" onclick="tog(this)">
+        <span class="trouble-icon">🔴</span>
+        <span class="trouble-title">ModuleNotFoundError on startup</span>
+        <span class="trouble-chev">▼</span>
       </div>
-
-      <div class="iblock active" id="i-docker">
-        <div class="code-block"><pre><span class="c"># 1. Clone and extract</span>
-<span class="k">git clone</span> <span class="s">https://github.com/rootabhi1/Automated-Threat-Modelling.git</span>
-<span class="cmd">cd Automated-Threat-Modelling</span>
-<span class="cmd">unzip threat-modeler.zip && cd threat-modeler</span>
-
-<span class="c"># 2. Set environment variables</span>
-<span class="cmd">cp .env.example .env</span>
-<span class="c"># Edit .env: set INITIAL_ADMIN_EMAIL, INITIAL_ADMIN_PASSWORD, JWT_SECRET</span>
-<span class="c"># Generate JWT_SECRET:</span>
-<span class="k">python3 -c</span> <span class="s">"import secrets; print(secrets.token_urlsafe(48))"</span>
-
-<span class="c"># 3. Build and run</span>
-<span class="k">docker compose up</span> --build
-
-<span class="c"># Open → http://localhost:8000</span>
-<span class="c"># Health check → http://localhost:8000/api/health</span></pre></div>
+      <div class="trouble-body"><div class="trouble-inner">
+        <p>Your venv isn't activated or pip install wasn't run. You should see <code>(.venv)</code> in your terminal prompt.</p>
+        <pre class="code-block"><span class="c-c"># Mac/Linux</span>
+<span class="c-g">source</span> .venv/bin/activate
+<span class="c-g">pip install</span> -r requirements.txt</pre>
+      </div></div>
+    </div>
+    <div class="trouble-item">
+      <div class="trouble-head" onclick="tog(this)">
+        <span class="trouble-icon">🔴</span>
+        <span class="trouble-title">Port 8000 already in use</span>
+        <span class="trouble-chev">▼</span>
       </div>
-
-      <div class="iblock" id="i-python">
-        <div class="code-block"><pre><span class="k">git clone</span> <span class="s">https://github.com/rootabhi1/Automated-Threat-Modelling.git</span>
-<span class="cmd">cd Automated-Threat-Modelling && unzip threat-modeler.zip && cd threat-modeler</span>
-
-<span class="c"># Create and activate virtual environment</span>
-<span class="k">python3 -m venv</span> venv
-<span class="k">source</span> venv/bin/activate   <span class="c"># Windows: venv\Scripts\activate</span>
-<span class="k">pip install</span> -r requirements.txt
-
-<span class="c"># Set required environment variables</span>
-<span class="k">export</span> INITIAL_ADMIN_EMAIL=<span class="s">admin@example.com</span>
-<span class="k">export</span> INITIAL_ADMIN_PASSWORD=<span class="s">ChangeMe123!</span>
-<span class="k">export</span> JWT_SECRET=$(<span class="k">python3 -c</span> <span class="s">"import secrets; print(secrets.token_urlsafe(48))"</span>)
-<span class="k">export</span> ANTHROPIC_API_KEY=<span class="s">sk-ant-...</span>  <span class="c"># optional — enables AI enrichment</span>
-
-<span class="c"># Start the server</span>
-<span class="k">python</span> app.py
-<span class="c"># Open → http://127.0.0.1:8000</span></pre></div>
+      <div class="trouble-body"><div class="trouble-inner">
+        <pre class="code-block"><span class="c-g">uvicorn</span> app:app --reload --port 8001
+<span class="c-c"># or kill whatever is using 8000:</span>
+<span class="c-g">lsof</span> -ti:8000 | xargs kill</pre>
+      </div></div>
+    </div>
+    <div class="trouble-item">
+      <div class="trouble-head" onclick="tog(this)">
+        <span class="trouble-icon">🔴</span>
+        <span class="trouble-title">401 Unauthorized on API calls</span>
+        <span class="trouble-chev">▼</span>
       </div>
-
-      <div class="iblock" id="i-script">
-        <div class="code-block"><pre><span class="k">git clone</span> <span class="s">https://github.com/rootabhi1/Automated-Threat-Modelling.git</span>
-<span class="cmd">cd Automated-Threat-Modelling && unzip threat-modeler.zip && cd threat-modeler</span>
-
-<span class="c"># Edit run.sh to set your admin credentials</span>
-<span class="k">nano</span> run.sh
-
-<span class="c"># Make executable and run</span>
-<span class="k">chmod +x</span> run.sh && ./run.sh
-<span class="c"># Open → http://127.0.0.1:8000</span></pre></div>
+      <div class="trouble-body"><div class="trouble-inner">
+        <p>Token expired (15 min TTL) or server restarted without a persistent JWT_SECRET. Re-login to get a fresh token. Set a permanent JWT_SECRET value so tokens survive restarts.</p>
+        <pre class="code-block"><span class="c-v">TOKEN</span>=$(curl -s -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"changeme123"}' \
+  | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")</pre>
+      </div></div>
+    </div>
+    <div class="trouble-item">
+      <div class="trouble-head" onclick="tog(this)">
+        <span class="trouble-icon">🔴</span>
+        <span class="trouble-title">Tests fail with fixture or DB errors</span>
+        <span class="trouble-chev">▼</span>
       </div>
+      <div class="trouble-body"><div class="trouble-inner">
+        <p>Run pytest from inside the <code>threat-modeler/</code> directory with env vars set.</p>
+        <pre class="code-block"><span class="c-g">cd</span> threat-modeler
+<span class="c-g">export</span> <span class="c-v">INITIAL_ADMIN_EMAIL</span>=admin@example.com
+<span class="c-g">export</span> <span class="c-v">INITIAL_ADMIN_PASSWORD</span>=changeme123
+<span class="c-g">export</span> <span class="c-v">JWT_SECRET</span>=test-secret
+<span class="c-g">pytest</span> tests/test_new_endpoints.py -v</pre>
+      </div></div>
     </div>
-
-    <div style="background:var(--green-bg);border:1px solid var(--green);border-radius:10px;
-      padding:16px 20px;margin-top:20px;font-size:13px;color:var(--text);line-height:1.8">
-      <strong style="color:var(--green)">📋 Full step-by-step guide</strong> including API testing, pytest suite, troubleshooting table,
-      and Azure deployment →
-      <a href="https://github.com/rootabhi1/Automated-Threat-Modelling/blob/main/TESTING.md" style="color:var(--green)">
-        TESTING.md on GitHub ↗
-      </a>
-    </div>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- RBAC -->
-<section style="background:var(--surface)">
-  <div style="max-width:1100px;margin:0 auto">
-    <div class="section-label">Access Control</div>
-    <h2 class="section-title">Role-Based Access Control (RBAC)</h2>
-    <p class="section-sub">Three roles with fine-grained permission boundaries across every resource.</p>
-    <table class="roles-table">
-      <thead>
-        <tr>
-          <th>Role</th><th>Threat Models</th><th>All Users' Models</th><th>Releases & Features</th><th>User Management</th><th>Audit Log</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><span class="role-badge rb-admin">Admin</span></td>
-          <td class="check">✓ Full</td><td class="check">✓ Full</td>
-          <td class="check">✓ Full</td><td class="check">✓ Full</td><td class="check">✓ Full</td>
-        </tr>
-        <tr>
-          <td><span class="role-badge rb-mgmt">Management</span></td>
-          <td class="check">✓ Read</td><td class="check">✓ Read all</td>
-          <td class="check">✓ Read</td><td class="cross">✗</td><td class="cross">✗</td>
-        </tr>
-        <tr>
-          <td><span class="role-badge rb-user">User</span></td>
-          <td class="check">✓ Own only</td><td class="cross">✗</td>
-          <td class="cross">Read assigned</td><td class="cross">✗</td><td class="cross">✗</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- API REFERENCE -->
-<section id="api" style="background:var(--bg)">
-  <div style="max-width:1100px;margin:0 auto">
-    <div class="section-label">API Reference</div>
-    <h2 class="section-title">REST API</h2>
-    <p class="section-sub">Full interactive Swagger docs available at <code style="color:var(--green)">/docs</code> when the server is running.</p>
-
-    <table class="api-table">
-      <thead>
-        <tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr>
-      </thead>
-      <tbody>
-        <tr><td><span class="method m-post">POST</span></td><td>/api/auth/login</td><td class="auth-no">Public</td><td>Login → returns access + refresh tokens</td></tr>
-        <tr><td><span class="method m-post">POST</span></td><td>/api/auth/register</td><td class="auth-no">Public</td><td>Self-register (User role by default)</td></tr>
-        <tr><td><span class="method m-post">POST</span></td><td>/api/threat-models</td><td class="auth-req">🔐 JWT</td><td>Create a new threat model</td></tr>
-        <tr><td><span class="method m-post">POST</span></td><td>/api/threat-models/{id}/analyze</td><td class="auth-req">🔐 JWT</td><td>Run full analysis (STRIDE/DREAD/PASTA/LINDDUN + AI)</td></tr>
-        <tr><td><span class="method m-get">GET</span></td><td>/api/threat-models/{id}/report/{fmt}</td><td class="auth-req">🔐 JWT</td><td>Export report — fmt: pdf | html | md</td></tr>
-        <tr><td><span class="method m-put">PUT</span></td><td>/api/threat-models/{id}/threats/{tid}/status</td><td class="auth-req">🔐 JWT</td><td>Update threat status (open / mitigated / accepted)</td></tr>
-        <tr><td><span class="method m-post">POST</span></td><td>/api/extract-from-text</td><td class="auth-no">Public</td><td>Extract system components from plain text</td></tr>
-        <tr><td><span class="method m-get">GET</span></td><td>/api/releases</td><td class="auth-req">🔐 JWT</td><td>List all releases</td></tr>
-        <tr><td><span class="method m-post">POST</span></td><td>/api/releases</td><td class="auth-req">🔐 Admin</td><td>Create a release</td></tr>
-        <tr><td><span class="method m-get">GET</span></td><td>/api/audit-log</td><td class="auth-req">🔐 Admin</td><td>Full audit log of all actions</td></tr>
-        <tr><td><span class="method m-get">GET</span></td><td>/api/health</td><td class="auth-no">Public</td><td>Health check — returns LLM availability status</td></tr>
-      </tbody>
-    </table>
-
-    <div style="margin-top:20px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;font-family:'IBM Plex Mono',monospace;letter-spacing:.05em">QUICK TEST — CURL</div>
-      <pre style="font-size:12px;line-height:1.8;color:#94A3B8;overflow-x:auto"><span style="color:#4ADE80">TOKEN</span>=$(curl -s -X POST http://localhost:8000/api/auth/login \
-  -H <span style="color:#86EFAC">"Content-Type: application/json"</span> \
-  -d <span style="color:#86EFAC">'{"email":"admin@example.com","password":"ChangeMe123!"}'</span> \
-  | python3 -c <span style="color:#86EFAC">"import sys,json; print(json.load(sys.stdin)['access_token'])"</span>)
-
-curl -s http://localhost:8000/api/health | python3 -m json.tool
-
-curl -s -H <span style="color:#86EFAC">"Authorization: Bearer $TOKEN"</span> \
-  http://localhost:8000/api/threat-models | python3 -m json.tool</pre>
-    </div>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- TESTING -->
-<section id="testing" style="background:var(--surface)">
-  <div style="max-width:900px;margin:0 auto;text-align:center">
-    <div class="section-label">Testing</div>
-    <h2 class="section-title">Full test suite included</h2>
-    <p class="section-sub" style="margin:0 auto 40px">pytest unit tests + shell smoke tests covering RBAC, trust boundaries, and API endpoints.</p>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px 26px;text-align:left">
-      <pre style="font-size:13px;line-height:1.9;color:#94A3B8;overflow-x:auto"><span style="color:#64748B"># Run all tests</span>
-<span style="color:#4ADE80">python -m pytest</span> tests/ -v
-
-<span style="color:#64748B"># Expected output:</span>
-tests/test_api.py::test_health                    <span style="color:#4ADE80">PASSED</span>
-tests/test_api.py::test_register_and_login        <span style="color:#4ADE80">PASSED</span>
-tests/test_api.py::test_create_threat_model       <span style="color:#4ADE80">PASSED</span>
-tests/test_rbac.py::test_user_cannot_see_all      <span style="color:#4ADE80">PASSED</span>
-tests/test_rbac.py::test_admin_can_manage_users   <span style="color:#4ADE80">PASSED</span>
-tests/test_trust_boundaries.py::test_internet     <span style="color:#4ADE80">PASSED</span>
-tests/test_trust_boundaries.py::test_dmz_zone     <span style="color:#4ADE80">PASSED</span>
-
-<span style="color:#64748B"># Shell smoke test (needs running server)</span>
-<span style="color:#4ADE80">chmod +x</span> tests/smoke_test.sh && ./tests/smoke_test.sh</pre>
-    </div>
-    <div style="margin-top:20px">
-      <a href="https://github.com/rootabhi1/Automated-Threat-Modelling/blob/main/TESTING.md"
-         style="display:inline-flex;align-items:center;gap:8px;background:var(--green-bg);
-         border:1px solid var(--green);color:var(--green);padding:12px 24px;border-radius:10px;
-         font-size:14px;font-weight:500;transition:all .2s">
-        📋 Read the Full Testing Guide (TESTING.md) ↗
-      </a>
+    <div class="trouble-item">
+      <div class="trouble-head" onclick="tog(this)">
+        <span class="trouble-icon">💡</span>
+        <span class="trouble-title">Interactive API docs (Swagger)</span>
+        <span class="trouble-chev">▼</span>
+      </div>
+      <div class="trouble-body"><div class="trouble-inner">
+        <p>FastAPI auto-generates interactive docs. Go to <code>http://localhost:8000/docs</code>, click <strong>Authorize</strong>, paste your Bearer token, and test any endpoint without writing curl commands.</p>
+      </div></div>
     </div>
   </div>
 </section>
 
 <!-- FOOTER -->
 <footer>
-  <div class="footer-logo">
-    <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
-    ThreatGuard
-    <span style="color:var(--muted);font-weight:400;font-size:12px">— Automated Threat Modelling</span>
-  </div>
+  <div class="footer-left">🛡 Automated Threat Modeler · MIT License · rootabhi1</div>
   <div class="footer-links">
-    <a href="https://github.com/rootabhi1/Automated-Threat-Modelling">GitHub</a>
-    <a href="https://github.com/rootabhi1/Automated-Threat-Modelling/blob/main/TESTING.md">Testing Guide</a>
-    <a href="https://github.com/rootabhi1/Automated-Threat-Modelling/blob/main/README.md">README</a>
-    <a href="https://github.com/rootabhi1/Automated-Threat-Modelling/blob/main/.env.example">.env.example</a>
+    <a href="https://github.com/rootabhi1/Automated-Threat-Modelling" target="_blank">GitHub</a>
+    <a href="https://github.com/rootabhi1/Automated-Threat-Modelling/tree/feature/enhancements" target="_blank">feature branch</a>
+    <a href="https://github.com/rootabhi1/Automated-Threat-Modelling/issues" target="_blank">Issues</a>
+    <a href="https://github.com/rootabhi1/Automated-Threat-Modelling/blob/main/README.md" target="_blank">README</a>
   </div>
-  <div style="font-size:12px;color:var(--muted)">MIT License · Built with FastAPI · Claude AI · Azure</div>
 </footer>
 
 <script>
-function showTab(id, btn) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-'+id).classList.add('active');
-  btn.classList.add('active');
+function tog(head){
+  const b = head.nextElementSibling;
+  const c = head.querySelector('.trouble-chev');
+  b.classList.toggle('open'); c.classList.toggle('open');
 }
-function showInstall(id, btn) {
-  document.querySelectorAll('.iblock').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.itab').forEach(b => b.classList.remove('active'));
-  document.getElementById('i-'+id).classList.add('active');
-  btn.classList.add('active');
-}
-// Smooth nav highlight
-const sections = document.querySelectorAll('section[id]');
-const navLinks = document.querySelectorAll('.nav-links a');
-window.addEventListener('scroll', () => {
-  let cur = '';
-  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) cur = s.id; });
-  navLinks.forEach(a => {
-    a.style.color = a.getAttribute('href') === '#'+cur ? 'var(--green)' : '';
+function cp(btn){
+  const pre = btn.closest('pre');
+  const text = pre.innerText.replace('copy\n','').trim();
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='copied!';
+    setTimeout(()=>btn.textContent='copy',1500);
   });
-});
+}
 </script>
 </body>
 </html>
