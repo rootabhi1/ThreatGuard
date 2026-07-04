@@ -1,12 +1,12 @@
-fastapi==0.115.0
+fastapi==0.138.0
 uvicorn[standard]==0.30.6
 jinja2==3.1.4
 python-multipart==0.0.12
-pydantic==2.9.2
+pydantic==2.13.4
 reportlab==4.2.5
-svglib==1.5.1
+svglib==2.0.2
 anthropic==0.39.0
 bcrypt==4.2.0
-PyJWT==2.9.0
-email-validator==2.2.0
+PyJWT==2.13.0
+email-validator==2.3.0
 openai>=1.0.0
