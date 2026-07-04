@@ -31,8 +31,7 @@ If anything is missing:
 git clone https://github.com/rootabhi1/Automated-Threat-Modelling.git
 cd Automated-Threat-Modelling
 
-# Extract the application source
-unzip threat-modeler.zip
+# The application source lives in threat-modeler/
 cd threat-modeler
 ```
 
@@ -76,9 +75,11 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 # Output example: Xk2p9...  (copy and paste into .env)
 ```
 
-**Optional — Claude AI enrichment:**
+**Optional — AI enrichment (Claude or any OpenAI-compatible model):**
 ```env
-ANTHROPIC_API_KEY=sk-ant-xxxx   # get free at console.anthropic.com
+ANTHROPIC_API_KEY=sk-ant-xxxx        # Claude — get a key at console.anthropic.com
+# or an OpenAI-compatible endpoint:
+# OPENAI_API_KEY=sk-...  OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 > Without the API key the app still works — it uses rule-based STRIDE/DREAD/PASTA/LINDDUN analysis.
 
@@ -244,7 +245,7 @@ Click **Create Feature** ✅
 2. Fill in the name: `Auth Service v2 — Login & Session`
 3. Select Feature: `User Authentication Flow`
 4. Choose methodologies: ✅ **STRIDE** ✅ **DREAD**
-5. Enable **Claude AI Enhancement** if you have an API key
+5. Enable **AI Enhancement** if you have a provider key (Claude or OpenAI-compatible)
 6. Paste this system description into the text box:
 
 ```
@@ -423,7 +424,8 @@ threat-modeler/
 │   └── domain.py                   # CRUD: releases, features, threat models, threats
 │
 ├── threat_engine/                  # Core analysis engine
-│   ├── analyzer.py                 # Text extraction + threat rule application + Claude AI
+│   ├── analyzer.py                 # Text extraction + threat rule application
+│   ├── llm.py                      # LLM provider layer (Anthropic + OpenAI-compatible)
 │   ├── methodologies.py            # STRIDE / DREAD / PASTA / LINDDUN catalogs
 │   ├── dfd.py                      # SVG data flow diagram renderer
 │   ├── scoring.py                  # CVSS-inspired severity scoring

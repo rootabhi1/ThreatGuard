@@ -115,7 +115,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         response.headers["X-Request-ID"] = rid
         return response
 
-app = FastAPI(title="Threat Modeler", version="2.0")
+app = FastAPI(title="Threat Modeler", version="2.1")
 
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
