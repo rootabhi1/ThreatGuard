@@ -1,0 +1,113 @@
+{% extends "_shell.html" %}
+{% block title %}Overview · ThreatGuard{% endblock %}
+{% block page_title %}Management Overview{% endblock %}
+{% block page_subtitle %}Read-only view of threat models, OWASP coverage, and remediation progress{% endblock %}
+
+{% block header_actions %}
+<button id="btn-refresh" class="btn btn-secondary btn-sm">
+  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+  Refresh
+</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- Top metrics -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 stagger">
+  <div class="stat-card stat-card-info">
+    <div class="stat-card-label">Features</div>
+    <div class="stat-card-value" id="m-features">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Threat Models</div>
+    <div class="stat-card-value" id="m-tms">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Total Threats</div>
+    <div class="stat-card-value" id="m-threats">0</div>
+  </div>
+  <div class="stat-card stat-card-critical">
+    <div class="stat-card-label">Critical</div>
+    <div class="stat-card-value" id="m-critical">0</div>
+  </div>
+  <div class="stat-card stat-card-success">
+    <div class="stat-card-label">Mitigated</div>
+    <div class="stat-card-value" id="m-mitigated">0</div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button data-tab="features" class="tab active">By Feature</button>
+  <button data-tab="owasp" class="tab">OWASP Top 10</button>
+  <button data-tab="threats" class="tab">All Threat Models</button>
+</div>
+
+<!-- BY FEATURE TAB -->
+<section id="tab-features" class="tab-panel">
+  <div id="feature-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger"></div>
+  <div id="empty-state" class="hidden">
+    <div class="card empty-state">
+      <div class="empty-state-art">
+        <svg viewBox="0 0 200 200" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="100" cy="100" r="80" fill="#fef3c7" opacity="0.5"/>
+          <path d="M50 130 L80 100 L110 120 L150 70" fill="none" stroke="#d97706" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="empty-state-title">No data yet</div>
+      <div class="empty-state-desc">Once features are created and threat models are analyzed, you'll see metrics and OWASP coverage here.</div>
+    </div>
+  </div>
+</section>
+
+<!-- OWASP TAB -->
+<section id="tab-owasp" class="tab-panel hidden">
+  <div class="mb-4">
+    <h2 style="font-size: 1.25rem; margin-bottom: 0.25rem;">OWASP Top 10 (2021) Coverage</h2>
+    <p class="text-sm text-light">Distribution of detected threats across the OWASP Top 10 categories.</p>
+  </div>
+  <div id="owasp-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 stagger"></div>
+</section>
+
+<!-- ALL TMS TAB -->
+<section id="tab-threats" class="tab-panel hidden">
+  <div class="table-card">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Threat Model</th>
+          <th>Feature</th>
+          <th>Owner</th>
+          <th>Updated</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="all-tms-tbody">
+        <tr><td colspan="5" class="text-center text-light">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Detail modal -->
+<div id="modal-tm-detail" class="modal hidden">
+  <div class="modal-card modal-card-lg">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="detail-title"></div>
+        <div class="modal-subtitle" id="detail-subtitle"></div>
+      </div>
+      <button data-close-modal class="modal-close">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="detail-body"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/dfd_editor.js"></script>
+<script src="/static/js/management.js"></script>
+{% endblock %}

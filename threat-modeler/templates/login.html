@@ -1,0 +1,123 @@
+{% extends "_base.html" %}
+{% block title %}Sign in · ThreatGuard{% endblock %}
+
+{% block body %}
+<div class="auth-page">
+  <!-- Left: branding/marketing -->
+  <div class="auth-hero">
+    <div class="auth-hero-content">
+      <div class="flex items-center gap-3 mb-8">
+        <div class="sidebar-brand-icon">⚡</div>
+        <div>
+          <div style="color: white; font-size: 1.125rem; font-weight: 700;">ThreatGuard</div>
+          <div style="color: var(--c-dark-text-dim); font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;">Security Platform</div>
+        </div>
+      </div>
+
+      <h1>Threat modeling that <span class="accent">scales</span> with your team.</h1>
+      <p>Automated STRIDE, DREAD, LINDDUN, and PASTA analysis. Continuous coverage from web apps to AI integrations.</p>
+
+      <div class="auth-features">
+        <div class="auth-feature">
+          <div class="auth-feature-icon">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <div>
+            <div class="auth-feature-title">4 methodologies, one engine</div>
+            <div class="auth-feature-desc">STRIDE, DREAD, LINDDUN, PASTA — applied automatically</div>
+          </div>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature-icon">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2"/></svg>
+          </div>
+          <div>
+            <div class="auth-feature-title">CVSS · CWE · OWASP mapped</div>
+            <div class="auth-feature-desc">Every threat scored and linked to industry standards</div>
+          </div>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature-icon">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </div>
+          <div>
+            <div class="auth-feature-title">Role-based with audit trail</div>
+            <div class="auth-feature-desc">Admin, User, Management — every action logged</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: form -->
+  <div class="auth-form-side">
+    <div class="auth-form animate-fade-in-up">
+      <h2 style="font-size: 1.75rem; margin-bottom: 0.5rem;">Welcome back</h2>
+      <p class="text-dim text-sm mb-8">Sign in to continue to your threat models.</p>
+
+      <form id="login-form" class="flex-col gap-4">
+        <div class="field">
+          <label class="field-label">Email</label>
+          <input type="email" name="email" required autofocus class="input" placeholder="you@company.com">
+        </div>
+        <div class="field">
+          <label class="field-label">Password</label>
+          <input type="password" name="password" required class="input" placeholder="••••••••">
+        </div>
+        <div id="login-error" class="hidden" style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 0.625rem; border-radius: 8px; font-size: 0.8125rem;"></div>
+        <button type="submit" class="btn btn-primary btn-lg w-full" id="login-submit">
+          <span class="submit-label">Sign in</span>
+        </button>
+      </form>
+
+      <p class="text-sm text-dim text-center mt-6">
+        Don't have an account?
+        <a href="/register" style="color: var(--c-brand); font-weight: 600; text-decoration: none;">Register</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function() {
+  // If already logged in, redirect
+  if (Auth.getToken()) {
+    try {
+      const me = await Auth.fetchMe();
+      Auth.redirectForRole(me.user.role);
+      return;
+    } catch (e) { Auth.clearToken(); }
+  }
+})();
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errBox = document.getElementById('login-error');
+  const btn = document.getElementById('login-submit');
+  const label = btn.querySelector('.submit-label');
+  errBox.classList.add('hidden');
+  btn.disabled = true;
+  label.innerHTML = '<span class="dots-loader"><span></span><span></span><span></span></span> Signing in...';
+
+  const fd = new FormData(e.target);
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: fd.get('email'), password: fd.get('password')}),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(UI.formatApiError(data, 'Login failed'));
+    Auth.setToken(data.access_token, data.refresh_token, data.user);
+    Auth.redirectForRole(data.user.role);
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.classList.remove('hidden');
+    btn.disabled = false;
+    label.textContent = 'Sign in';
+  }
+});
+</script>
+{% endblock %}

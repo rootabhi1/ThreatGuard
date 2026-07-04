@@ -1,0 +1,99 @@
+{% extends "_base.html" %}
+
+{% block body %}
+<div class="app-shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">⚡</div>
+      <div>
+        <div class="sidebar-brand-text">ThreatGuard</div>
+        <div class="sidebar-brand-sub">Security · v2.1</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebar-nav">
+      <!-- Populated by JS based on role -->
+    </nav>
+
+    <div class="sidebar-user" id="sidebar-user">
+      <!-- Populated by JS -->
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-area">
+    <header class="main-header">
+      <div>
+        <div class="main-header-title">{% block page_title %}Dashboard{% endblock %}</div>
+        <div class="main-header-sub">{% block page_subtitle %}{% endblock %}</div>
+      </div>
+      <div class="flex items-center gap-3" id="header-actions">
+        {% block header_actions %}{% endblock %}
+      </div>
+    </header>
+
+    <main class="main-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<script>
+// Render sidebar nav based on role
+(async function() {
+  const me = await Auth.fetchMeOptional();
+  if (!me) return;
+
+  const role = me.user.role;
+  const path = window.location.pathname;
+  const nav = document.getElementById('sidebar-nav');
+  const userBox = document.getElementById('sidebar-user');
+
+  const links = [];
+  if (role === 'admin' || role === 'user') {
+    links.push({ href: '/dashboard', label: 'Threat Models', icon: 'shield', active: path === '/dashboard' });
+  }
+  if (role === 'management' || role === 'admin') {
+    links.push({ href: '/management', label: 'Overview', icon: 'chart', active: path === '/management' });
+    links.push({ href: '/management?tab=owasp', label: 'OWASP Top 10', icon: 'check', active: false });
+  }
+  if (role === 'admin') {
+    links.push({ section: 'Administration' });
+    links.push({ href: '/admin', label: 'Users & Access', icon: 'users', active: path === '/admin' });
+    links.push({ href: '/admin?tab=releases', label: 'Releases', icon: 'box', active: false });
+    links.push({ href: '/admin?tab=audit', label: 'Audit Log', icon: 'log', active: false });
+  }
+
+  const icons = {
+    shield: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>',
+    chart: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>',
+    users: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>',
+    box: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>',
+    log: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>',
+    check: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>',
+  };
+
+  nav.innerHTML = links.map(l => {
+    if (l.section) return `<div class="sidebar-section">${l.section}</div>`;
+    return `<a href="${l.href}" class="sidebar-link ${l.active ? 'active' : ''}">${icons[l.icon] || ''}<span>${l.label}</span></a>`;
+  }).join('');
+
+  const initials = (me.user.name || me.user.email).split(/[ @]/).filter(Boolean).slice(0,2).map(s => s[0].toUpperCase()).join('');
+  userBox.innerHTML = `
+    <div class="sidebar-user-avatar">${initials}</div>
+    <div style="flex: 1; min-width: 0;">
+      <div class="sidebar-user-name">${UI.escapeHtml(me.user.name || me.user.email)}</div>
+      <div class="sidebar-user-email"><span class="role-badge role-${role}" style="font-size: 0.6rem;">${role}</span></div>
+    </div>
+    <button class="sidebar-user-logout" id="logout-btn" title="Sign out">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+    </button>
+  `;
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    await Auth.logout();
+    window.location.href = '/';
+  });
+})();
+</script>
+{% endblock %}

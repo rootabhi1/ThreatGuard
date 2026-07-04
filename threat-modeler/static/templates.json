@@ -1,0 +1,165 @@
+[
+  {
+    "id": "saas-webapp",
+    "name": "SaaS Web App",
+    "description": "React/Vue frontend, REST API, PostgreSQL, Redis cache, Auth0",
+    "icon": "🌐",
+    "components": [
+      {"id":"c_user","name":"User","type":"user","description":"End user via browser"},
+      {"id":"c_cdn","name":"CDN / Frontend","type":"webapp","description":"React SPA served via CDN"},
+      {"id":"c_api","name":"API Server","type":"api","description":"Node.js / Django REST API"},
+      {"id":"c_auth","name":"Auth0","type":"auth_service","description":"External identity provider"},
+      {"id":"c_db","name":"PostgreSQL","type":"database","description":"Primary relational database"},
+      {"id":"c_cache","name":"Redis","type":"cache","description":"Session + hot-data cache"},
+      {"id":"c_stripe","name":"Stripe","type":"payment_service","description":"Payment processor"}
+    ],
+    "data_flows": [
+      {"id":"f_1","from":"c_user","to":"c_cdn","label":"HTTPS request","protocol":"HTTPS","auth":"none","encrypted":true},
+      {"id":"f_2","from":"c_cdn","to":"c_auth","label":"OAuth2 login","protocol":"HTTPS","auth":"oauth2","encrypted":true},
+      {"id":"f_3","from":"c_cdn","to":"c_api","label":"REST calls","protocol":"HTTPS","auth":"bearer","encrypted":true},
+      {"id":"f_4","from":"c_api","to":"c_db","label":"SQL queries","protocol":"TCP","auth":"credentials","encrypted":false},
+      {"id":"f_5","from":"c_api","to":"c_cache","label":"Cache read/write","protocol":"TCP","auth":"none","encrypted":false},
+      {"id":"f_6","from":"c_api","to":"c_stripe","label":"Payment API","protocol":"HTTPS","auth":"api_key","encrypted":true}
+    ],
+    "trust_boundaries": [
+      {"id":"b_internet","name":"Public Internet","contains":["c_user","c_cdn"]},
+      {"id":"b_app","name":"Application Tier","contains":["c_api","c_auth"]},
+      {"id":"b_data","name":"Data Tier","contains":["c_db","c_cache"]},
+      {"id":"b_external","name":"External Services","contains":["c_stripe"]}
+    ]
+  },
+  {
+    "id": "mobile-api",
+    "name": "Mobile App + API",
+    "description": "iOS/Android client, API gateway, microservices, push notifications",
+    "icon": "📱",
+    "components": [
+      {"id":"c_user","name":"Mobile User","type":"user","description":"iOS / Android end user"},
+      {"id":"c_app","name":"Mobile App","type":"mobile_app","description":"Native iOS/Android app"},
+      {"id":"c_gateway","name":"API Gateway","type":"api","description":"Rate-limiting, auth enforcement"},
+      {"id":"c_auth","name":"Auth Service","type":"auth_service","description":"JWT issuance and validation"},
+      {"id":"c_core","name":"Core API","type":"api","description":"Business logic service"},
+      {"id":"c_db","name":"Database","type":"database","description":"Primary data store"},
+      {"id":"c_push","name":"Push Service","type":"external_entity","description":"APNs / FCM"},
+      {"id":"c_storage","name":"Object Storage","type":"datastore","description":"S3-compatible media storage"}
+    ],
+    "data_flows": [
+      {"id":"f_1","from":"c_user","to":"c_app","label":"User interaction","protocol":"local","auth":"biometric","encrypted":true},
+      {"id":"f_2","from":"c_app","to":"c_gateway","label":"API requests","protocol":"HTTPS","auth":"bearer","encrypted":true},
+      {"id":"f_3","from":"c_gateway","to":"c_auth","label":"Token validation","protocol":"HTTPS","auth":"mtls","encrypted":true},
+      {"id":"f_4","from":"c_gateway","to":"c_core","label":"Forwarded request","protocol":"HTTPS","auth":"bearer","encrypted":true},
+      {"id":"f_5","from":"c_core","to":"c_db","label":"DB queries","protocol":"TCP","auth":"credentials","encrypted":false},
+      {"id":"f_6","from":"c_core","to":"c_storage","label":"Media upload/download","protocol":"HTTPS","auth":"api_key","encrypted":true},
+      {"id":"f_7","from":"c_core","to":"c_push","label":"Push notifications","protocol":"HTTPS","auth":"api_key","encrypted":true}
+    ],
+    "trust_boundaries": [
+      {"id":"b_client","name":"Client Device","contains":["c_user","c_app"]},
+      {"id":"b_edge","name":"Edge / Gateway","contains":["c_gateway","c_auth"]},
+      {"id":"b_backend","name":"Backend Services","contains":["c_core","c_storage"]},
+      {"id":"b_data","name":"Data Tier","contains":["c_db"]},
+      {"id":"b_ext","name":"External Services","contains":["c_push"]}
+    ]
+  },
+  {
+    "id": "microservices",
+    "name": "Microservices Platform",
+    "description": "Kubernetes-based, service mesh, event bus, shared DB per service",
+    "icon": "🏗️",
+    "components": [
+      {"id":"c_user","name":"External User","type":"user","description":"API consumer"},
+      {"id":"c_ingress","name":"Ingress / LB","type":"api","description":"Nginx ingress controller"},
+      {"id":"c_auth","name":"Auth Service","type":"auth_service","description":"OIDC / JWT authority"},
+      {"id":"c_svc_a","name":"Service A","type":"api","description":"Core domain service"},
+      {"id":"c_svc_b","name":"Service B","type":"api","description":"Supporting domain service"},
+      {"id":"c_bus","name":"Event Bus","type":"queue","description":"Kafka / RabbitMQ"},
+      {"id":"c_db_a","name":"DB (Service A)","type":"database","description":"Postgres for Service A"},
+      {"id":"c_db_b","name":"DB (Service B)","type":"database","description":"Postgres for Service B"},
+      {"id":"c_secrets","name":"Secrets Store","type":"config","description":"HashiCorp Vault / AWS SSM"},
+      {"id":"c_admin","name":"Admin Panel","type":"admin_panel","description":"Internal ops dashboard"}
+    ],
+    "data_flows": [
+      {"id":"f_1","from":"c_user","to":"c_ingress","label":"HTTPS API","protocol":"HTTPS","auth":"bearer","encrypted":true},
+      {"id":"f_2","from":"c_ingress","to":"c_auth","label":"Token verification","protocol":"gRPC","auth":"mtls","encrypted":true},
+      {"id":"f_3","from":"c_ingress","to":"c_svc_a","label":"Routed request","protocol":"gRPC","auth":"mtls","encrypted":true},
+      {"id":"f_4","from":"c_svc_a","to":"c_bus","label":"Domain events","protocol":"TCP","auth":"api_key","encrypted":false},
+      {"id":"f_5","from":"c_bus","to":"c_svc_b","label":"Event stream","protocol":"TCP","auth":"api_key","encrypted":false},
+      {"id":"f_6","from":"c_svc_a","to":"c_db_a","label":"Queries","protocol":"TCP","auth":"credentials","encrypted":false},
+      {"id":"f_7","from":"c_svc_b","to":"c_db_b","label":"Queries","protocol":"TCP","auth":"credentials","encrypted":false},
+      {"id":"f_8","from":"c_svc_a","to":"c_secrets","label":"Secret fetch","protocol":"HTTPS","auth":"mtls","encrypted":true},
+      {"id":"f_9","from":"c_admin","to":"c_svc_a","label":"Admin ops","protocol":"HTTPS","auth":"session","encrypted":true}
+    ],
+    "trust_boundaries": [
+      {"id":"b_public","name":"Public Internet","contains":["c_user"]},
+      {"id":"b_edge","name":"Edge","contains":["c_ingress","c_auth"]},
+      {"id":"b_services","name":"Service Mesh","contains":["c_svc_a","c_svc_b","c_bus"]},
+      {"id":"b_data","name":"Data Tier","contains":["c_db_a","c_db_b"]},
+      {"id":"b_mgmt","name":"Management","contains":["c_secrets","c_admin"]}
+    ]
+  },
+  {
+    "id": "data-pipeline",
+    "name": "Data Pipeline / Analytics",
+    "description": "Ingest, ETL, data lake, BI dashboard, audit trail",
+    "icon": "📊",
+    "components": [
+      {"id":"c_src","name":"Data Sources","type":"external_entity","description":"Third-party data feeds / webhooks"},
+      {"id":"c_ingest","name":"Ingest API","type":"api","description":"Validates and buffers incoming data"},
+      {"id":"c_queue","name":"Message Queue","type":"queue","description":"Kafka / SQS for reliable delivery"},
+      {"id":"c_etl","name":"ETL Workers","type":"api","description":"Transform, cleanse, enrich"},
+      {"id":"c_lake","name":"Data Lake","type":"datastore","description":"S3 / Azure Blob raw storage"},
+      {"id":"c_warehouse","name":"Data Warehouse","type":"database","description":"Snowflake / BigQuery"},
+      {"id":"c_bi","name":"BI Dashboard","type":"webapp","description":"Metabase / Looker"},
+      {"id":"c_analysts","name":"Analysts","type":"user","description":"Internal business analysts"},
+      {"id":"c_audit","name":"Audit Log Store","type":"datastore","description":"Immutable audit trail"}
+    ],
+    "data_flows": [
+      {"id":"f_1","from":"c_src","to":"c_ingest","label":"Raw events","protocol":"HTTPS","auth":"api_key","encrypted":true},
+      {"id":"f_2","from":"c_ingest","to":"c_queue","label":"Buffered events","protocol":"TCP","auth":"credentials","encrypted":false},
+      {"id":"f_3","from":"c_queue","to":"c_etl","label":"Event stream","protocol":"TCP","auth":"credentials","encrypted":false},
+      {"id":"f_4","from":"c_etl","to":"c_lake","label":"Raw data write","protocol":"HTTPS","auth":"api_key","encrypted":true},
+      {"id":"f_5","from":"c_etl","to":"c_warehouse","label":"Processed data","protocol":"HTTPS","auth":"credentials","encrypted":true},
+      {"id":"f_6","from":"c_analysts","to":"c_bi","label":"Dashboard queries","protocol":"HTTPS","auth":"session","encrypted":true},
+      {"id":"f_7","from":"c_bi","to":"c_warehouse","label":"SQL queries","protocol":"TCP","auth":"credentials","encrypted":true},
+      {"id":"f_8","from":"c_ingest","to":"c_audit","label":"Access events","protocol":"HTTPS","auth":"api_key","encrypted":true}
+    ],
+    "trust_boundaries": [
+      {"id":"b_external","name":"External","contains":["c_src"]},
+      {"id":"b_ingest","name":"Ingest Layer","contains":["c_ingest","c_queue"]},
+      {"id":"b_processing","name":"Processing","contains":["c_etl"]},
+      {"id":"b_storage","name":"Storage","contains":["c_lake","c_warehouse","c_audit"]},
+      {"id":"b_access","name":"Access Layer","contains":["c_bi","c_analysts"]}
+    ]
+  },
+  {
+    "id": "iot-platform",
+    "name": "IoT Platform",
+    "description": "Device fleet, MQTT broker, device registry, OTA updates",
+    "icon": "🔌",
+    "components": [
+      {"id":"c_device","name":"IoT Device","type":"external_entity","description":"Embedded / firmware device"},
+      {"id":"c_broker","name":"MQTT Broker","type":"api","description":"Message broker for device telemetry"},
+      {"id":"c_registry","name":"Device Registry","type":"database","description":"Fleet management, certs, provisioning"},
+      {"id":"c_api","name":"Backend API","type":"api","description":"Business logic, alerting"},
+      {"id":"c_timeseries","name":"Time-series DB","type":"database","description":"InfluxDB / TimescaleDB"},
+      {"id":"c_ota","name":"OTA Update Server","type":"api","description":"Firmware update delivery"},
+      {"id":"c_dashboard","name":"Operator Dashboard","type":"webapp","description":"Fleet monitoring UI"},
+      {"id":"c_operator","name":"Operator","type":"user","description":"Fleet operator"}
+    ],
+    "data_flows": [
+      {"id":"f_1","from":"c_device","to":"c_broker","label":"Telemetry (MQTT)","protocol":"MQTTS","auth":"mtls","encrypted":true},
+      {"id":"f_2","from":"c_broker","to":"c_api","label":"Event forward","protocol":"TCP","auth":"credentials","encrypted":false},
+      {"id":"f_3","from":"c_api","to":"c_timeseries","label":"Telemetry write","protocol":"TCP","auth":"credentials","encrypted":false},
+      {"id":"f_4","from":"c_api","to":"c_registry","label":"Device lookup","protocol":"TCP","auth":"credentials","encrypted":false},
+      {"id":"f_5","from":"c_device","to":"c_ota","label":"OTA poll","protocol":"HTTPS","auth":"mtls","encrypted":true},
+      {"id":"f_6","from":"c_operator","to":"c_dashboard","label":"Browser","protocol":"HTTPS","auth":"session","encrypted":true},
+      {"id":"f_7","from":"c_dashboard","to":"c_api","label":"REST calls","protocol":"HTTPS","auth":"bearer","encrypted":true}
+    ],
+    "trust_boundaries": [
+      {"id":"b_field","name":"Field / Device","contains":["c_device"]},
+      {"id":"b_edge","name":"Edge / Broker","contains":["c_broker","c_ota"]},
+      {"id":"b_backend","name":"Backend","contains":["c_api","c_registry"]},
+      {"id":"b_data","name":"Data Tier","contains":["c_timeseries"]},
+      {"id":"b_ops","name":"Operations","contains":["c_dashboard","c_operator"]}
+    ]
+  }
+]

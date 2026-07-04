@@ -1,0 +1,196 @@
+{% extends "_shell.html" %}
+{% block title %}Threat Models · ThreatGuard{% endblock %}
+{% block page_title %}Threat Models{% endblock %}
+{% block page_subtitle %}Your threat models and security analysis{% endblock %}
+
+{% block header_actions %}
+<button id="btn-new-tm" class="btn btn-primary">
+  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+  New Threat Model
+</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats row -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 stagger">
+  <div class="stat-card stat-card-info">
+    <div class="stat-card-icon">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+    </div>
+    <div class="stat-card-label">Threat Models</div>
+    <div class="stat-card-value" id="stat-total">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-icon">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    </div>
+    <div class="stat-card-label">Total Threats</div>
+    <div class="stat-card-value" id="stat-threats">0</div>
+  </div>
+  <div class="stat-card stat-card-critical">
+    <div class="stat-card-icon">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+    </div>
+    <div class="stat-card-label">Open</div>
+    <div class="stat-card-value" id="stat-open">0</div>
+  </div>
+  <div class="stat-card stat-card-success">
+    <div class="stat-card-icon">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+    </div>
+    <div class="stat-card-label">Mitigated</div>
+    <div class="stat-card-value" id="stat-mitigated">0</div>
+  </div>
+</div>
+
+<!-- TM list -->
+<div id="tm-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 stagger"></div>
+
+<!-- Empty state -->
+<div id="empty-state" class="hidden">
+  <div class="card empty-state">
+    <div class="empty-state-art">
+      <svg viewBox="0 0 200 200" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="es-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#6366f1"/>
+            <stop offset="100%" stop-color="#06b6d4"/>
+          </linearGradient>
+        </defs>
+        <circle cx="100" cy="100" r="85" fill="#eef2ff" opacity="0.7"/>
+        <path d="M100 50 L130 65 L130 100 C130 125 100 145 100 145 C100 145 70 125 70 100 L70 65 Z"
+              fill="url(#es-grad)" opacity="0.85"/>
+        <path d="M88 100 L96 108 L114 90" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </div>
+    <div class="empty-state-title">No threat models yet</div>
+    <div class="empty-state-desc">Create your first threat model to start analyzing your system. Describe it in plain English — we'll extract components and run STRIDE, DREAD, LINDDUN, and PASTA analysis automatically.</div>
+    <button id="btn-new-tm-empty" class="btn btn-primary">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+      Create Threat Model
+    </button>
+  </div>
+</div>
+
+<!-- =========== Modal: New TM =========== -->
+<div id="modal-new-tm" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">New Threat Model</div>
+        <div class="modal-subtitle">Describe your system — we'll extract components and run analysis</div>
+      </div>
+      <button data-close-modal class="modal-close">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="form-new-tm" class="modal-body flex-col gap-4">
+      <div class="field">
+        <label class="field-label">Feature</label>
+        <select name="feature_id" id="select-feature" required class="select">
+          <option value="">Loading...</option>
+        </select>
+        <div id="feature-help" class="field-help"></div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Threat model name</label>
+        <input type="text" name="name" required maxlength="120" class="input" placeholder="e.g. Login subsystem">
+      </div>
+
+      <div class="field">
+        <label class="field-label">Description <span class="field-label-optional">optional</span></label>
+        <textarea name="description" rows="2" class="textarea" placeholder="What does this system do?"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">System Description</label>
+        <textarea name="system_text" required rows="6" class="textarea" style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.8125rem;"
+                  placeholder="A user logs in via the web app, which authenticates against an OAuth provider. After login, the app reads user data from a Postgres database. Files are uploaded to S3."></textarea>
+        <div class="field-help">We'll auto-extract components, flows, and trust boundaries.</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Methodologies</label>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <label class="toggle-card">
+            <input type="checkbox" name="methodology" value="stride" checked>
+            <div class="toggle-card-title">STRIDE</div>
+            <div class="toggle-card-sub">Microsoft</div>
+          </label>
+          <label class="toggle-card">
+            <input type="checkbox" name="methodology" value="dread">
+            <div class="toggle-card-title">DREAD</div>
+            <div class="toggle-card-sub">Risk score</div>
+          </label>
+          <label class="toggle-card">
+            <input type="checkbox" name="methodology" value="linddun">
+            <div class="toggle-card-title">LINDDUN</div>
+            <div class="toggle-card-sub">Privacy</div>
+          </label>
+          <label class="toggle-card">
+            <input type="checkbox" name="methodology" value="pasta">
+            <div class="toggle-card-title">PASTA</div>
+            <div class="toggle-card-sub">Attacker-view</div>
+          </label>
+        </div>
+      </div>
+
+      <div class="card p-3" style="background: linear-gradient(135deg, #fafbff, #eef2ff); border-color: rgba(99, 102, 241, 0.2);">
+        <label class="flex items-center gap-3 cursor-pointer" style="margin: 0;">
+          <input type="checkbox" name="use_llm" id="use-llm" style="width: 18px; height: 18px; accent-color: var(--c-brand);">
+          <div style="flex: 1;">
+            <div class="flex items-center gap-2">
+              <span class="font-semibold text-sm">Enable AI enhancement</span>
+              <span id="llm-status-badge" class="role-badge role-inactive" style="font-size: 0.625rem;">Checking...</span>
+            </div>
+            <div class="text-xs text-light mt-1">Claude AI suggests context-specific threats AND infers smarter trust boundaries. Requires <code style="font-family: 'JetBrains Mono', monospace; background: rgba(99, 102, 241, 0.1); padding: 1px 4px; border-radius: 3px; font-size: 0.6875rem;">ANTHROPIC_API_KEY</code></div>
+          </div>
+        </label>
+      </div>
+
+      <div class="card p-3" style="background: linear-gradient(135deg, #fef3c7, #fffbeb); border-color: #fde68a;">
+        <div class="flex items-start gap-2">
+          <span style="font-size: 1.25rem; line-height: 1;">🛡</span>
+          <div style="flex: 1;">
+            <div class="font-semibold text-sm" style="color: #78350f;">Trust boundaries auto-inferred</div>
+            <div class="text-xs mt-1" style="color: #92400e;">We'll partition your components into Internet / DMZ / Application tier / Data tier / Third-party zones automatically. You can edit them in the Data Flow Diagram tab after creation.</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="new-tm-error" class="hidden" style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 0.625rem; border-radius: 8px; font-size: 0.8125rem;"></div>
+    </form>
+
+    <div class="modal-footer">
+      <button type="button" data-close-modal class="btn btn-ghost">Cancel</button>
+      <button type="submit" form="form-new-tm" id="submit-new-tm" class="btn btn-primary">
+        <span class="submit-label">Create &amp; analyze</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- =========== Modal: TM Detail =========== -->
+<div id="modal-tm-detail" class="modal hidden">
+  <div class="modal-card modal-card-lg">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="detail-title"></div>
+        <div class="modal-subtitle" id="detail-subtitle"></div>
+      </div>
+      <button data-close-modal class="modal-close">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="detail-body"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/dfd_editor.js"></script>
+<script src="/static/js/dashboard.js"></script>
+{% endblock %}

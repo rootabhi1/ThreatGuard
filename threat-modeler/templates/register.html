@@ -1,0 +1,113 @@
+{% extends "_base.html" %}
+{% block title %}Create account · ThreatGuard{% endblock %}
+
+{% block body %}
+<div class="auth-page">
+  <div class="auth-hero">
+    <div class="auth-hero-content">
+      <div class="flex items-center gap-3 mb-8">
+        <div class="sidebar-brand-icon">⚡</div>
+        <div>
+          <div style="color: white; font-size: 1.125rem; font-weight: 700;">ThreatGuard</div>
+          <div style="color: var(--c-dark-text-dim); font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;">Security Platform</div>
+        </div>
+      </div>
+
+      <h1>Get started in <span class="accent">60 seconds</span>.</h1>
+      <p>Register for a free account. Once an admin grants you feature access, you can start threat modeling immediately.</p>
+
+      <div class="auth-features">
+        <div class="auth-feature">
+          <div class="auth-feature-icon">✓</div>
+          <div>
+            <div class="auth-feature-title">No setup needed</div>
+            <div class="auth-feature-desc">Describe your system in plain English — we extract components automatically</div>
+          </div>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature-icon">✓</div>
+          <div>
+            <div class="auth-feature-title">Industry-grade output</div>
+            <div class="auth-feature-desc">CVSS 3.1 + 4.0, CWE mappings, OWASP Top 10, downloadable reports</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-form-side">
+    <div class="auth-form animate-fade-in-up">
+      <h2 style="font-size: 1.75rem; margin-bottom: 0.5rem;">Create account</h2>
+      <p class="text-dim text-sm mb-8">Set up your access. An admin will grant you feature access after.</p>
+
+      <form id="register-form" class="flex-col gap-4">
+        <div class="field">
+          <label class="field-label">Full name</label>
+          <input type="text" name="name" required maxlength="80" class="input" placeholder="Jane Doe">
+        </div>
+        <div class="field">
+          <label class="field-label">Email</label>
+          <input type="email" name="email" required class="input" placeholder="jane@company.com">
+        </div>
+        <div class="field">
+          <label class="field-label">Password <span class="field-label-optional">8+ chars</span></label>
+          <input type="password" name="password" required minlength="8" maxlength="128" class="input" placeholder="••••••••">
+        </div>
+        <div id="register-error" class="hidden" style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 0.625rem; border-radius: 8px; font-size: 0.8125rem;"></div>
+        <button type="submit" class="btn btn-primary btn-lg w-full" id="register-submit">
+          <span class="submit-label">Create account</span>
+        </button>
+      </form>
+
+      <p class="text-sm text-dim text-center mt-6">
+        Already have an account?
+        <a href="/" style="color: var(--c-brand); font-weight: 600; text-decoration: none;">Sign in</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('register-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errBox = document.getElementById('register-error');
+  const btn = document.getElementById('register-submit');
+  const label = btn.querySelector('.submit-label');
+  errBox.classList.add('hidden');
+  btn.disabled = true;
+  label.innerHTML = '<span class="dots-loader"><span></span><span></span><span></span></span> Creating...';
+
+  const fd = new FormData(e.target);
+  try {
+    const r = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        email: fd.get('email'),
+        password: fd.get('password'),
+        full_name: fd.get('name'),
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(UI.formatApiError(data, 'Registration failed'));
+
+    // Auto-login
+    const lr = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: fd.get('email'), password: fd.get('password')}),
+    });
+    const ld = await lr.json();
+    Auth.setToken(ld.access_token, ld.refresh_token, ld.user);
+    Auth.redirectForRole(ld.user.role);
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.classList.remove('hidden');
+    btn.disabled = false;
+    label.textContent = 'Create account';
+  }
+});
+</script>
+{% endblock %}

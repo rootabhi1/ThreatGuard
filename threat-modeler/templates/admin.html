@@ -1,0 +1,283 @@
+{% extends "_shell.html" %}
+{% block title %}Admin · ThreatGuard{% endblock %}
+{% block page_title %}Admin Console{% endblock %}
+{% block page_subtitle %}Manage users, roles, releases, and feature access{% endblock %}
+
+{% block content %}
+
+<!-- Tabs -->
+<div class="tabs" style="margin-bottom: 1.5rem;">
+  <button data-tab="users" class="tab active">Users</button>
+  <button data-tab="releases" class="tab">Releases &amp; Features</button>
+  <button data-tab="audit" class="tab">Audit Log</button>
+</div>
+
+<!-- ========== USERS TAB ========== -->
+<section id="tab-users" class="tab-panel">
+  <div class="flex justify-between items-center mb-4">
+    <div>
+      <h2 style="font-size: 1.125rem; font-weight: 700; margin: 0;">All users</h2>
+      <p class="text-sm text-light" style="margin-top: 2px;">Create and manage role-based access</p>
+    </div>
+    <button id="btn-new-user" class="btn btn-primary">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+      New user
+    </button>
+  </div>
+  <div class="table-card">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="users-tbody">
+        <tr><td colspan="6" class="text-center text-light" style="padding: 1.5rem;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ========== RELEASES TAB ========== -->
+<section id="tab-releases" class="tab-panel hidden">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Releases column -->
+    <div>
+      <div class="flex justify-between items-center mb-3">
+        <h2 style="font-size: 1.125rem; font-weight: 700; margin: 0;">Releases</h2>
+        <button id="btn-new-release" class="btn btn-secondary btn-sm">+ New release</button>
+      </div>
+      <div id="releases-list" class="flex-col gap-2">
+        <p class="text-sm text-light">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Features column -->
+    <div>
+      <div class="flex justify-between items-center mb-3">
+        <div>
+          <h2 style="font-size: 1.125rem; font-weight: 700; margin: 0;">Features</h2>
+          <p id="selected-release-label" class="text-xs text-light" style="margin-top: 2px;">Select a release to view features</p>
+        </div>
+        <button id="btn-new-feature" class="btn btn-secondary btn-sm" disabled>+ New feature</button>
+      </div>
+      <div id="features-list" class="flex-col gap-2">
+        <p class="text-sm text-light">Select a release first.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== AUDIT TAB ========== -->
+<section id="tab-audit" class="tab-panel hidden">
+  <div class="flex justify-between items-center mb-4">
+    <div>
+      <h2 style="font-size: 1.125rem; font-weight: 700; margin: 0;">Audit log <span id="audit-count" class="text-sm text-light" style="font-weight: 400;"></span></h2>
+      <p class="text-sm text-light" style="margin-top: 2px;">Every grant and deny is recorded</p>
+    </div>
+    <button id="btn-refresh-audit" class="btn btn-secondary btn-sm">↻ Refresh</button>
+  </div>
+  <div class="table-card">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Decision</th>
+          <th>Resource</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody id="audit-tbody">
+        <tr><td colspan="6" class="text-center text-light" style="padding: 1.5rem;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ========== Modal: New user ========== -->
+<div id="modal-new-user" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Create new user</div>
+        <div class="modal-subtitle">Set role and feature access at creation</div>
+      </div>
+      <button data-close-modal class="modal-close">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="form-new-user" class="modal-body flex-col gap-4">
+      <div>
+        <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Email</label>
+        <input type="email" name="email" required class="input" />
+      </div>
+      <div>
+        <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Full name</label>
+        <input type="text" name="full_name" required class="input" />
+      </div>
+      <div>
+        <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Password (8+ chars)</label>
+        <input type="password" name="password" required minlength="8" class="input" />
+      </div>
+      <div>
+        <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Role</label>
+        <select name="role" id="new-user-role" class="select">
+          <option value="user">User — creates threat models</option>
+          <option value="management">Management — read-only oversight</option>
+          <option value="admin">Admin — full access</option>
+        </select>
+      </div>
+      <div id="feature-access-wrapper">
+        <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Feature access</label>
+        <div id="feature-checkboxes" class="flex-col gap-1" style="background: var(--c-surface-2); border-radius: 8px; padding: 0.75rem; max-height: 12rem; overflow-y: auto;"></div>
+        <p class="text-xs text-light" style="margin-top: 4px;">Tick features this user can create threat models in.</p>
+      </div>
+      <div id="new-user-error" class="hidden" style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.875rem;"></div>
+      <div class="flex justify-end gap-2" style="border-top: 1px solid var(--c-border); padding-top: 1rem; margin-top: 0.5rem;">
+        <button type="button" data-close-modal class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create user</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========== Modal: Edit user ========== -->
+<div id="modal-edit-user" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Edit user</div>
+        <div class="modal-subtitle" id="edit-user-email"></div>
+      </div>
+      <button data-close-modal class="modal-close">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body flex-col gap-4">
+      <div>
+        <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Role</label>
+        <select id="edit-user-role" class="select">
+          <option value="user">User</option>
+          <option value="management">Management</option>
+          <option value="admin">Admin</option>
+        </select>
+        <p class="text-xs text-light" style="margin-top: 4px;">Role changes immediately invalidate all the user's active sessions.</p>
+      </div>
+      <div>
+        <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Feature access</label>
+        <div id="edit-feature-checkboxes" class="flex-col gap-1" style="background: var(--c-surface-2); border-radius: 8px; padding: 0.75rem; max-height: 12rem; overflow-y: auto;"></div>
+      </div>
+      <div id="edit-user-error" class="hidden" style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.875rem;"></div>
+      <div id="edit-user-msg" class="hidden" style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.875rem;"></div>
+      <div class="flex justify-between gap-2" style="border-top: 1px solid var(--c-border); padding-top: 1rem; margin-top: 0.5rem;">
+        <button id="btn-deactivate-user" class="btn btn-danger">Deactivate user</button>
+        <div class="flex gap-2">
+          <button data-close-modal class="btn btn-ghost">Cancel</button>
+          <button id="btn-save-user" class="btn btn-primary">Save changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Modal: New release ========== -->
+<div id="modal-new-release" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">New release</div>
+      <button data-close-modal class="modal-close">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="form-new-release" class="modal-body flex-col gap-4">
+      <div>
+        <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Name</label>
+        <input type="text" name="name" required class="input" placeholder="e.g. Q1 2026 Platform Launch" />
+      </div>
+      <div>
+        <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Description</label>
+        <textarea name="description" rows="2" class="input"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Status</label>
+          <select name="status" class="select">
+            <option value="planned">Planned</option>
+            <option value="in_progress" selected>In progress</option>
+            <option value="released">Released</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Target date</label>
+          <input type="date" name="target_date" class="input" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2" style="border-top: 1px solid var(--c-border); padding-top: 1rem; margin-top: 0.5rem;">
+        <button type="button" data-close-modal class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create release</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========== Modal: New feature ========== -->
+<div id="modal-new-feature" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">New feature</div>
+      <button data-close-modal class="modal-close">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="form-new-feature" class="modal-body flex-col gap-4">
+      <div>
+        <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Release</label>
+        <select name="release_id" id="feat-release-select" required class="select">
+          <option value="">Select a release...</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Name</label>
+        <input type="text" name="name" required class="input" placeholder="e.g. User Authentication" />
+      </div>
+      <div>
+        <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Description</label>
+        <textarea name="description" rows="2" class="input"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Status</label>
+          <select name="status" class="select">
+            <option value="draft">Draft</option>
+            <option value="in_review">In review</option>
+            <option value="in_sprint" selected>In sprint</option>
+            <option value="released">Released</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-medium" style="display: block; margin-bottom: 4px;">Target date</label>
+          <input type="date" name="target_date" class="input" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2" style="border-top: 1px solid var(--c-border); padding-top: 1rem; margin-top: 0.5rem;">
+        <button type="button" data-close-modal class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create feature</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/admin.js"></script>
+{% endblock %}

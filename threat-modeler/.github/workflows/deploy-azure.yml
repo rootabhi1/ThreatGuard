@@ -1,0 +1,99 @@
+name: Deploy to Azure App Service
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AZURE_RESOURCE_GROUP: threat-modeler-rg
+  AZURE_WEBAPP_NAME: threat-modeler-prod        # change to match your deployed app
+  ACR_NAME: tmacrXXXXXX                          # change to match your ACR
+  IMAGE_NAME: threat-modeler
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Use OIDC federation — no client secrets stored.
+      # See setup notes at the bottom of this file.
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push image with ACR Tasks
+        run: |
+          az acr build \
+            --registry "$ACR_NAME" \
+            --image "$IMAGE_NAME:${{ github.sha }}" \
+            --image "$IMAGE_NAME:latest" \
+            --file Dockerfile \
+            .
+
+      - name: Update Web App to new image
+        run: |
+          az webapp config container set \
+            --name "$AZURE_WEBAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --container-image-name "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${{ github.sha }}"
+
+      - name: Restart Web App
+        run: |
+          az webapp restart \
+            --name "$AZURE_WEBAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP"
+
+      - name: Smoke test
+        run: |
+          URL="https://$(az webapp show -n "$AZURE_WEBAPP_NAME" -g "$AZURE_RESOURCE_GROUP" --query defaultHostName -o tsv)"
+          echo "Deployed to $URL"
+          # Give it 60s to come back up after restart, then check health
+          for i in 1 2 3 4 5 6; do
+            sleep 15
+            if curl -fsS "$URL/api/health" >/dev/null; then
+              echo "✓ Health check passed"
+              exit 0
+            fi
+            echo "  attempt $i/6: not ready yet"
+          done
+          echo "✗ Health check did not pass within 90s"
+          exit 1
+
+# ===========================================================================
+#  One-time setup for OIDC federation (avoids storing secrets):
+#
+#  1. Register an app + service principal:
+#       az ad app create --display-name "threat-modeler-gh-actions"
+#       APP_ID="$(az ad app list --display-name 'threat-modeler-gh-actions' --query '[0].appId' -o tsv)"
+#       az ad sp create --id "$APP_ID"
+#
+#  2. Grant Contributor on the resource group:
+#       SUB_ID="$(az account show --query id -o tsv)"
+#       az role assignment create --role Contributor \
+#         --assignee "$APP_ID" \
+#         --scope "/subscriptions/$SUB_ID/resourceGroups/threat-modeler-rg"
+#
+#  3. Create a federated credential for this repo:
+#       az ad app federated-credential create \
+#         --id "$APP_ID" \
+#         --parameters '{
+#           "name": "main-branch",
+#           "issuer": "https://token.actions.githubusercontent.com",
+#           "subject": "repo:OWNER/REPO:ref:refs/heads/main",
+#           "audiences": ["api://AzureADTokenExchange"]
+#         }'
+#
+#  4. Add three repository secrets in GitHub:
+#       AZURE_CLIENT_ID       = $APP_ID
+#       AZURE_TENANT_ID       = $(az account show --query tenantId -o tsv)
+#       AZURE_SUBSCRIPTION_ID = $(az account show --query id -o tsv)
+# ===========================================================================
