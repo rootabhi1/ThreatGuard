@@ -120,12 +120,24 @@ app = FastAPI(title="Threat Modeler", version="2.1")
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware)
+# CORS: browsers reject (and it is unsafe to send) wildcard origins together
+# with credentials. Only enable credentials when explicit origins are configured;
+# a bare "*" default falls back to no-credentials, which is the safe public-API mode.
+# Auth uses Bearer tokens in the Authorization header, so credentialed CORS is
+# not required for normal operation.
+_cors_env = os.getenv("CORS_ORIGINS", "*").strip()
+if _cors_env and _cors_env != "*":
+    _cors_origins = [o.strip() for o in _cors_env.split(",") if o.strip()]
+    _cors_allow_credentials = True
+else:
+    _cors_origins = ["*"]
+    _cors_allow_credentials = False
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_credentials=True,
+    allow_credentials=_cors_allow_credentials,
 )
 
 BASE_DIR = Path(__file__).resolve().parent
