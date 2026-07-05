@@ -2,6 +2,8 @@
 
 > Threat modeling for engineering teams — STRIDE, DREAD, LINDDUN, PASTA and OWASP Top 10, with CVSS/CWE/MITRE ATT&CK scoring and compliance mapping. Works fully offline; optionally enriched by an LLM (Claude **or** any OpenAI-compatible model).
 
+[![CI](https://github.com/rootabhi1/Automated-Threat-Modelling/actions/workflows/ci.yml/badge.svg)](https://github.com/rootabhi1/Automated-Threat-Modelling/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/rootabhi1/Automated-Threat-Modelling/actions/workflows/codeql.yml/badge.svg)](https://github.com/rootabhi1/Automated-Threat-Modelling/actions/workflows/codeql.yml)
 [![Live Site](https://img.shields.io/badge/🌐_Live_Site-GitHub_Pages-22c55e?style=flat-square)](https://rootabhi1.github.io/Automated-Threat-Modelling/)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.138+-green?style=flat-square)](https://fastapi.tiangolo.com)
