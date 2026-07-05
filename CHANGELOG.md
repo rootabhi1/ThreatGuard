@@ -11,6 +11,17 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 > `0.1.0`. The internal number will be reconciled with the public scheme in a
 > future release.
 
+## [0.1.1] — 2026-07-05
+
+### Fixed
+- **CSV export** returned HTTP 500 when the system name contained a non-latin-1
+  character (em dash, en dash, accented, CJK, or emoji): the raw name was placed
+  directly in the `Content-Disposition` filename, which is a latin-1 HTTP header.
+  The filename is now emitted per RFC 6266 / RFC 5987 with an ASCII-safe
+  `filename` and a UTF-8 `filename*`, and the original Unicode name is preserved.
+  Added regression tests covering em dash, en dash, accented, CJK, and emoji
+  names across both CSV export paths. (Other export formats were unaffected.)
+
 ## [Unreleased] — targeting v0.1.0 (Community Preview)
 
 ### Added
