@@ -77,7 +77,7 @@ The rule engine always runs; LLM steps are additive and fail safe (see below).
 - **Reports:** ReportLab + svglib (PDF), custom HTML/Markdown/CSV
 - **LLM (optional):** Anthropic SDK and the OpenAI SDK (used for any
   OpenAI-compatible endpoint)
-- **Tests:** in-process FastAPI `TestClient` across 8 suites
+- **Tests:** in-process FastAPI `TestClient` across 7 suites
 
 ## Trust boundaries (of the application itself)
 

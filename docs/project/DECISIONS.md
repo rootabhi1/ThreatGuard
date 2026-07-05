@@ -9,6 +9,19 @@ Evidence for many of these lives in [`../audit/`](../audit/).
 
 ---
 
+### D-016 · Remove the stale `test_new_endpoints.py` suite
+**Context:** CI's first run failed. The file was pytest-style (the other suites
+are self-executing scripts), so the `python test_*.py` loop imported it and
+exited 0 **without running any assertion**; it also needed `pytest` (not a
+dependency) and targeted an **old API** (username/form-login).
+**Decision:** remove it rather than rewrite it.
+**Rationale:** every endpoint it covered is already exercised by the executing
+`test_full_product.py`, so removal loses no real coverage and ends a false
+"green."
+**Consequences:** the battery is 7 genuinely-executing suites; docs updated from
+"8" to "7" (historical audit reports 01–03 left unchanged as point-in-time
+records).
+
 ### D-015 · Keep the audit reports in the repo permanently
 **Context:** the Sprint produced per-phase reports under `docs/audit/`.
 **Decision:** keep them in version control indefinitely.

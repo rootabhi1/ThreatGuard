@@ -30,7 +30,7 @@ ruff check .
 
 ## Checklist
 
-- [ ] All 8 test suites pass and `ruff check .` is clean
+- [ ] All 7 test suites pass and `ruff check .` is clean
 - [ ] No secrets committed; new env vars added to `.env.example`
 - [ ] Documentation updated if behavior changed
 - [ ] Change is small and focused (one concern)

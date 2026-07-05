@@ -93,14 +93,14 @@ threat-modeler/
 │       ├── admin.js, dashboard.js, management.js
 │       ├── dfd_editor.js        # Interactive DFD editor
 │       └── app.js               # Canvas
-└── tests/                       # 8 suites (see below)
+└── tests/                       # 7 suites (see below)
 ```
 
 ---
 
 ## Tests
 
-All eight suites run in-process against a real app instance and SQLite — no server or network needed:
+All seven suites run in-process against a real app instance and SQLite — no server or network needed:
 
 ```bash
 export JWT_SECRET=test INITIAL_ADMIN_EMAIL=admin@corp.io INITIAL_ADMIN_PASSWORD='AdminPass123!' RATE_LIMIT_ENABLED=0
@@ -113,7 +113,6 @@ for t in tests/test_*.py; do python3 "$t"; done
 - `test_page_integrity.py` — UI/template integrity
 - `test_trust_boundaries.py` — boundary inference + DFD
 - `test_api.py` — API integration, auth flows, account lockout
-- `test_new_endpoints.py` — sharing, release diff, status workflow, custom rules
 - `test_full_product.py` — whole-product sweep (119 checks across 17 areas), including a **secure-by-default** pass that calls every route anonymously to confirm none leak
 
 See [`../TESTING.md`](../TESTING.md) for the detailed matrix.

@@ -18,7 +18,7 @@ never run** and PRs had no checks. Fixed by creating real root workflows.
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `ci.yml` | push / PR | `ruff` lint + all 8 test suites on a **Python 3.11 & 3.12** matrix |
+| `ci.yml` | push / PR | `ruff` lint + the test suites on a **Python 3.11 & 3.12** matrix |
 | `codeql.yml` | push / PR / weekly | CodeQL SAST for Python (`security-and-quality`) |
 | `secret-scan.yml` | push / PR / weekly | gitleaks secret scanning over full history |
 | `deploy-azure.yml` | **manual only** | relocated from the nested path, gated to `workflow_dispatch`, build path fixed |
@@ -74,10 +74,31 @@ These resolve the "use the Bug report template" references written in Phase 3.
 - **Semantic versioning:** first public tag `v0.1.0`; see `CHANGELOG.md`. Release
   notes for `v0.1.0` are prepared in Phase 11.
 
+## What the first CI run caught
+
+Turning CI on immediately paid for itself. The first run failed (CodeQL and
+secret-scan passed) and exposed a problem that had been invisible locally:
+
+- **`tests/test_new_endpoints.py` was a stale, never-executed suite.** It was
+  written in **pytest** style (fixtures/classes) while the other suites are
+  self-executing scripts, so the `python test_*.py` loop imported it and exited
+  0 **without running a single assertion**. It also (a) required `pytest`, which
+  is not a dependency, and (b) was written against an **old API** (username +
+  form-login; the app now uses email + JSON), so it would have failed wholesale
+  had it ever run.
+- Every endpoint it targeted (templates, diagram extraction, sharing, release
+  diff, status, custom rules) is already covered by the executing
+  `test_full_product.py`. It was therefore **removed** rather than rewritten —
+  net test coverage is unchanged, and the battery is now **7 genuinely
+  executing suites**. Recorded as decision D-016.
+
+This is exactly the class of issue CI exists to catch: a green-looking local run
+hiding a test that never actually ran.
+
 ## Quality bar
 
 - ✅ Report in `docs/audit/` (this file)
-- ✅ Tests passing — 8/8 suites, on the versions CI will use
+- ✅ Tests passing — 7 suites, verified in a clean virtualenv on the exact CI command
 - ✅ `ruff check .` clean
 - ✅ Small logical commits (lint baseline; CI workflows; templates)
 - ✅ No regressions (behavior unchanged; the only code change is the 3.11 fix)

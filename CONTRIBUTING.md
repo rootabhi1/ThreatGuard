@@ -26,7 +26,7 @@ threat-modeler/
   threat_engine/    methodologies, scoring, DFD, trust boundaries,
                     diagram extraction, the LLM provider layer, reports
   templates/ static/ server-rendered UI
-  tests/            8 in-process test suites
+  tests/            7 in-process test suites
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for how these fit together.
@@ -55,7 +55,7 @@ variables are documented in [`.env.example`](.env.example).
 ## Running the tests
 
 The suites run in-process against a real app instance and SQLite — no server or
-network needed. **Every PR must keep all eight green.**
+network needed. **Every PR must keep all seven green.**
 
 ```bash
 cd threat-modeler
