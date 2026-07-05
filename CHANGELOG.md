@@ -56,5 +56,9 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
   enabled only for explicitly configured origins.
 - Verified secure-by-default: an automated sweep calls every route anonymously
   and confirms none serve protected data.
+- Container image now runs as a non-root user.
+- Removed two unwired, undocumented integration stubs (`notifications.py`,
+  `ticket_export.py`) from the release to reduce attack surface; they will
+  return, wired and tested, when the roadmap integrations land.
 
 [Unreleased]: https://github.com/rootabhi1/Automated-Threat-Modelling/commits/main
