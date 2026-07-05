@@ -12,7 +12,12 @@ Exit codes:
   2 — error / misconfiguration
 """
 from __future__ import annotations
-import argparse, json, os, sys, urllib.request, urllib.error
+import argparse
+import json
+import os
+import sys
+import urllib.request
+import urllib.error
 from pathlib import Path
 
 

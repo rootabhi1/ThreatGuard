@@ -12,7 +12,6 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from threat_engine.trust_boundaries import (
     infer_trust_boundaries_heuristic,
     infer_trust_boundaries,
-    _BOUNDARY_RULES,
 )
 from threat_engine.analyzer import extract_components_from_text
 

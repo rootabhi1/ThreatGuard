@@ -3,8 +3,7 @@ tests/test_new_endpoints.py
 QA test suite for all endpoints added in the enhancement pass.
 Run with:  pytest threat-modeler/tests/test_new_endpoints.py -v
 """
-import io, json, pytest
-from unittest.mock import patch, MagicMock
+import pytest
 from fastapi.testclient import TestClient
 
 # ---------------------------------------------------------------------------

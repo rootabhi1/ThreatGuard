@@ -12,7 +12,9 @@ Env vars:
   NOTIFY_THRESHOLD               — "critical" | "high" | "all"  (default: high)
 """
 from __future__ import annotations
-import os, json, smtplib
+import os
+import json
+import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import urllib.request

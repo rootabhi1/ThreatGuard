@@ -17,14 +17,13 @@ When migrating to Postgres:
 """
 from __future__ import annotations
 
-import json
 import os
 import sqlite3
 import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Iterator
 
 # E5: Custom threat rules table
 INIT_SQL_CUSTOM_RULES = """

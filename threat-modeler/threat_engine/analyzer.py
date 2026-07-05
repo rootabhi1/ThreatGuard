@@ -14,14 +14,13 @@ optionally enhances with Claude API if an API key is configured.
 """
 from __future__ import annotations
 
-import os
 import json
 import uuid
 import re
 import re as _re2
 from typing import Any
 
-from .methodologies import METHODOLOGIES, COMPONENT_TYPES
+from .methodologies import METHODOLOGIES
 
 
 _SEV_RANK = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1, "Info": 0}

@@ -1,7 +1,16 @@
 """Extensive product-wide test battery. Run in-process via TestClient.
 Organized by functional area; prints a pass/fail matrix at the end.
 """
-import os, io, csv, json, struct, zlib, re, subprocess, sys, threading
+import os
+import io
+import csv
+import json
+import struct
+import zlib
+import re
+import subprocess
+import sys
+import threading
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Force test-owned config so the suite is deterministic regardless of caller env.
 os.environ["JWT_SECRET"] = "test-secret"
@@ -122,7 +131,7 @@ check(a, "threat model delete", C.get(f"/api/threat-models/{tmp_tm['id']}", head
 
 # ============ E. THREAT ENGINE ============
 a = area("E. Threat Engine")
-from threat_engine import analyze_system, METHODOLOGIES
+from threat_engine import analyze_system
 for m in ["stride", "dread", "linddun", "pasta", "owasp"]:
     res = analyze_system(SYSTEM, [m])
     check(a, f"methodology '{m}' produces threats", res["summary"]["total"] > 0, f"{res['summary']['total']} threats")

@@ -67,6 +67,13 @@ def to_html(analysis: dict) -> str:
         ("#f59e0b", "#fffbeb"), ("#14b8a6", "#f0fdfa"),
     ]
 
+    # Built here (not inline in the template below) because backslashes inside an
+    # f-string expression are a SyntaxError on Python 3.11 (allowed only from 3.12).
+    meth_chips = "".join(
+        f'<span class="chip" data-meth="{_esc(m)}" onclick="setMeth(\'{_esc(m)}\', this)">{_esc(m.upper())}</span>'
+        for m in analysis["methodologies_used"]
+    )
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -453,7 +460,7 @@ def to_html(analysis: dict) -> str:
     <div class="filter-bar">
       <label>Methodology:</label>
       <span class="chip active" data-meth="all" onclick="setMeth('all', this)">All</span>
-      {''.join(f'<span class="chip" data-meth="{_esc(m)}" onclick="setMeth(\'{_esc(m)}\', this)">{_esc(m.upper())}</span>' for m in analysis['methodologies_used'])}
+      {meth_chips}
       <label style="margin-left:16px">Cross-boundary only:</label>
       <span class="chip cb" id="cb-toggle" onclick="toggleCb(this)">Off</span>
       <span style="flex-grow:1"></span>

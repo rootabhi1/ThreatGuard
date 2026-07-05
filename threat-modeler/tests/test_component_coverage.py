@@ -7,7 +7,6 @@ each component type (web, mobile, API, AI integration, full-stack) and reports:
   * Whether expected threat categories appear
 """
 import sys
-import json
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

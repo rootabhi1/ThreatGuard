@@ -54,11 +54,13 @@ class _FakeJWT:
     @staticmethod
     def encode(payload, secret, algorithm=None):
         # Encode the payload as a fake token (not signed, but recoverable)
-        import json, base64
+        import json
+        import base64
         return "fake." + base64.b64encode(json.dumps(payload).encode()).decode() + ".sig"
     @staticmethod
     def decode(token, secret, algorithms=None):
-        import json, base64
+        import json
+        import base64
         try:
             mid = token.split(".")[1]
             return json.loads(base64.b64decode(mid).decode())
@@ -70,11 +72,10 @@ sys.modules.setdefault("jwt", _FakeJWT())
 
 
 # Now import db + domain
-from db import init_db, db_conn, audit, _now
+from db import init_db, db_conn
 from db import domain
 
 # Import permissions/auth.auth via the package path now that bcrypt/jwt are mocked
-import importlib.util
 _spec = importlib.util.spec_from_file_location(
     "permissions_iso", str(PROJECT_ROOT / "auth" / "permissions.py")
 )
@@ -147,7 +148,7 @@ def t_register_basic():
     u = reg("alice@x.com", "pass12345", "Alice")
     assert u["email"] == "alice@x.com"
     assert u["role"] == "user"
-    assert u["is_active"] == True
+    assert u["is_active"]
 
 t("Self-register creates a user-role account", t_register_basic)
 

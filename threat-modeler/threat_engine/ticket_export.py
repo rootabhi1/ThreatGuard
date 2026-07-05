@@ -6,8 +6,10 @@ Requires env vars:
   JIRA_BASE_URL + JIRA_EMAIL + JIRA_API_TOKEN + JIRA_PROJECT_KEY — for Jira
 """
 from __future__ import annotations
-import os, json, re
-import urllib.request, urllib.error
+import os
+import json
+import urllib.request
+import urllib.error
 
 SEV_TO_GITHUB_LABEL = {
     "Critical": "priority: critical",

@@ -52,7 +52,6 @@ sys.modules.setdefault("jwt", _FakeJWT())
 from db import init_db, db_conn, audit, _now
 from db import domain
 # Import permissions directly to avoid pulling in auth.deps which needs FastAPI
-import importlib.util
 _spec = importlib.util.spec_from_file_location(
     "permissions_isolated", str(PROJECT_ROOT / "auth" / "permissions.py")
 )

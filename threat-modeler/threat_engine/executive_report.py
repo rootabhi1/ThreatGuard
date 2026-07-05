@@ -4,7 +4,7 @@ Generate a PDF executive summary report using WeasyPrint (if installed)
 or an HTML fallback. Calls Claude to write the narrative sections.
 """
 from __future__ import annotations
-import os, json
+import json
 from datetime import datetime
 
 

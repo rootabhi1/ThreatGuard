@@ -7,7 +7,6 @@ This module trusts its caller — pass the ID, get the row.
 from __future__ import annotations
 import json
 from datetime import datetime
-from typing import Any
 
 from db import db_conn, _now
 

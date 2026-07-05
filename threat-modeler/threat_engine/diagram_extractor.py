@@ -4,11 +4,7 @@ Uses Claude vision API to identify components, data flows, and trust boundaries
 from architecture diagrams (PNG/JPG/WebP).
 """
 from __future__ import annotations
-import base64
 import json
-import os
-import re
-import uuid
 
 
 def extract_from_diagram(image_bytes: bytes, media_type: str, description: str = "") -> dict:

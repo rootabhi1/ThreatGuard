@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import io
-import base64
 from datetime import datetime
 
 from .dfd import render_dfd_svg
@@ -263,7 +262,7 @@ def to_pdf(analysis: dict) -> bytes:
     from reportlab.lib.units import inch
     from reportlab.lib import colors
     from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image as RLImage
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
     )
 
     # Try to render the DFD into the PDF. svglib is the standard pairing with ReportLab;

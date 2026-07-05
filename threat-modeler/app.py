@@ -28,7 +28,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
 import json
-import re
 import secrets as _secrets
 import logging as _logging
 import uuid as _uuid
@@ -648,7 +647,8 @@ async def analyze_adhoc(
 def _risk_register_csv(threats: list, system_name: str = "System") -> bytes:
     """Build a CSV risk register from a list of threats. Shared by the
     /api/report/csv route and the {fmt}=csv path."""
-    import csv as _csv, io as _io
+    import csv as _csv
+    import io as _io
     buf = _io.StringIO(); writer = _csv.writer(buf)
     writer.writerow(["ID", "Title", "Severity", "Methodology", "Component", "Category", "CVSS3.1",
                      "Cross-boundary", "ATT&CK ID", "ATT&CK Tactic", "SOC2", "ISO27001", "PCI-DSS", "Description"])
