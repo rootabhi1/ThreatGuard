@@ -91,7 +91,7 @@ Only architecture-diagram images are accepted.
 
 ```mermaid
 flowchart LR
-    F[Uploaded file] --> T{Content-type in\npng/jpeg/webp?}
+    F[Uploaded file] --> T{Content-type in<br>png/jpeg/webp?}
     T -- no --> R415[415 Unsupported]
     T -- yes --> Z{Size within cap?}
     Z -- no --> R413[413 Too Large]

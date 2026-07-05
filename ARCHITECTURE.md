@@ -17,15 +17,15 @@ flowchart LR
     U[Browser / Client] -->|HTTPS + JWT| MW
 
     subgraph APP[FastAPI application]
-        MW[Middleware: security headers,\nrate limit, CORS, request log] --> R[Routes]
+        MW[Middleware: security headers,<br>rate limit, CORS, request log] --> R[Routes]
         R --> AUTH[Auth + RBAC]
         R --> ENG[Threat engine]
-        ENG --> REP[Report renderers\nHTML / PDF / MD / CSV]
+        ENG --> REP[Report renderers<br>HTML / PDF / MD / CSV]
     end
 
     AUTH --> DB[(SQLite)]
     ENG --> DB
-    ENG -.optional.-> LLM[[External LLM provider\nAnthropic / OpenAI-compatible]]
+    ENG -.optional.-> LLM[[External LLM provider<br>Anthropic / OpenAI-compatible]]
 ```
 
 ## Components
@@ -61,7 +61,7 @@ sequenceDiagram
         Eng->>LLM: Extract model / suggest threats
         LLM-->>Eng: Structured suggestions (or failure → skip)
     end
-    Eng->>Eng: Apply rules, score (CVSS/CWE/ATT&CK),\nmap compliance, infer trust boundaries
+    Eng->>Eng: Apply rules, score (CVSS/CWE/ATT&CK),<br>map compliance, infer trust boundaries
     Eng->>DB: Persist threat model + analysis
     API-->>User: Threats, data-flow diagram, reports
 ```
@@ -90,16 +90,16 @@ flowchart TB
         B[Browser / API client]
     end
     subgraph Server[Trusted server zone]
-        A[FastAPI app\nauthN + authZ + validation]
+        A[FastAPI app<br>authN + authZ + validation]
         S[(SQLite — local)]
     end
     subgraph External[Third-party zone]
         P[[LLM provider API]]
     end
 
-    B ==>|"① HTTPS, JWT Bearer\nrate-limited, validated"| A
+    B ==>|"① HTTPS, JWT Bearer<br>rate-limited, validated"| A
     A ==>|"② local, parameterised SQL"| S
-    A -.->|"③ egress: system text / image\nonly when a key is configured"| P
+    A -.->|"③ egress: system text / image<br>only when a key is configured"| P
 ```
 
 - **① Client ↔ server** — the primary boundary. All data endpoints require a
@@ -124,7 +124,7 @@ flowchart TD
     K -- no --> OFF[Return None → rules-only result]
     K -- yes --> P{LLM_PROVIDER / auto-detect}
     P -- anthropic --> AN[Anthropic Messages API]
-    P -- openai --> OA["OpenAI-compatible /v1/chat/completions\n(OpenAI, Azure, Ollama, vLLM, …)"]
+    P -- openai --> OA["OpenAI-compatible /v1/chat/completions<br>(OpenAI, Azure, Ollama, vLLM, …)"]
     AN --> RESP{Success?}
     OA --> RESP
     RESP -- yes --> MERGE[Parse + merge into analysis]
