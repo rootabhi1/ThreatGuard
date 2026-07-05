@@ -9,6 +9,13 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.138+-green?style=flat-square)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/License-MIT-gray?style=flat-square)](LICENSE)
 
+> **Status — v0.1 Community Preview.** Self-hosted and early. Treat generated
+> threat models as a **draft for human review**, not a security sign-off. With no
+> LLM key, everything runs locally; with a provider configured, your system
+> description (and any uploaded diagram) is sent to that provider. No telemetry.
+> Repository: `Automated-Threat-Modelling`; the application (**ThreatGuard**)
+> lives in [`threat-modeler/`](threat-modeler/).
+
 ---
 
 ## Why this project exists
@@ -146,6 +153,12 @@ No LLM key configured ⇒ the app runs in **rules-only** mode with the full meth
 - Security headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, HSTS on HTTPS); reports are XSS-safe (user-supplied names are escaped, including inside embedded JSON).
 - Parameterised SQL throughout; audit log for auth and access decisions.
 
+The full control-by-control design is in
+[`docs/security/SECURITY_ARCHITECTURE.md`](docs/security/SECURITY_ARCHITECTURE.md),
+and the security assessment (with the issues found and fixed) is in
+[`docs/audit/`](docs/audit/). Report vulnerabilities privately per
+[SECURITY.md](SECURITY.md).
+
 ---
 
 ## Testing
@@ -172,7 +185,7 @@ threat-modeler/
   threat_engine/         methodologies, scoring, DFD, trust boundaries,
                          diagram extraction, LLM provider layer, reports
   templates/  static/    server-rendered UI + canvas assets
-  tests/                 test suite (8 files)
+  tests/                 test suite (7 files)
 ```
 
 ---
@@ -193,6 +206,17 @@ threat-modeler/
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
 | [docs/audit/](docs/audit/) | Engineering audit records (repository health, security) |
 | [docs/project/](docs/project/) | Engineering notebook — vision, decision log, future ideas |
+
+---
+
+## Contributing
+
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for
+setup, conventions, and the PR workflow, and look for issues labeled
+[`good first issue`](https://github.com/rootabhi1/Automated-Threat-Modelling/issues?q=is%3Aopen+label%3A%22good+first+issue%22).
+Questions go in [Discussions](https://github.com/rootabhi1/Automated-Threat-Modelling/discussions);
+please report security issues privately per [SECURITY.md](SECURITY.md), not in
+public issues.
 
 ---
 
