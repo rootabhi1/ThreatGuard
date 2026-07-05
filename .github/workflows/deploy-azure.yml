@@ -1,8 +1,9 @@
 name: Deploy to Azure App Service
 
+# Manual only. This intentionally does NOT run on push — auto-deploying a public
+# repo on every merge is unsafe and requires the maintainer's cloud secrets.
+# Trigger it deliberately from the Actions tab when you want to deploy.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 env:
@@ -21,8 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Use OIDC federation — no client secrets stored.
-      # See setup notes at the bottom of this file.
+      # Use OIDC federation — no client secrets stored. See notes at the bottom.
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
@@ -36,8 +36,8 @@ jobs:
             --registry "$ACR_NAME" \
             --image "$IMAGE_NAME:${{ github.sha }}" \
             --image "$IMAGE_NAME:latest" \
-            --file Dockerfile \
-            .
+            --file threat-modeler/Dockerfile \
+            threat-modeler
 
       - name: Update Web App to new image
         run: |
@@ -56,7 +56,6 @@ jobs:
         run: |
           URL="https://$(az webapp show -n "$AZURE_WEBAPP_NAME" -g "$AZURE_RESOURCE_GROUP" --query defaultHostName -o tsv)"
           echo "Deployed to $URL"
-          # Give it 60s to come back up after restart, then check health
           for i in 1 2 3 4 5 6; do
             sleep 15
             if curl -fsS "$URL/api/health" >/dev/null; then
