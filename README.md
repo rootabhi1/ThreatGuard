@@ -175,6 +175,7 @@ threat-modeler/
 | [CHANGELOG.md](CHANGELOG.md) | Notable changes |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
 | [docs/audit/](docs/audit/) | Engineering audit records (repository health, security) |
+| [docs/project/](docs/project/) | Engineering notebook — vision, decision log, future ideas |
 
 ---
 
