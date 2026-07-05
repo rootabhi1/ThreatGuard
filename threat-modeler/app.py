@@ -644,6 +644,18 @@ async def analyze_adhoc(
     return analyze_system(req.system, req.methodologies, use_llm=req.use_llm)
 
 
+def _content_disposition(filename: str) -> str:
+    """Build an RFC 6266 Content-Disposition value with an ASCII-safe ``filename``
+    and a UTF-8 ``filename*`` (RFC 5987), so a system name containing non-latin-1
+    characters cannot break the latin-1 HTTP header. The original Unicode name is
+    preserved, percent-encoded, in ``filename*``."""
+    import unicodedata
+    from urllib.parse import quote
+    ascii_name = unicodedata.normalize("NFKD", filename).encode("ascii", "ignore").decode("ascii")
+    ascii_name = ascii_name.replace('"', "").replace("\\", "").strip() or "risk_register.csv"
+    return "attachment; filename=\"{}\"; filename*=UTF-8''{}".format(ascii_name, quote(filename, safe=""))
+
+
 def _risk_register_csv(threats: list, system_name: str = "System") -> bytes:
     """Build a CSV risk register from a list of threats. Shared by the
     /api/report/csv route and the {fmt}=csv path."""
@@ -681,7 +693,7 @@ async def adhoc_report(
         threats = analysis.get("threats", [])
         system_name = (analysis.get("system", {}) or {}).get("name", "System")
         return Response(_risk_register_csv(threats, system_name), media_type="text/csv",
-                        headers={"Content-Disposition": f'attachment; filename="risk_register_{system_name.replace(" ", "_")}.csv"'})
+                        headers={"Content-Disposition": _content_disposition(f"risk_register_{system_name.replace(' ', '_')}.csv")})
     return Response(to_pdf(analysis), media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{fname}.pdf"'})
 
@@ -1094,7 +1106,7 @@ async def report_csv(request: Request, user: dict = Depends(get_current_user)):
     body = await request.json()
     threats = body.get("threats", []); system_name = body.get("system", {}).get("name", "System")
     return Response(content=_risk_register_csv(threats, system_name), media_type="text/csv",
-                    headers={"Content-Disposition": f'attachment; filename="risk_register_{system_name.replace(" ","_")}.csv"'})
+                    headers={"Content-Disposition": _content_disposition(f"risk_register_{system_name.replace(' ', '_')}.csv")})
 
 
 # ===========================================================================
