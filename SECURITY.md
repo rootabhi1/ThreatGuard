@@ -45,7 +45,9 @@ provider); and self-inflicted misconfiguration (e.g. deploying with a weak
 ## Security posture (summary)
 
 The current posture is documented in the audit records under
-[`docs/audit/`](docs/audit/). In short:
+[`docs/audit/`](docs/audit/), and the full control-by-control design is in
+[`docs/security/SECURITY_ARCHITECTURE.md`](docs/security/SECURITY_ARCHITECTURE.md).
+In short:
 
 - **Auth:** JWT with refresh-token rotation and logout revocation; bcrypt
   password hashing; account lockout; per-IP rate limiting on auth endpoints.

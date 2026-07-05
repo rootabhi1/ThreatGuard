@@ -169,6 +169,7 @@ threat-modeler/
 | [FAQ.md](FAQ.md) | Why AI, supported/local LLMs, accuracy, data handling, self-hosting |
 | [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) | Candid account of what the tool does and doesn't do |
 | [SECURITY.md](SECURITY.md) | Vulnerability disclosure, security posture, hardening |
+| [docs/security/SECURITY_ARCHITECTURE.md](docs/security/SECURITY_ARCHITECTURE.md) | Control-by-control security design (boundaries, LLM flow, prompt lifecycle, threat assumptions) |
 | [SUPPORT.md](SUPPORT.md) | Where to ask questions and report issues |
 | [ROADMAP.md](ROADMAP.md) | Direction and planned work |
 | [CHANGELOG.md](CHANGELOG.md) | Notable changes |
