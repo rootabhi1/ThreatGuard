@@ -9,6 +9,36 @@
 
 ---
 
+## Why this project exists
+
+Threat modeling is one of the highest-leverage things a team can do for security
+— and one of the most often skipped. Done manually it's slow, inconsistent
+between reviewers, and easy to postpone until "later." The result is that many
+systems ship without anyone having systematically asked *what could go wrong
+here?*
+
+ThreatGuard exists to lower that barrier. It turns a description of a system —
+typed, drawn, or uploaded as a diagram — into a structured, methodology-backed
+threat model in minutes, with consistent scoring and clear mitigations. It gives
+engineers a strong first draft to review rather than a blank page, so threat
+modeling actually happens. It is a force-multiplier for security engineers, not
+a replacement for their judgment.
+
+## Design principles
+
+- **AI assists — it does not replace security engineers.** The deterministic rule
+  engine is the backbone; AI is optional enrichment on top.
+- **Human validation is required.** Every output is a draft for a human to
+  review, never a sign-off.
+- **Secure by default.** Auth on every data endpoint, safe defaults (CORS,
+  headers), and a test that verifies it.
+- **Framework agnostic.** Works offline on rules, or with Claude or any
+  OpenAI-compatible model — including local ones.
+- **Explainable outputs.** Every threat maps to a methodology, a CWE, CVSS
+  scores, ATT&CK/compliance references, and concrete mitigations — no black box.
+
+---
+
 ## What it does
 
 ThreatGuard turns a description of a system — typed, drawn on a canvas, or **uploaded as an architecture diagram** — into a structured threat model: identified threats, severity and CVSS scores, CWE and MITRE ATT&CK references, mapped compliance controls, a data-flow diagram with trust boundaries, and exportable reports.
@@ -127,6 +157,23 @@ threat-modeler/
   templates/  static/    server-rendered UI + canvas assets
   tests/                 test suite (8 files)
 ```
+
+---
+
+## Documentation
+
+| Document | What it covers |
+|----------|----------------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Components, data flow, trust boundaries, LLM flow (with diagrams) |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, tests, conventions, PR flow for first-time contributors |
+| [FAQ.md](FAQ.md) | Why AI, supported/local LLMs, accuracy, data handling, self-hosting |
+| [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) | Candid account of what the tool does and doesn't do |
+| [SECURITY.md](SECURITY.md) | Vulnerability disclosure, security posture, hardening |
+| [SUPPORT.md](SUPPORT.md) | Where to ask questions and report issues |
+| [ROADMAP.md](ROADMAP.md) | Direction and planned work |
+| [CHANGELOG.md](CHANGELOG.md) | Notable changes |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
+| [docs/audit/](docs/audit/) | Engineering audit records (repository health, security) |
 
 ---
 
