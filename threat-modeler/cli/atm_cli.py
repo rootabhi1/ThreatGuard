@@ -4,7 +4,7 @@ cli/atm_cli.py — Automated Threat Modeler CLI
 Wraps the REST API for use in CI/CD pipelines.
 
 Usage:
-  python atm_cli.py analyze --system-file system.json [options]
+  python cli/atm_cli.py analyze --system-file ../examples/systems/simple-api.json [options]
 
 Exit codes:
   0 — analysis complete, no threats above threshold
@@ -40,10 +40,10 @@ def _api(method: str, path: str, body: dict | None = None, token: str = "") -> d
         sys.exit(2)
 
 
-def _login(username: str, password: str) -> str:
-    import urllib.parse
-    data = urllib.parse.urlencode({"username": username, "password": password}).encode()
-    req  = urllib.request.Request(DEFAULT_ATM_URL + "/api/auth/login", data=data, method="POST")
+def _login(email: str, password: str) -> str:
+    body = json.dumps({"email": email, "password": password}).encode()
+    req  = urllib.request.Request(DEFAULT_ATM_URL + "/api/auth/login", data=body, method="POST",
+                                  headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
             return json.loads(r.read()).get("access_token", "")
@@ -56,8 +56,8 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     # Auth
     token = os.getenv("ATM_TOKEN") or ""
     if not token:
-        user = os.getenv("ATM_USER", "admin")
-        pw   = os.getenv("ATM_PASS", "admin")
+        user = os.getenv("ATM_USER", "admin@example.com")
+        pw   = os.getenv("ATM_PASS", "ChangeMe123!")
         token = _login(user, pw)
 
     # Load system definition
@@ -68,14 +68,18 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     system_def = json.loads(system_file.read_text())
 
     frameworks = [f.strip() for f in args.frameworks.split(",")]
-    payload = {
-        "system": system_def.get("system", {"name": system_file.stem}),
-        "components":       system_def.get("components", []),
-        "data_flows":       system_def.get("data_flows", []),
-        "trust_boundaries": system_def.get("trust_boundaries", []),
-        "methodologies":    frameworks,
-        "use_llm":          args.use_llm,
-    }
+    # Accept either a flat system ({name, components, data_flows, trust_boundaries})
+    # or the legacy nested shape ({system: {...}, components: [...], ...}).
+    if "components" in system_def:
+        system = system_def
+    else:
+        system = {
+            **system_def.get("system", {"name": system_file.stem}),
+            "components":       system_def.get("components", []),
+            "data_flows":       system_def.get("data_flows", []),
+            "trust_boundaries": system_def.get("trust_boundaries", []),
+        }
+    payload = {"system": system, "methodologies": frameworks, "use_llm": args.use_llm}
 
     print(f"[atm-cli] Analyzing {payload['system'].get('name')} with {frameworks}…")
     result = _api("POST", "/api/analyze", payload, token)
@@ -136,7 +140,7 @@ def main():
     sub    = parser.add_subparsers(dest="command")
 
     analyze = sub.add_parser("analyze", help="Run threat analysis on a system definition file")
-    analyze.add_argument("--system-file",  default="system.json", help="Path to system.json")
+    analyze.add_argument("--system-file",  default="../examples/systems/simple-api.json", help="Path to a system definition JSON (see examples/systems/)")
     analyze.add_argument("--frameworks",   default="stride",      help="Comma-separated: stride,dread,linddun,pasta")
     analyze.add_argument("--threshold",    default="high",        choices=["info","low","medium","high","critical"],
                          help="Fail if threats at or above this severity exist (default: high)")
