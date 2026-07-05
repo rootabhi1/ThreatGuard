@@ -47,11 +47,40 @@ jobs:
           INITIAL_ADMIN_PASSWORD: AdminPass123!
           RATE_LIMIT_ENABLED: "0"
         run: |
-          fail=0
+          set -uo pipefail
+          echo "Python: $(python -V)"
+          total=0; passed=0; failed=0; failed_list=""
+          run_start=$(date +%s)
           for t in tests/test_*.py; do
-            echo "::group::$t"
+            total=$((total + 1))
             rm -f /tmp/ci.db
-            THREAT_MODELER_DB=/tmp/ci.db python "$t" || fail=1
-            echo "::endgroup::"
+            start=$(date +%s)
+            out=$(THREAT_MODELER_DB=/tmp/ci.db python "$t" 2>&1); rc=$?
+            elapsed=$(( $(date +%s) - start ))
+            if [ "$rc" -eq 0 ]; then
+              passed=$((passed + 1))
+              echo "::group::✅ PASS  $t  (${elapsed}s)"
+              echo "$out" | tail -n 6
+              echo "::endgroup::"
+            else
+              failed=$((failed + 1)); failed_list="${failed_list} ${t}"
+              # GitHub annotation pins the failure to the file in the UI / PR.
+              echo "::error file=threat-modeler/${t}::Test suite failed (exit ${rc})"
+              echo "────────────────────────────────────────────────────────"
+              echo "❌ FAIL  $t  (${elapsed}s, exit ${rc})"
+              echo "──────────────── full output / traceback ────────────────"
+              echo "$out"
+              echo "────────────────────────────────────────────────────────"
+            fi
           done
-          exit $fail
+          run_elapsed=$(( $(date +%s) - run_start ))
+          echo ""
+          echo "══════════════════════ SUMMARY ══════════════════════"
+          echo "Suites: ${total}  |  Passed: ${passed}  |  Failed: ${failed}  |  Total: ${run_elapsed}s"
+          if [ "$failed" -gt 0 ]; then
+            echo "Failed suites:${failed_list}"
+            echo "══════════════════════════════════════════════════════"
+            exit 1
+          fi
+          echo "All ${total} suites passed."
+          echo "══════════════════════════════════════════════════════"
