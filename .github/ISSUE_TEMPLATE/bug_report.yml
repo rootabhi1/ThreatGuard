@@ -1,0 +1,61 @@
+name: Bug report
+description: Report a defect so we can reproduce and fix it
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please **do not** report security
+        vulnerabilities here — use the private process in
+        [SECURITY.md](../blob/main/SECURITY.md).
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and this isn't a duplicate.
+          required: true
+        - label: This is not a security vulnerability (those go through private disclosure).
+          required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what actually happened?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact, minimal steps. Include the input/system description if relevant.
+      placeholder: |
+        1. Start the app with …
+        2. Go to …
+        3. See error …
+    validations:
+      required: true
+  - type: dropdown
+    id: llm-mode
+    attributes:
+      label: LLM mode
+      options:
+        - Rules-only (no LLM key)
+        - Anthropic (Claude)
+        - OpenAI-compatible (OpenAI / Azure / Ollama / vLLM / …)
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Python version, and how you run it (source / Docker).
+      placeholder: "e.g. Ubuntu 24.04, Python 3.11, Docker"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / error output
+      description: Paste relevant output. **Redact any secrets.**
+      render: shell

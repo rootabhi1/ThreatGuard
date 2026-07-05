@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or usage help
+    url: https://github.com/rootabhi1/Automated-Threat-Modelling/discussions
+    about: Ask and browse questions in Discussions. See SUPPORT.md for guidance.
+  - name: Report a security vulnerability (private)
+    url: https://github.com/rootabhi1/Automated-Threat-Modelling/security/advisories/new
+    about: Please disclose privately via GitHub Security — never in a public issue. See SECURITY.md.
