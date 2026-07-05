@@ -1,0 +1,65 @@
+ID,Title,Severity,Methodology,Component,Category,CVSS3.1,Cross-boundary,ATT&CK ID,ATT&CK Tactic,SOC2,ISO27001,PCI-DSS,Description
+t_c9fd9002,Stored data tampering via injection,Critical,STRIDE,Database,Tampering,7.3,No,,,,,,SQL/NoSQL/command injection alters records or schema.
+t_4749fdd7,Broken access control / missing authz check,Critical,STRIDE,Database,Elevation of Privilege,7.6,No,,,,,,Endpoints fail to verify the caller has permission for the action.
+t_40d486d0,Container / process escape,Critical,STRIDE,Database,Elevation of Privilege,7.6,No,,,,,,Attacker breaks out of a sandbox to gain host privileges.
+t_63b13bc6,Privilege transit across boundary: REST API → Database,Critical,STRIDE,Database,Elevation of Privilege,8.9,Yes,,,,,,"If the receiver in 'Data tier' acts on behalf of the caller, attackers compromising 'Application tier' may inherit the receiver's privileges (confused-deputy)."
+t_2813aa95,Broken access control / missing authz check,Critical,STRIDE,REST API,Elevation of Privilege,8.3,No,,,,,,Endpoints fail to verify the caller has permission for the action.
+t_0bca504a,Container / process escape,Critical,STRIDE,REST API,Elevation of Privilege,8.3,No,,,,,,Attacker breaks out of a sandbox to gain host privileges.
+t_4fe50324,Privilege transit across boundary: User → REST API,Critical,STRIDE,REST API,Elevation of Privilege,9.9,Yes,,,,,,"If the receiver in 'Application tier' acts on behalf of the caller, attackers compromising 'Internet' may inherit the receiver's privileges (confused-deputy)."
+t_b0e5cd65,Data-in-transit modification,High,STRIDE,Database,Tampering,7.3,No,,,,,,Attacker on the network path alters request/response payloads.
+t_114d37be,Config / secret tampering,High,STRIDE,Database,Tampering,7.3,No,,,,,,Unauthorized changes to runtime config alter security behavior.
+t_a27c43bc,Log tampering,High,STRIDE,Database,Repudiation,7.3,No,,,,,,An attacker with access modifies or deletes audit trails.
+t_2c4c082a,Sensitive data exposure in transit,High,STRIDE,Database,Information Disclosure,5.7,No,T1552,Credential Access,,,,"PII, secrets, or tokens transmitted over unencrypted channels."
+t_9f2d86be,Sensitive data exposure at rest,High,STRIDE,Database,Information Disclosure,5.7,No,T1552,Credential Access,,,,Stored PII / secrets accessible without proper authorization.
+t_91905f7c,Insecure direct object reference (IDOR),High,STRIDE,Database,Information Disclosure,5.7,No,T1552,Credential Access,,,,User can access another user's resources by guessing IDs.
+t_67622382,Application-layer DDoS,High,STRIDE,Database,Denial of Service,7.3,No,T1499,Impact,A1.1 A1.2,A.17.1.1,6.3,"Attacker floods expensive endpoints (e.g., search, login)."
+t_57b2d2d4,Privilege escalation via mass assignment,High,STRIDE,Database,Elevation of Privilege,7.6,No,,,,,,"User submits extra fields (e.g., role=admin) and they bind to the model."
+t_0cdc0c9c,Unencrypted flow: REST API → Database,High,STRIDE,Database,Information Disclosure,5.7,No,T1040,Credential Access,CC6.7,A.10.1.1,4.1,Data flow '' uses TCP without encryption.
+t_951b6eb3,Unauthenticated flow: REST API → Database,High,STRIDE,Database,Spoofing,5.7,No,,,,,,Data flow has no authentication mechanism declared.
+t_0f9f4061,Trust-boundary crossing without strong authn: REST API → Database,High,STRIDE,Database,Spoofing,6.8,Yes,T1110,Credential Access,CC6.1 CC6.2,A.9.2.1 A.9.4.2,8.2 8.6,Flow '' crosses trust boundary 'Application tier' → 'Data tier'. Caller identity must be re-verified at the boundary; existing trust does not transit.
+t_a37c2c0e,Cross-boundary input not validated: REST API → Database,High,STRIDE,Database,Tampering,8.7,Yes,T1190,Initial Access,,,,"Data crossing the trust boundary into 'Data tier' must be treated as untrusted, even if the source is internal. Implicit trust is the most common cause of injection / SSRF / deserialization bugs."
+t_9160bbb8,Cross-boundary data exposure risk: REST API → Database,High,STRIDE,Database,Information Disclosure,6.8,Yes,T1552,Credential Access,,,,Information leaving 'Application tier' into 'Data tier' may include data the receiving zone is not authorized to see. Cross-boundary egress is a common data-leak surface.
+t_c6454206,Authentication bypass via credential stuffing,High,STRIDE,REST API,Spoofing,7.5,No,T1110,Credential Access,CC6.1 CC6.2,A.9.2.1 A.9.4.2,8.2 8.6,Attackers reuse leaked credentials to impersonate legitimate users.
+t_e72507b6,Session token hijacking,High,STRIDE,REST API,Spoofing,7.5,No,T1110,Credential Access,CC6.1 CC6.2,A.9.2.1 A.9.4.2,8.2 8.6,Attacker steals or predicts a session token to impersonate a user.
+t_3810ac32,API key / service identity spoofing,High,STRIDE,REST API,Spoofing,7.5,No,T1110,Credential Access,CC6.1 CC6.2,A.9.2.1 A.9.4.2,8.2 8.6,An attacker obtains or forges an API key to act as a trusted service.
+t_630b66af,Log tampering,High,STRIDE,REST API,Repudiation,7.5,No,,,,,,An attacker with access modifies or deletes audit trails.
+t_c5eaa613,Sensitive data exposure in transit,High,STRIDE,REST API,Information Disclosure,7.5,No,T1040,Credential Access,CC6.7,A.10.1.1,4.1,"PII, secrets, or tokens transmitted over unencrypted channels."
+t_155e3a9a,Sensitive data exposure at rest,High,STRIDE,REST API,Information Disclosure,7.5,No,T1552,Credential Access,,,,Stored PII / secrets accessible without proper authorization.
+t_43b652a4,Insecure direct object reference (IDOR),High,STRIDE,REST API,Information Disclosure,7.5,No,T1552,Credential Access,,,,User can access another user's resources by guessing IDs.
+t_0c986b64,Application-layer DDoS,High,STRIDE,REST API,Denial of Service,7.5,No,T1499,Impact,A1.1 A1.2,A.17.1.1,6.3,"Attacker floods expensive endpoints (e.g., search, login)."
+t_ba8b7893,Privilege escalation via mass assignment,High,STRIDE,REST API,Elevation of Privilege,8.3,No,,,,,,"User submits extra fields (e.g., role=admin) and they bind to the model."
+t_f6ef17f1,Unauthenticated flow: User → REST API,High,STRIDE,REST API,Spoofing,7.5,No,,,,,,Data flow has no authentication mechanism declared.
+t_5a6da766,Trust-boundary crossing without strong authn: User → REST API,High,STRIDE,REST API,Spoofing,8.6,Yes,T1110,Credential Access,CC6.1 CC6.2,A.9.2.1 A.9.4.2,8.2 8.6,Flow '' crosses trust boundary 'Internet' → 'Application tier'. Caller identity must be re-verified at the boundary; existing trust does not transit.
+t_fb994fd4,Cross-boundary input not validated: User → REST API,High,STRIDE,REST API,Tampering,8.6,Yes,T1190,Initial Access,,,,"Data crossing the trust boundary into 'Application tier' must be treated as untrusted, even if the source is internal. Implicit trust is the most common cause of injection / SSRF / deserialization bugs."
+t_8f8363cd,Cross-boundary data exposure risk: User → REST API,High,STRIDE,REST API,Information Disclosure,8.6,Yes,T1552,Credential Access,,,,Information leaving 'Internet' into 'Application tier' may include data the receiving zone is not authorized to see. Cross-boundary egress is a common data-leak surface.
+t_627b61c4,Authentication bypass via credential stuffing,High,STRIDE,User,Spoofing,7.5,No,T1110,Credential Access,CC6.1 CC6.2,A.9.2.1 A.9.4.2,8.2 8.6,Attackers reuse leaked credentials to impersonate legitimate users.
+t_c9125373,Session token hijacking,High,STRIDE,User,Spoofing,7.5,No,T1110,Credential Access,CC6.1 CC6.2,A.9.2.1 A.9.4.2,8.2 8.6,Attacker steals or predicts a session token to impersonate a user.
+t_a166b141,API key / service identity spoofing,High,STRIDE,User,Spoofing,7.5,No,T1110,Credential Access,CC6.1 CC6.2,A.9.2.1 A.9.4.2,8.2 8.6,An attacker obtains or forges an API key to act as a trusted service.
+t_90708db6,Insufficient audit logging,Medium,STRIDE,Database,Repudiation,7.3,No,,,,,,Critical user actions cannot be reliably attributed after the fact.
+t_082cd04f,Verbose error messages / stack traces,Medium,STRIDE,Database,Information Disclosure,5.7,No,T1552,Credential Access,,,,Error responses leak implementation details to attackers.
+t_08bc557a,Resource exhaustion via unbounded input,Medium,STRIDE,Database,Denial of Service,7.3,No,T1499,Impact,A1.1 A1.2,A.17.1.1,6.3,Large payloads or unbounded loops exhaust CPU/memory.
+t_89a151b1,Algorithmic complexity attack,Medium,STRIDE,Database,Denial of Service,7.3,No,T1499,Impact,A1.1 A1.2,A.17.1.1,6.3,"Crafted inputs trigger worst-case algorithm behavior (e.g., regex DoS)."
+t_12e50f8e,Insufficient audit logging,Medium,STRIDE,REST API,Repudiation,7.5,No,,,,,,Critical user actions cannot be reliably attributed after the fact.
+t_a1bb8980,Verbose error messages / stack traces,Medium,STRIDE,REST API,Information Disclosure,7.5,No,T1552,Credential Access,,,,Error responses leak implementation details to attackers.
+t_6bba296b,Resource exhaustion via unbounded input,Medium,STRIDE,REST API,Denial of Service,7.5,No,T1499,Impact,A1.1 A1.2,A.17.1.1,6.3,Large payloads or unbounded loops exhaust CPU/memory.
+t_6067cfa4,Algorithmic complexity attack,Medium,STRIDE,REST API,Denial of Service,7.5,No,T1499,Impact,A1.1 A1.2,A.17.1.1,6.3,"Crafted inputs trigger worst-case algorithm behavior (e.g., regex DoS)."
+t_d249852a,Sensitive data stored in plaintext,Critical,OWASP TOP 10,Database,A02 Cryptographic Failures,5.7,No,T1552,Credential Access,,,,PII or passwords stored without encryption.
+t_c093a894,SQL injection via unsanitised input,Critical,OWASP TOP 10,Database,A03 Injection,5.7,No,T1552,Credential Access,,,,Attacker manipulates SQL queries.
+t_1562b5c9,Command injection via shell execution,Critical,OWASP TOP 10,Database,A03 Injection,5.7,No,T1552,Credential Access,,,,User input passed to OS shell.
+t_54c01e84,Default credentials left on service,Critical,OWASP TOP 10,Database,A05 Security Misconfiguration,5.7,No,T1552,Credential Access,,,,Admin password left at factory default.
+t_f660534b,Missing function-level access control,Critical,OWASP TOP 10,REST API,A01 Broken Access Control,0.0,No,T1190,Initial Access,,,,Admin endpoints accessible to low-privilege users.
+t_de4e850d,Sensitive data stored in plaintext,Critical,OWASP TOP 10,REST API,A02 Cryptographic Failures,0.0,No,T1190,Initial Access,,,,PII or passwords stored without encryption.
+t_da28d2eb,SQL injection via unsanitised input,Critical,OWASP TOP 10,REST API,A03 Injection,0.0,No,T1190,Initial Access,,,,Attacker manipulates SQL queries.
+t_5720333a,Command injection via shell execution,Critical,OWASP TOP 10,REST API,A03 Injection,0.0,No,T1190,Initial Access,,,,User input passed to OS shell.
+t_aa5f1bf2,Default credentials left on service,Critical,OWASP TOP 10,REST API,A05 Security Misconfiguration,0.0,No,T1190,Initial Access,,,,Admin password left at factory default.
+t_b1982a33,Weak or absent MFA on privileged accounts,Critical,OWASP TOP 10,REST API,A07 Authentication Failures,0.0,No,T1190,Initial Access,,,,Admin accounts authenticated by password only.
+t_f21ac022,SSRF via user-supplied URL parameter,Critical,OWASP TOP 10,REST API,A10 Server-Side Request Forgery,0.0,No,T1190,Initial Access,,,,Attacker makes server fetch internal metadata endpoints.
+t_dcb94a4a,Cleartext transmission of credentials,High,OWASP TOP 10,Database,A02 Cryptographic Failures,5.7,No,T1040,Credential Access,CC6.7,A.10.1.1,4.1,Passwords transmitted over HTTP.
+t_355bdb0e,Unencrypted flow: REST API → Database,High,OWASP TOP 10,Database,Disclosure of information,5.7,No,T1040,Credential Access,CC6.7,A.10.1.1,4.1,Data flow '' uses TCP without encryption.
+t_3bfadda0,Unauthenticated flow: REST API → Database,High,OWASP TOP 10,Database,Stage 3 — Application Decomposition,6.3,No,,,,,,Data flow has no authentication mechanism declared.
+t_54e8bef0,Insecure Direct Object Reference (IDOR),High,OWASP TOP 10,REST API,A01 Broken Access Control,0.0,No,T1190,Initial Access,,,,User accesses other users data by modifying IDs.
+t_0e648cd7,Cleartext transmission of credentials,High,OWASP TOP 10,REST API,A02 Cryptographic Failures,0.0,No,T1040,Credential Access,CC6.7,A.10.1.1,4.1,Passwords transmitted over HTTP.
+t_cf698e6e,No rate limiting on login endpoint,High,OWASP TOP 10,REST API,A07 Authentication Failures,0.0,No,T1190,Initial Access,,,,Brute-force and credential stuffing possible.
+t_7e0f5227,Unauthenticated flow: User → REST API,High,OWASP TOP 10,REST API,Stage 3 — Application Decomposition,6.5,No,,,,,,Data flow has no authentication mechanism declared.
+t_4dbb5680,Missing security headers,Medium,OWASP TOP 10,Database,A05 Security Misconfiguration,5.7,No,T1552,Credential Access,,,,"CSP, X-Frame-Options, HSTS absent."
+t_1a2d57dc,Missing security headers,Medium,OWASP TOP 10,REST API,A05 Security Misconfiguration,0.0,No,T1190,Initial Access,,,,"CSP, X-Frame-Options, HSTS absent."

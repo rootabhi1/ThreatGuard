@@ -61,9 +61,24 @@ A full generated report is checked in at **[`docs/sample-report.html`](docs/samp
 |---|---|---|
 | ![Dashboard](docs/screenshots/01_dashboard.png) | ![Canvas](docs/screenshots/02_new_threat_model.png) | ![Analysis](docs/screenshots/03_threat_analysis.png) |
 
+Ready-to-use example system definitions and generated reports are in
+[`examples/`](examples/) — start with `examples/systems/simple-api.json`.
+
 ---
 
 ## Run locally
+
+**One command** (Unix/macOS) — creates a virtualenv, installs dependencies, and
+starts the app with safe dev defaults:
+
+```bash
+git clone https://github.com/rootabhi1/Automated-Threat-Modelling
+cd Automated-Threat-Modelling
+make dev            # → http://localhost:8000  (or: cd threat-modeler && ./run.sh)
+```
+
+`make setup` / `make test` / `make lint` are also available. Prefer to do it by
+hand (or on Windows)? The manual steps:
 
 ```bash
 # 1. Clone
