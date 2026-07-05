@@ -12,6 +12,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Run as a non-root user; ensure the runtime data directory exists and is writable.
+RUN useradd --create-home --uid 10001 appuser \
+    && mkdir -p /app/data \
+    && chown -R appuser:appuser /app
+USER appuser
+
 # In containers we always want to bind 0.0.0.0 so the orchestrator can route to us.
 ENV HOST=0.0.0.0 \
     PORT=8000
