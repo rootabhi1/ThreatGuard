@@ -16,6 +16,28 @@ Rendered inline (Mermaid) in **[../../ARCHITECTURE.md](../../ARCHITECTURE.md)**:
 Mermaid is used so the diagrams live in version control as text, render on
 GitHub, and never go stale against a binary export.
 
+## Workflow diagram
+
+The end-to-end user journey through ThreatGuard, from submitting a system to
+receiving a report:
+
+```mermaid
+flowchart LR
+    A([1. Describe]) -->|"Text description or\narchitecture diagram upload"| B([2. Parse])
+    B -->|"Extract components,\ndata flows, trust boundaries"| C([3. Analyze])
+    C -->|"Rule engine\n+ optional LLM enrichment"| D([4. Assess risk])
+    D -->|"CVSS / CWE / ATT&CK\nscoring & mapping"| E([5. Review])
+    E -->|"Validate & refine\nfindings"| F([6. Report])
+    F -->|"HTML / PDF / MD / CSV"| G([Done])
+
+    classDef default fill:#f4f6f8,stroke:#555,stroke-width:1px,color:#333;
+```
+
+This mirrors the data-flow sequence in
+[ARCHITECTURE.md](../../ARCHITECTURE.md#data-flow-analyzing-a-system): the rule
+engine always runs, LLM enrichment is additive and optional, and risk scoring
+(CVSS 3.1/4.0, CWE, ATT&CK mappings) happens before a report is rendered.
+
 ## Screenshots
 
 Canonical screenshots live in [`../screenshots/`](../screenshots/) and are
@@ -33,8 +55,6 @@ A full generated report: [`../sample-report.html`](../sample-report.html).
 
 These are intentionally listed but not yet produced — contributions welcome:
 
-- `workflow.*` — an end-to-end workflow diagram (describe → analyze → review →
-  report). _Placeholder._
 - `demo.gif` — a short screen capture of the create-and-analyze flow.
   _Placeholder._
 - `banner.*` / `social-preview.*` — repository branding imagery (see the Phase 8
