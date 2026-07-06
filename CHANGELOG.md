@@ -11,6 +11,16 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 > `0.1.0`. The internal number will be reconciled with the public scheme in a
 > future release.
 
+## [0.1.2] — 2026-07-06
+
+### Changed
+- Unified the product name to **ThreatGuard** everywhere it is user-visible: the
+  repository was renamed to `ThreatGuard`, and the in-app display name (API title,
+  page titles, report footers, CLI help) changed from "Threat Modeler" to
+  "ThreatGuard". Internal plumbing (the `threat-modeler/` directory, the
+  `THREAT_MODELER_DB` environment variable, deployment resource names) is
+  unchanged. The previous repository URL redirects automatically.
+
 ## [0.1.1] — 2026-07-05
 
 ### Fixed
