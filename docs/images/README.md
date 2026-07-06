@@ -23,11 +23,11 @@ receiving a report:
 
 ```mermaid
 flowchart LR
-    A([1. Describe]) -->|"Text description or\narchitecture diagram upload"| B([2. Parse])
-    B -->|"Extract components,\ndata flows, trust boundaries"| C([3. Analyze])
-    C -->|"Rule engine\n+ optional LLM enrichment"| D([4. Assess risk])
-    D -->|"CVSS / CWE / ATT&CK\nscoring & mapping"| E([5. Review])
-    E -->|"Validate & refine\nfindings"| F([6. Report])
+    A([1. Describe]) -->|"Text description or<br>architecture diagram upload"| B([2. Parse])
+    B -->|"Extract components,<br>data flows, trust boundaries"| C([3. Analyze])
+    C -->|"Rule engine<br>+ optional LLM enrichment"| D([4. Assess risk])
+    D -->|"CVSS / CWE / ATT&CK<br>scoring & mapping"| E([5. Review])
+    E -->|"Validate & refine<br>findings"| F([6. Report])
     F -->|"HTML / PDF / MD / CSV"| G([Done])
 
     classDef default fill:#f4f6f8,stroke:#555,stroke-width:1px,color:#333;
