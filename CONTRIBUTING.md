@@ -36,8 +36,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for how these fit together.
 Requires **Python 3.11+**.
 
 ```bash
-git clone https://github.com/rootabhi1/Automated-Threat-Modelling
-cd Automated-Threat-Modelling/threat-modeler
+git clone https://github.com/rootabhi1/ThreatGuard
+cd ThreatGuard/threat-modeler
 
 python3 -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt

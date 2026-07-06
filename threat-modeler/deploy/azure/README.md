@@ -1,4 +1,4 @@
-# Deploying Threat Modeler to Azure App Service
+# Deploying ThreatGuard to Azure App Service
 
 Three ways to deploy, in increasing order of complexity. **All produce the same result** — a Web App for Containers running on Linux App Service Plan B1, with HTTPS enforced and ACR pull via managed identity.
 

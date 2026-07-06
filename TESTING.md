@@ -28,8 +28,8 @@ If anything is missing:
 
 ```bash
 # Clone the repo
-git clone https://github.com/rootabhi1/Automated-Threat-Modelling.git
-cd Automated-Threat-Modelling
+git clone https://github.com/rootabhi1/ThreatGuard.git
+cd ThreatGuard
 
 # The application source lives in threat-modeler/
 cd threat-modeler
@@ -472,7 +472,7 @@ threat-modeler/
 ## 🌐 Live Demo
 
 Hosted on GitHub Pages (static demo — login screen only):
-**https://rootabhi1.github.io/Automated-Threat-Modelling/**
+**https://rootabhi1.github.io/ThreatGuard/**
 
 For the full working app, use Docker or Python methods above.
 

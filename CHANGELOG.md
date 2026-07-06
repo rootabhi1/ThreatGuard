@@ -72,4 +72,4 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
   `ticket_export.py`) from the release to reduce attack surface; they will
   return, wired and tested, when the roadmap integrations land.
 
-[Unreleased]: https://github.com/rootabhi1/Automated-Threat-Modelling/commits/main
+[Unreleased]: https://github.com/rootabhi1/ThreatGuard/commits/main

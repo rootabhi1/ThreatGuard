@@ -1,5 +1,5 @@
 /**
- * enhancements.js — Six additive features for Automated Threat Modeler.
+ * enhancements.js — Six additive features for ThreatGuard.
  *
  * 1. System Templates Library
  * 2. Per-threat Remediation Tracking (status, owner, due date)

@@ -2,9 +2,9 @@
 
 > Threat modeling for engineering teams — STRIDE, DREAD, LINDDUN, PASTA and OWASP Top 10, with CVSS/CWE/MITRE ATT&CK scoring and compliance mapping. Works fully offline; optionally enriched by an LLM (Claude **or** any OpenAI-compatible model).
 
-[![CI](https://github.com/rootabhi1/Automated-Threat-Modelling/actions/workflows/ci.yml/badge.svg)](https://github.com/rootabhi1/Automated-Threat-Modelling/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/rootabhi1/Automated-Threat-Modelling/actions/workflows/codeql.yml/badge.svg)](https://github.com/rootabhi1/Automated-Threat-Modelling/actions/workflows/codeql.yml)
-[![Live Site](https://img.shields.io/badge/🌐_Live_Site-GitHub_Pages-22c55e?style=flat-square)](https://rootabhi1.github.io/Automated-Threat-Modelling/)
+[![CI](https://github.com/rootabhi1/ThreatGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/rootabhi1/ThreatGuard/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/rootabhi1/ThreatGuard/actions/workflows/codeql.yml/badge.svg)](https://github.com/rootabhi1/ThreatGuard/actions/workflows/codeql.yml)
+[![Live Site](https://img.shields.io/badge/🌐_Live_Site-GitHub_Pages-22c55e?style=flat-square)](https://rootabhi1.github.io/ThreatGuard/)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.138+-green?style=flat-square)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/License-MIT-gray?style=flat-square)](LICENSE)
@@ -13,7 +13,7 @@
 > threat models as a **draft for human review**, not a security sign-off. With no
 > LLM key, everything runs locally; with a provider configured, your system
 > description (and any uploaded diagram) is sent to that provider. No telemetry.
-> Repository: `Automated-Threat-Modelling`; the application (**ThreatGuard**)
+> Repository: `ThreatGuard`; the application (**ThreatGuard**)
 > lives in [`threat-modeler/`](threat-modeler/).
 
 ---
@@ -81,8 +81,8 @@ Ready-to-use example system definitions and generated reports are in
 starts the app with safe dev defaults:
 
 ```bash
-git clone https://github.com/rootabhi1/Automated-Threat-Modelling
-cd Automated-Threat-Modelling
+git clone https://github.com/rootabhi1/ThreatGuard
+cd ThreatGuard
 make dev            # → http://localhost:8000  (or: cd threat-modeler && ./run.sh)
 ```
 
@@ -91,8 +91,8 @@ hand (or on Windows)? The manual steps:
 
 ```bash
 # 1. Clone
-git clone https://github.com/rootabhi1/Automated-Threat-Modelling
-cd Automated-Threat-Modelling/threat-modeler
+git clone https://github.com/rootabhi1/ThreatGuard
+cd ThreatGuard/threat-modeler
 
 # 2. Virtual environment + dependencies
 python3 -m venv .venv
@@ -213,8 +213,8 @@ threat-modeler/
 
 Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for
 setup, conventions, and the PR workflow, and look for issues labeled
-[`good first issue`](https://github.com/rootabhi1/Automated-Threat-Modelling/issues?q=is%3Aopen+label%3A%22good+first+issue%22).
-Questions go in [Discussions](https://github.com/rootabhi1/Automated-Threat-Modelling/discussions);
+[`good first issue`](https://github.com/rootabhi1/ThreatGuard/issues?q=is%3Aopen+label%3A%22good+first+issue%22).
+Questions go in [Discussions](https://github.com/rootabhi1/ThreatGuard/discussions);
 please report security issues privately per [SECURITY.md](SECURITY.md), not in
 public issues.
 

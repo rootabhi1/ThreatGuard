@@ -1,4 +1,4 @@
-"""Threat Modeler — FastAPI app with RBAC.
+"""ThreatGuard — FastAPI app with RBAC.
 
 Architecture (POC):
   - SQLite via db/__init__.py
@@ -114,7 +114,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         response.headers["X-Request-ID"] = rid
         return response
 
-app = FastAPI(title="Threat Modeler", version="2.1")
+app = FastAPI(title="ThreatGuard", version="2.1")
 
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -1122,7 +1122,7 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", "8000"))
     host = os.getenv("HOST", "127.0.0.1")
-    print(f"\n  Threat Modeler v2.0 running on {host}:{port}")
+    print(f"\n  ThreatGuard v2.0 running on {host}:{port}")
     print(f"  LLM: {_llm_provider()} ({'available' if _llm_available() else 'not configured — rules-only'})")
     print(f"  JWT_SECRET:      {'set' if os.getenv('JWT_SECRET') else 'NOT SET (sessions reset on restart)'}")
     print(f"  Initial admin:   {'configured' if os.getenv('INITIAL_ADMIN_EMAIL') else 'not configured'}\n")

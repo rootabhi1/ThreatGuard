@@ -8,7 +8,7 @@ with a free Azure-managed certificate.
 
 - A registered domain you control (Namecheap, GoDaddy, Cloudflare, Route 53, anywhere)
 - Access to your domain's DNS records
-- The Threat Modeler already deployed via `deploy.sh`
+- The ThreatGuard already deployed via `deploy.sh`
 - App Service Plan on **B1 or higher** (free tier doesn't support custom domains)
 
 ## TL;DR

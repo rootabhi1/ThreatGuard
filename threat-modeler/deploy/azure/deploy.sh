@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  Deploy Threat Modeler to Azure App Service for Containers
+#  Deploy ThreatGuard to Azure App Service for Containers
 #
 #  What this script does:
 #    1. Creates a resource group
@@ -45,7 +45,7 @@ warn() { printf "  \033[33m!\033[0m %s\n" "$*"; }
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_DIR="$( cd "$SCRIPT_DIR/../.." && pwd )"
 
-b "Threat Modeler — Azure deploy"
+b "ThreatGuard — Azure deploy"
 echo "  Resource group: $RG"
 echo "  Location:       $LOCATION"
 echo "  ACR:            $ACR_NAME"

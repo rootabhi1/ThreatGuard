@@ -1,5 +1,5 @@
 // ============================================================================
-//  Threat Modeler — Bicep deployment for Azure App Service for Containers
+//  ThreatGuard — Bicep deployment for Azure App Service for Containers
 //
 //  Deploys: Resource Group (use the one you target with az deployment group),
 //           ACR, App Service Plan (Linux), Web App for Containers, role

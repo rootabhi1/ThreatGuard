@@ -138,7 +138,7 @@ the engine's correctness does not depend on it.
 ## Repository structure
 
 ```
-Automated-Threat-Modelling/
+ThreatGuard/
 ├── README.md, LICENSE, CHANGELOG.md, ROADMAP.md …   # project meta + governance
 ├── docs/                # audit records, sample report, screenshots, images
 ├── examples/            # sample inputs and reports

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-cli/atm_cli.py — Automated Threat Modeler CLI
+cli/atm_cli.py — ThreatGuard CLI
 Wraps the REST API for use in CI/CD pipelines.
 
 Usage:
@@ -136,7 +136,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Automated Threat Modeler CLI")
+    parser = argparse.ArgumentParser(description="ThreatGuard CLI")
     sub    = parser.add_subparsers(dest="command")
 
     analyze = sub.add_parser("analyze", help="Run threat analysis on a system definition file")
