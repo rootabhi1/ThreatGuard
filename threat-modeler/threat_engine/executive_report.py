@@ -135,7 +135,7 @@ def generate_executive_report(analysis: dict, api_key: str | None = None) -> str
 
 <h2>Critical &amp; High Severity Threats</h2>
 <table>
-  <thead><tr><th>Severity</th><th>Title</th><th>Component</th><th>Framework</th></tr></thead>
+  <thead><tr><th>Severity</th><th>Title</th><th>Component</th><th>Methodology</th></tr></thead>
   <tbody>{top_threats_rows}</tbody>
 </table>
 

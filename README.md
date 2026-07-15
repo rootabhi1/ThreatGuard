@@ -1,6 +1,6 @@
 # 🛡 ThreatGuard — Automated Threat Modeling
 
-> Threat modeling for engineering teams — the STRIDE, LINDDUN and PASTA methodologies, with DREAD risk scoring and OWASP Top 10 coverage, plus CVSS/CWE/MITRE ATT&CK scoring and compliance mapping. Works fully offline; optionally enriched by an LLM (Claude **or** any OpenAI-compatible model).
+> Threat modeling for engineering teams — the STRIDE, PASTA and LINDDUN methodologies, with DREAD risk scoring and OWASP Top 10 reference mapping, plus CVSS/CWE/MITRE ATT&CK scoring and compliance mapping. Works fully offline; optionally enriched by an LLM (Claude **or** any OpenAI-compatible model).
 
 [![CI](https://github.com/rootabhi1/ThreatGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/rootabhi1/ThreatGuard/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/rootabhi1/ThreatGuard/actions/workflows/codeql.yml/badge.svg)](https://github.com/rootabhi1/ThreatGuard/actions/workflows/codeql.yml)
@@ -52,7 +52,7 @@ a replacement for their judgment.
 
 ThreatGuard turns a description of a system — typed, drawn on a canvas, or **uploaded as an architecture diagram** — into a structured threat model: identified threats, severity and CVSS scores, CWE and MITRE ATT&CK references, mapped compliance controls, a data-flow diagram with trust boundaries, and exportable reports.
 
-- **Three threat-modeling methodologies** — STRIDE, LINDDUN and PASTA — applied by a deterministic rule engine (no API key required), plus **DREAD** risk scoring on every threat and an **OWASP Top 10** coverage checklist. (DREAD is a scoring model and OWASP Top 10 is an awareness reference — neither is a threat-modeling methodology.)
+- **Three threat-modeling methodologies** — STRIDE, PASTA and LINDDUN — applied by a deterministic rule engine (no API key required), plus **DREAD** risk scoring on every threat and **OWASP Top 10** reference mapping on findings. (DREAD is a scoring model and OWASP Top 10 is an awareness reference — neither is a threat-modeling methodology, so neither is selectable as one.)
 - **Rich scoring** — CVSS 3.1 & 4.0, CWE, MITRE ATT&CK technique/tactic, and SOC 2 / ISO 27001 / PCI-DSS control mapping.
 - **Trust boundaries & DFD** — boundaries are auto-inferred when none are defined, cross-boundary flows are flagged, and a labelled data-flow diagram is rendered.
 - **Diagram upload** — drop in a PNG/JPEG/WebP architecture diagram; with a vision-capable LLM it is turned into a system model, otherwise you get an editable starting point.
@@ -64,7 +64,7 @@ ThreatGuard turns a description of a system — typed, drawn on a canvas, or **u
 
 ## Sample output
 
-A full generated report is checked in at **[`docs/sample-report.html`](docs/sample-report.html)** — 191 threats across STRIDE / OWASP / LINDDUN for a sample retail platform, each with CVSS, CWE and MITRE ATT&CK references and compliance mapping, plus a data-flow diagram with automatically inferred trust boundaries.
+A full generated report is checked in at **[`docs/sample-report.html`](docs/sample-report.html)** — 209 threats across STRIDE, LINDDUN and PASTA for a sample retail platform, each with a DREAD score, CVSS, CWE, MITRE ATT&CK and OWASP Top 10 references, plus compliance mapping and a data-flow diagram with automatically inferred trust boundaries.
 
 | Dashboard | Threat canvas | Analysis & data-flow diagram |
 |---|---|---|

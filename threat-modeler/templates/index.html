@@ -143,13 +143,12 @@
   <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h2 class="text-base font-semibold">1. Choose analysis methods</h2>
-        <p class="text-sm text-slate-500">Pick one or more threat-modeling methodologies. Optionally add a risk checklist or scoring lens.</p>
+        <h2 class="text-base font-semibold">1. Choose methodologies</h2>
+        <p class="text-sm text-slate-500">Pick one or more threat-modeling methodologies. DREAD scoring and OWASP references are applied automatically.</p>
       </div>
     </div>
 
-    <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Threat-modeling methodologies</div>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-3" id="methodology-grid">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3" id="methodology-grid">
       {% for key, m in methodologies.items() if m.kind == 'methodology' %}
       <label class="block cursor-pointer">
         <input type="checkbox" name="methodology" value="{{ key }}" class="peer sr-only" {% if key == 'stride' %}checked{% endif %}>
@@ -161,17 +160,15 @@
       {% endfor %}
     </div>
 
-    <div class="mt-4 mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Risk checklists &amp; scoring <span class="normal-case font-normal text-slate-400">— references applied to findings, not threat-modeling methodologies</span></div>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-      {% for key, m in methodologies.items() if m.kind != 'methodology' %}
-      <label class="block cursor-pointer">
-        <input type="checkbox" name="methodology" value="{{ key }}" class="peer sr-only">
-        <div class="border-2 border-dashed border-slate-200 peer-checked:border-brand-600 peer-checked:bg-brand-50 rounded-lg p-3 transition h-full">
-          <div class="font-semibold text-sm">{{ m.name }} <span class="text-[10px] font-medium uppercase tracking-wide text-slate-400">{{ m.kind }}</span></div>
-          <div class="text-xs text-slate-500 mt-1 line-clamp-3">{{ m.description }}</div>
-        </div>
-      </label>
-      {% endfor %}
+    <div class="mt-4 rounded-lg bg-slate-50 border border-slate-200 p-3">
+      <div class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Applied automatically <span class="normal-case font-normal">— not methodologies, not selectable</span></div>
+      <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-600">
+        {% for key, m in methodologies.items() if m.kind != 'methodology' %}
+        <div><span class="font-semibold">{{ m.name }}</span>
+          <span class="text-[10px] font-medium uppercase tracking-wide text-slate-400">{{ m.kind }}</span>
+          — {% if m.kind == 'scoring' %}risk score on every threat{% else %}cross-linked onto findings as references{% endif %}</div>
+        {% endfor %}
+      </div>
     </div>
     <div class="mt-4 flex items-center gap-3">
       <label class="flex items-center gap-2 text-sm {% if not llm_available %}opacity-50{% endif %}">

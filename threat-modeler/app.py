@@ -806,7 +806,7 @@ async def create_threat_model_from_diagram(
     feature_id: int = Form(...),
     name: str = Form(""),
     description: str = Form(""),
-    methodologies: str = Form("stride,owasp"),
+    methodologies: str = Form("stride,linddun,pasta"),
     analyze: bool = Form(True),
     actor: dict = Depends(require_permission("threat_model.create")),
 ):
@@ -824,7 +824,7 @@ async def create_threat_model_from_diagram(
     data, media_type = await _read_diagram(file)
     system = extract_from_diagram(data, media_type, description or "")
 
-    mkeys = [m.strip().lower() for m in methodologies.split(",") if m.strip()] or ["stride", "owasp"]
+    mkeys = [m.strip().lower() for m in methodologies.split(",") if m.strip()] or ["stride", "linddun", "pasta"]
     tm_name = name.strip() or (file.filename or "Diagram").rsplit(".", 1)[0]
 
     try:

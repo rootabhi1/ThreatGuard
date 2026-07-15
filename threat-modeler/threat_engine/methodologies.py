@@ -1,64 +1,17 @@
 
 # NOTE: The OWASP Top 10 is a standard *awareness document* — a ranked list of the
 # most critical web-application security risks. It is NOT a threat-modeling
-# methodology (unlike STRIDE / LINDDUN / PASTA). It is exposed here as a coverage
-# *checklist*: its risk categories are applied to components as a completeness aid,
-# and individual findings are separately cross-linked to the relevant Top-10 risk
-# (see detail.OWASP_LINKS). It must never be presented as a threat-modeling
-# methodology in the UI, API, or docs.
+# methodology, nor a threat generator. In this tool it is a **reference mapping
+# only**: individual findings from the real methodologies are cross-linked to the
+# relevant Top-10 risk (see detail.OWASP_LINKS and the "references" a threat
+# carries). It is therefore registered with kind "reference" and empty
+# `categories`, so it is never selectable and never produces threat rows of its
+# own. It must never be presented as a threat-modeling methodology or framework.
 OWASP_TOP10 = {
     "name": "OWASP Top 10",
-    "kind": "checklist",
-    "description": "Coverage checklist based on the OWASP Top 10 web-application security risks (2021). An awareness reference, not a threat-modeling methodology.",
-    "categories": {
-        "A01 Broken Access Control": {
-            "description": "Access restrictions not enforced",
-            "applies_to": ["api","webapp","admin_panel","auth_service"],
-            "threats": [
-                {"title":"Insecure Direct Object Reference (IDOR)","description":"User accesses other users data by modifying IDs.","severity":"High","mitigations":["Object-level auth on every endpoint","Use indirect references","Log access-denied spikes"]},
-                {"title":"Missing function-level access control","description":"Admin endpoints accessible to low-privilege users.","severity":"Critical","mitigations":["Default-deny on new routes","Centralise authorisation in middleware","Automated privilege escalation tests"]},
-            ],
-        },
-        "A02 Cryptographic Failures": {
-            "description": "Failures exposing sensitive data",
-            "applies_to": ["database","datastore","api","webapp","cache"],
-            "threats": [
-                {"title":"Sensitive data stored in plaintext","description":"PII or passwords stored without encryption.","severity":"Critical","mitigations":["Encrypt at rest AES-256","Hash passwords with bcrypt/argon2","KMS for key management"]},
-                {"title":"Cleartext transmission of credentials","description":"Passwords transmitted over HTTP.","severity":"High","mitigations":["Enforce HTTPS/TLS 1.2+","HSTS with preloading","Certificate pinning in mobile"]},
-            ],
-        },
-        "A03 Injection": {
-            "description": "Hostile data sent to an interpreter",
-            "applies_to": ["api","webapp","database"],
-            "threats": [
-                {"title":"SQL injection via unsanitised input","description":"Attacker manipulates SQL queries.","severity":"Critical","mitigations":["Parameterised queries","ORM with query binding","WAF + input length limits"]},
-                {"title":"Command injection via shell execution","description":"User input passed to OS shell.","severity":"Critical","mitigations":["Avoid shell=True","Whitelist allowed arguments","Run with minimal OS privileges"]},
-            ],
-        },
-        "A05 Security Misconfiguration": {
-            "description": "Improperly configured security controls",
-            "applies_to": ["api","webapp","database","config","admin_panel"],
-            "threats": [
-                {"title":"Default credentials left on service","description":"Admin password left at factory default.","severity":"Critical","mitigations":["Rotate all defaults at provisioning","Fail startup if SECRET_KEY is default"]},
-                {"title":"Missing security headers","description":"CSP, X-Frame-Options, HSTS absent.","severity":"Medium","mitigations":["Implement Content-Security-Policy","Add all OWASP-recommended headers"]},
-            ],
-        },
-        "A07 Authentication Failures": {
-            "description": "Weaknesses in authentication and session management",
-            "applies_to": ["auth_service","api","webapp","mobile_app"],
-            "threats": [
-                {"title":"No rate limiting on login endpoint","description":"Brute-force and credential stuffing possible.","severity":"High","mitigations":["Rate-limit per IP on login","Exponential back-off","CAPTCHA on high-risk flows"]},
-                {"title":"Weak or absent MFA on privileged accounts","description":"Admin accounts authenticated by password only.","severity":"Critical","mitigations":["Enforce MFA for all admin roles","Prefer hardware tokens or passkeys"]},
-            ],
-        },
-        "A10 Server-Side Request Forgery": {
-            "description": "Server fetches remote resource without validation",
-            "applies_to": ["api","webapp","external_entity"],
-            "threats": [
-                {"title":"SSRF via user-supplied URL parameter","description":"Attacker makes server fetch internal metadata endpoints.","severity":"Critical","mitigations":["Validate and whitelist URL schemes and hosts","Block RFC-1918 and metadata IP ranges","Use egress proxy with allow-list"]},
-            ],
-        },
-    },
+    "kind": "reference",
+    "description": "Reference mapping — findings are cross-linked to the relevant OWASP Top 10 (2021) risk. An awareness reference, not a threat-modeling methodology, and not a threat generator.",
+    "categories": {},
 }
 """Threat modeling methodology catalogs.
 

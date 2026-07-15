@@ -132,18 +132,21 @@ check(a, "threat model delete", C.get(f"/api/threat-models/{tmp_tm['id']}", head
 # ============ E. THREAT ENGINE ============
 a = area("E. Threat Engine")
 from threat_engine import analyze_system
-# Threat-generating methods (STRIDE/LINDDUN/PASTA methodologies + the OWASP
-# checklist) must produce threats. DREAD is a risk-scoring lens, not a generator:
-# it must produce NO threats of its own but must score every threat instead.
-for m in ["stride", "linddun", "pasta", "owasp"]:
+# Only the three methodologies enumerate threats. DREAD (scoring) and OWASP
+# (reference) must NOT generate threats of their own.
+for m in ["stride", "linddun", "pasta"]:
     res = analyze_system(SYSTEM, [m])
-    check(a, f"method '{m}' produces threats", res["summary"]["total"] > 0, f"{res['summary']['total']} threats")
-dread_only = analyze_system(SYSTEM, ["dread"])
-check(a, "DREAD generates no threats (scoring lens)", dread_only["summary"]["total"] == 0, f"{dread_only['summary']['total']} threats")
+    check(a, f"methodology '{m}' produces threats", res["summary"]["total"] > 0, f"{res['summary']['total']} threats")
+for m in ["dread", "owasp"]:
+    res = analyze_system(SYSTEM, [m])
+    check(a, f"'{m}' generates no threats (not a methodology)", res["summary"]["total"] == 0, f"{res['summary']['total']} threats")
 _scored = analyze_system(SYSTEM, ["stride"])["threats"]
 check(a, "every threat carries a DREAD score + tier",
       all(isinstance(t.get("dread"), dict) and "tier" in t["dread"] for t in _scored))
-multi = analyze_system(SYSTEM, ["stride", "owasp"])
+# OWASP is reference-only: it must never appear as a methodology in the output.
+_used = analyze_system(SYSTEM, ["stride", "owasp"])["methodologies_used"]
+check(a, "OWASP excluded from methodologies_used", "owasp" not in _used, str(_used))
+multi = analyze_system(SYSTEM, ["stride", "linddun"])
 t0 = multi["threats"][0]
 check(a, "dedup merges methodologies", any("+" in (t.get("methodology") or "") for t in multi["threats"]) or len(multi["threats"]) > 0)
 check(a, "CVSS 3.1 present & in range", 0 <= (t0.get("cvss_3_1", {}).get("score", t0.get("cvss31_score", -1))) <= 10 if isinstance(t0.get("cvss_3_1"), dict) else True)
@@ -161,7 +164,7 @@ check(a, "custom rule list", C.get("/api/custom-rules", headers=AH).status_code 
 # ============ F. TRUST BOUNDARIES & DFD ============
 a = area("F. Trust Boundaries & DFD")
 from threat_engine.dfd import render_dfd_svg
-res = analyze_system(SYSTEM, ["stride", "owasp"])  # no boundaries provided
+res = analyze_system(SYSTEM, ["stride", "linddun"])  # no boundaries provided
 zones = res["system"]["trust_boundaries"]
 check(a, "boundaries auto-inferred when none", len(zones) > 0, f"{len(zones)} zones")
 check(a, "cross-boundary threats detected", sum(1 for t in res["threats"] if t.get("cross_boundary")) > 0)
@@ -185,7 +188,7 @@ check(a, "offline stub fallback used", r.json().get("extraction_method") == "stu
 check(a, "requires auth (401 no token)", C.post("/api/extract-from-diagram", files={"file": ("a.png", img, "image/png")}).status_code == 401)
 check(a, "rejects non-image (415)", C.post("/api/extract-from-diagram", headers=AH, files={"file": ("a.txt", b"hi", "text/plain")}).status_code == 415)
 check(a, "rejects empty file (400)", C.post("/api/extract-from-diagram", headers=AH, files={"file": ("a.png", b"", "image/png")}).status_code == 400)
-one = C.post("/api/threat-models/from-diagram", headers=AH, files={"file": ("d.png", img, "image/png")}, data={"feature_id": str(feat["id"]), "methodologies": "stride,owasp", "analyze": "true"})
+one = C.post("/api/threat-models/from-diagram", headers=AH, files={"file": ("d.png", img, "image/png")}, data={"feature_id": str(feat["id"]), "methodologies": "stride,linddun", "analyze": "true"})
 check(a, "one-shot from-diagram creates+analyzes", one.status_code == 200 and one.json()["analysis"]["summary"]["total"] > 0, f"threats={one.json().get('analysis',{}).get('summary',{}).get('total')}")
 
 # ============ H. MULTI-LLM ============
@@ -218,7 +221,7 @@ _reset()
 
 # ============ I. REPORTS ============
 a = area("I. Reports")
-C.post(f"/api/threat-models/{tm['id']}/analyze", headers=AH, json={"methodologies": ["stride", "owasp"], "use_llm": False})
+C.post(f"/api/threat-models/{tm['id']}/analyze", headers=AH, json={"methodologies": ["stride", "linddun"], "use_llm": False})
 tmfull = C.get(f"/api/threat-models/{tm['id']}", headers=AH).json()
 rh = C.get(f"/api/threat-models/{tm['id']}/report/html", headers=AH)
 check(a, "HTML report generates", rh.status_code == 200 and "<html" in rh.text.lower())

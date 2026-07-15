@@ -581,10 +581,11 @@ def analyze_system(
     for mkey in methodology_keys:
         if mkey not in METHODOLOGIES:
             continue
-        # DREAD (and any other "scoring" kind) is a risk-scoring lens, not a threat
-        # generator — it is applied to every threat below, never selected to produce
-        # its own findings. Skip generation so it can't fabricate pseudo-threats.
-        if METHODOLOGIES[mkey].get("kind") == "scoring":
+        # Only threat-modeling methodologies (STRIDE / PASTA / LINDDUN) enumerate
+        # threats. "scoring" (DREAD — applied to every threat below) and "reference"
+        # (OWASP Top 10 — cross-linked onto findings as references) never generate
+        # rows of their own, so skip them here.
+        if METHODOLOGIES[mkey].get("kind", "methodology") != "methodology":
             continue
         rule_threats = _rule_based_threats(system, mkey)
         all_threats.extend(rule_threats)
@@ -638,7 +639,11 @@ def analyze_system(
         "threats": all_threats,
         "summary": summary,
         "untrusted_crossings": _untrusted_input_crossings(system, all_threats),
-        "methodologies_used": methodology_keys,
+        # Only real methodologies belong in this list — reports render it as
+        # "Methodologies:". DREAD (scoring) and OWASP (reference) are excluded even
+        # if a caller passes them, so they can never be presented as methodologies.
+        "methodologies_used": [k for k in methodology_keys
+                               if METHODOLOGIES.get(k, {}).get("kind", "methodology") == "methodology"],
         "llm_used": use_llm and summary["llm_enhanced"] > 0,
     }
 

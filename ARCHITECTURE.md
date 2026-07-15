@@ -38,8 +38,8 @@ flowchart LR
 | **Persistence** | `db/` | SQLite schema + parameterised domain queries for the Release → Feature → Threat Model hierarchy. |
 | **UI** | `templates/`, `static/` | Server-rendered pages plus the interactive DFD editor. |
 
-Inside the engine, the notable modules are `methodologies.py` (STRIDE / LINDDUN /
-PASTA methodologies, plus DREAD risk scoring and an OWASP Top 10 checklist),
+Inside the engine, the notable modules are `methodologies.py` (STRIDE / PASTA /
+LINDDUN methodologies, plus DREAD risk scoring and OWASP Top 10 reference mapping),
 `analyzer.py` (extraction + rule application +
 boundary inference), `scoring.py` (CVSS 3.1/4.0), `detail.py` (CWE, ATT&CK,
 mitigations), `trust_boundaries.py`, `dfd.py` (SVG), `diagram_extractor.py`
