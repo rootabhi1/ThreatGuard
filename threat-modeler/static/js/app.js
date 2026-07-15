@@ -248,6 +248,9 @@ function renderComponents() {
       </div>
       <input type="text" data-i="${i}" data-field="description" value="${escapeHtml(c.description || '')}" placeholder="Description (optional)"
              class="w-full text-xs rounded border border-slate-200 px-2 py-1 comp-input"/>
+      <input type="text" data-i="${i}" value="${escapeHtml((c.sensitivity || []).join(', '))}" placeholder="Data sensitivity (e.g. pii, phi, pci) — optional"
+             title="Data classification carried by this component. Drives privacy/compliance evidence (pii→GDPR/CCPA, phi→HIPAA, pci→PCI-DSS)."
+             class="w-full text-xs rounded border border-slate-200 px-2 py-1 comp-sens"/>
     </div>`;
   }).join('');
 
@@ -259,6 +262,15 @@ function renderComponents() {
       // Re-render flows in case the changed component name shows in the dropdowns
       renderFlows();
       renderBoundariesList();
+    });
+  });
+  list.querySelectorAll('.comp-sens').forEach(el => {
+    el.addEventListener('change', e => {
+      const i = parseInt(e.target.dataset.i);
+      // Comma/space separated classes -> lowercased array (empty -> drop the field).
+      const classes = e.target.value.split(/[,\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+      if (classes.length) state.components[i].sensitivity = classes;
+      else delete state.components[i].sensitivity;
     });
   });
   list.querySelectorAll('.comp-del').forEach(el => {
@@ -451,6 +463,7 @@ function serializeSystem() {
     data_flows: state.data_flows.map(f => ({
       id: f.id, from: f.from, to: f.to, label: f.label,
       protocol: f.protocol, auth: f.auth, encrypted: f.encrypted,
+      ...(f.sensitivity ? { sensitivity: f.sensitivity } : {}),
     })),
     trust_boundaries: state.trust_boundaries,
   };
