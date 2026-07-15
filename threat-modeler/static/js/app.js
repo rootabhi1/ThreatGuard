@@ -337,6 +337,9 @@ function renderFlows() {
         </label>
         ${cb_badge}
       </div>
+      <input type="text" data-i="${i}" value="${escapeHtml((f.sensitivity || []).join(', '))}" placeholder="Data sensitivity carried (e.g. pii, phi, pci) — optional"
+             title="Data classification carried across this flow. Tags both endpoints, so privacy/compliance evidence follows the data (pii→GDPR/CCPA, phi→HIPAA, pci→PCI-DSS)."
+             class="w-full text-xs rounded border border-slate-200 px-2 py-1 flow-sens"/>
     </div>`;
   }).join('');
   list.querySelectorAll('.flow-input').forEach(el => {
@@ -345,6 +348,15 @@ function renderFlows() {
       const field = e.target.dataset.field;
       state.data_flows[i][field] = field === 'encrypted' ? e.target.checked : e.target.value;
       renderCanvas();
+    });
+  });
+  list.querySelectorAll('.flow-sens').forEach(el => {
+    el.addEventListener('change', e => {
+      const i = parseInt(e.target.dataset.i);
+      // Comma/space separated classes -> lowercased array (empty -> drop the field).
+      const classes = e.target.value.split(/[,\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+      if (classes.length) state.data_flows[i].sensitivity = classes;
+      else delete state.data_flows[i].sensitivity;
     });
   });
   list.querySelectorAll('.flow-del').forEach(el => {
@@ -974,6 +986,7 @@ document.getElementById("analyze-btn").addEventListener("click", async () => {
         data_flows: state.data_flows.map(f => ({
           id: f.id, from: f.from, to: f.to, label: f.label,
           protocol: f.protocol, auth: f.auth, encrypted: f.encrypted,
+          ...(f.sensitivity ? { sensitivity: f.sensitivity } : {}),
         })),
         trust_boundaries: state.trust_boundaries,
       },
