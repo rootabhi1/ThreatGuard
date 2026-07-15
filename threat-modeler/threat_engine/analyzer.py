@@ -4,10 +4,14 @@ Takes a normalized system model:
 {
   "name": "...",
   "description": "...",
-  "components": [{"id","name","type","description"}],
-  "data_flows": [{"id","from","to","label","protocol","auth","encrypted"}],
+  "components": [{"id","name","type","description","sensitivity"?}],
+  "data_flows": [{"id","from","to","label","protocol","auth","encrypted","sensitivity"?}],
   "trust_boundaries": [{"id","name","contains":[component_id,...]}]
 }
+
+`sensitivity` (optional) is a data-classification tag — any truthy value such as
+["pii","pci","phi","secrets"] — on a component or on a flow. It drives the
+"handles_sensitive_data" evidence signal used by the privacy (LINDDUN) rules.
 
 Applies the requested methodology's rules to produce threats, then
 optionally enhances with Claude API if an API key is configured.
@@ -318,8 +322,33 @@ def _evidence_context(system: dict) -> dict:
                 user_reachable.add(nxt)
                 stack.append(nxt)
 
+    # Data classification (Phase 2): a component "handles sensitive data" when it
+    # is tagged `sensitivity` directly, or a flow it is on carries a `sensitivity`
+    # tag. We track the *classes* per component (e.g. {"pii","phi"}) so compliance
+    # evidence can be class-specific (phi->HIPAA, pii->GDPR/CCPA, pci->PCI-DSS).
+    # Untagged models produce empty sets, so nothing regresses.
+    sensitive_classes: dict[str, set] = {}
+
+    def _tag(cid, value):
+        if not cid or not value:
+            return
+        classes = value if isinstance(value, (list, tuple, set)) else [value]
+        bucket = sensitive_classes.setdefault(cid, set())
+        for cls in classes:
+            bucket.add(str(cls).strip().lower())
+
+    for c in components:
+        _tag(c["id"], c.get("sensitivity"))
+    for f in flows:
+        if f.get("sensitivity"):
+            _tag(f.get("from"), f.get("sensitivity"))
+            _tag(f.get("to"), f.get("sensitivity"))
+
+    sensitive_ids = set(sensitive_classes)
+
     return {"exposed": exposed, "unencrypted_touch": unencrypted_touch,
-            "user_reachable": user_reachable}
+            "user_reachable": user_reachable, "sensitive_ids": sensitive_ids,
+            "sensitive_classes": sensitive_classes}
 
 
 # Named evidence signals a catalog rule can declare via its "evidence" field.
@@ -330,6 +359,13 @@ _EVIDENCE_SIGNALS = {
     "exposed":          lambda cid, ctype, ctx: cid in ctx["exposed"],
     "user_reachable":   lambda cid, ctype, ctx: cid in ctx["user_reachable"],
     "is_store":         lambda cid, ctype, ctx: ctype in _STORE_TYPES,
+    # Phase 2 — data classification. "handles_sensitive_data" is class-agnostic
+    # (any tagged class); the class-specific signals drive class-appropriate
+    # compliance evidence (phi->HIPAA, pii->GDPR/CCPA, pci->PCI-DSS).
+    "handles_sensitive_data": lambda cid, ctype, ctx: cid in ctx.get("sensitive_ids", set()),
+    "handles_pii":            lambda cid, ctype, ctx: "pii" in ctx.get("sensitive_classes", {}).get(cid, ()),
+    "handles_phi":            lambda cid, ctype, ctx: "phi" in ctx.get("sensitive_classes", {}).get(cid, ()),
+    "handles_pci":            lambda cid, ctype, ctx: "pci" in ctx.get("sensitive_classes", {}).get(cid, ()),
     "always":           lambda cid, ctype, ctx: True,
     "none":             lambda cid, ctype, ctx: False,
 }

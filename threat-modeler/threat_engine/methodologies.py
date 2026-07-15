@@ -220,7 +220,7 @@ LINDDUN = {
             "threats": [
                 {
                     "title": "Cross-service user linkability",
-                    "evidence": "none",
+                    "evidence": "handles_sensitive_data",
                     "description": "Identifiers (emails, device IDs) let separate datasets be joined to profile a user.",
                     "severity": "Medium",
                     "mitigations": ["Use per-context pseudonyms", "Avoid global IDs in analytics", "Apply k-anonymity for shared datasets"],
@@ -233,7 +233,7 @@ LINDDUN = {
             "threats": [
                 {
                     "title": "Re-identification of anonymized data",
-                    "evidence": "none",
+                    "evidence": "handles_sensitive_data",
                     "description": "Quasi-identifiers (zip, DOB, gender) re-identify users in 'anonymous' exports.",
                     "severity": "High",
                     "mitigations": ["Apply differential privacy on aggregates", "Generalize quasi-identifiers", "Audit re-identification risk before release"],
@@ -246,7 +246,7 @@ LINDDUN = {
             "threats": [
                 {
                     "title": "Forced attribution of sensitive actions",
-                    "evidence": "none",
+                    "evidence": "handles_sensitive_data",
                     "description": "User cannot deny a sensitive action even when they should have plausible deniability.",
                     "severity": "Low",
                     "mitigations": ["Offer ephemeral / deniable modes where appropriate", "Avoid logging more than needed"],
@@ -272,14 +272,14 @@ LINDDUN = {
             "threats": [
                 {
                     "title": "Excessive data collection",
-                    "evidence": "none",
+                    "evidence": "handles_sensitive_data",
                     "description": "System collects more PII than needed for its purpose.",
                     "severity": "Medium",
                     "mitigations": ["Apply data minimization", "Document lawful basis per field", "Run privacy impact assessments"],
                 },
                 {
                     "title": "Third-party data leakage",
-                    "evidence": "none",
+                    "evidence": "handles_sensitive_data",
                     "description": "PII shared with analytics/ad SDKs without consent.",
                     "severity": "High",
                     "mitigations": ["Vendor review + DPAs", "Consent management platform", "Block third-party trackers by default"],
@@ -292,7 +292,7 @@ LINDDUN = {
             "threats": [
                 {
                     "title": "Lack of transparent privacy notice",
-                    "evidence": "none",
+                    "evidence": "handles_sensitive_data",
                     "description": "Users don't know what data is collected or for what purpose.",
                     "severity": "Medium",
                     "mitigations": ["Clear, layered privacy notice", "Just-in-time consent prompts", "Subject access / export tooling"],
@@ -302,13 +302,29 @@ LINDDUN = {
         "Non-compliance": {
             "description": "Failure to meet regulatory or contractual privacy obligations",
             "applies_to": ["*"],
+            # Class-specific: each fires only where the component actually handles
+            # that class of data, so PCI data doesn't get a HIPAA finding, etc.
             "threats": [
                 {
-                    "title": "GDPR / CCPA / HIPAA gaps",
-                    "evidence": "none",
-                    "description": "Missing DSAR handling, retention policies, or data residency controls.",
+                    "title": "GDPR / CCPA gaps for personal data",
+                    "evidence": "handles_pii",
+                    "description": "Personal data (PII) triggers GDPR / CCPA duties: lawful basis, DSAR handling, retention limits, and data-residency controls.",
                     "severity": "High",
-                    "mitigations": ["Map data flows to applicable regs", "Automate DSAR pipeline", "Set retention TTLs by data class"],
+                    "mitigations": ["Document lawful basis per field", "Automate DSAR / deletion pipeline", "Set retention TTLs by data class"],
+                },
+                {
+                    "title": "HIPAA gaps for health data (PHI)",
+                    "evidence": "handles_phi",
+                    "description": "Protected health information triggers HIPAA duties: BAAs, minimum-necessary access, audit controls, and breach notification.",
+                    "severity": "High",
+                    "mitigations": ["Sign Business Associate Agreements", "Enforce minimum-necessary access + audit logging", "Encrypt PHI at rest and in transit"],
+                },
+                {
+                    "title": "PCI-DSS gaps for cardholder data",
+                    "evidence": "handles_pci",
+                    "description": "Cardholder data triggers PCI-DSS: scope segmentation, tokenization / no-store of PANs, and key management.",
+                    "severity": "High",
+                    "mitigations": ["Tokenize or avoid storing PANs", "Segment the cardholder-data environment", "Apply PCI-DSS key-management controls"],
                 },
             ],
         },

@@ -1,0 +1,12 @@
+{
+  "system": "checkout-pci.json",
+  "methodologies": ["stride", "linddun", "pasta"],
+  "notes": "Card Vault tagged pci only -> PCI-DSS evidenced, HIPAA/GDPR must NOT be (class-awareness proof).",
+  "must_be_evidenced": [
+    { "component": "Card Vault", "title_contains": "PCI-DSS gaps", "why": "handles cardholder data" }
+  ],
+  "must_not_be_evidenced": [
+    { "component": "Card Vault", "title_contains": "HIPAA gaps",       "why": "no PHI -> class-specific, not a HIPAA finding" },
+    { "component": "Card Vault", "title_contains": "GDPR / CCPA gaps", "why": "no PII tagged" }
+  ]
+}

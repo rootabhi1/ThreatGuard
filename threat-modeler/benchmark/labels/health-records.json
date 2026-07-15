@@ -1,0 +1,16 @@
+{
+  "system": "health-records.json",
+  "methodologies": ["stride", "linddun", "pasta"],
+  "notes": "Health DB tagged phi+pii; api->hdb flow carries phi. Class-aware compliance: HIPAA (phi) + GDPR/CCPA (pii) evidenced, PCI-DSS not.",
+  "must_be_evidenced": [
+    { "component": "Health DB",   "title_contains": "HIPAA gaps",         "why": "DB handles PHI" },
+    { "component": "Health DB",   "title_contains": "GDPR / CCPA gaps",   "why": "DB handles PII" },
+    { "component": "Health DB",   "title_contains": "Excessive data collection", "why": "handles sensitive data" },
+    { "component": "Records API", "title_contains": "Cross-service user linkability", "why": "on the PHI-carrying flow" }
+  ],
+  "must_not_be_evidenced": [
+    { "component": "Health DB",      "title_contains": "PCI-DSS gaps",     "why": "no cardholder data tagged" },
+    { "component": "Patient Portal", "title_contains": "HIPAA gaps",       "why": "portal carries no sensitive data" },
+    { "component": "Patient Portal", "title_contains": "Excessive data collection", "why": "not on a sensitive flow" }
+  ]
+}

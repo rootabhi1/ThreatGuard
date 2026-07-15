@@ -1,0 +1,19 @@
+{
+  "name": "Patient Records",
+  "description": "A patient portal reads/writes health records; the health DB and its data flow are tagged as carrying PHI/PII.",
+  "components": [
+    { "id": "patient", "name": "Patient",        "type": "user" },
+    { "id": "portal",  "name": "Patient Portal", "type": "webapp" },
+    { "id": "api",     "name": "Records API",    "type": "api" },
+    { "id": "hdb",     "name": "Health DB",      "type": "database", "sensitivity": ["phi", "pii"] }
+  ],
+  "data_flows": [
+    { "id": "f1", "from": "patient", "to": "portal", "label": "View records", "protocol": "HTTPS", "auth": "session", "encrypted": true },
+    { "id": "f2", "from": "portal",  "to": "api",    "label": "GET /records", "protocol": "HTTPS", "auth": "bearer",  "encrypted": true },
+    { "id": "f3", "from": "api",     "to": "hdb",    "label": "Read PHI",     "protocol": "TCP",   "auth": "credentials", "encrypted": true, "sensitivity": ["phi"] }
+  ],
+  "trust_boundaries": [
+    { "id": "b_pub", "name": "Public / Internet",  "contains": ["patient", "portal"] },
+    { "id": "b_int", "name": "Internal (private)", "contains": ["api", "hdb"] }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "Checkout — Card Vault",
+  "description": "Checkout stores cardholder data in a vault tagged PCI (no PII/PHI tags), to test class-specific compliance evidence.",
+  "components": [
+    { "id": "shopper", "name": "Shopper",     "type": "user" },
+    { "id": "web",     "name": "Checkout Web", "type": "webapp" },
+    { "id": "api",     "name": "Payments API", "type": "api" },
+    { "id": "vault",   "name": "Card Vault",   "type": "datastore", "sensitivity": ["pci"] }
+  ],
+  "data_flows": [
+    { "id": "f1", "from": "shopper", "to": "web",   "label": "Enter card", "protocol": "HTTPS", "auth": "session", "encrypted": true },
+    { "id": "f2", "from": "web",     "to": "api",   "label": "Tokenize",   "protocol": "HTTPS", "auth": "bearer",  "encrypted": true },
+    { "id": "f3", "from": "api",     "to": "vault", "label": "Store token","protocol": "TCP",   "auth": "credentials", "encrypted": true, "sensitivity": ["pci"] }
+  ],
+  "trust_boundaries": [
+    { "id": "b_pub", "name": "Public / Internet",  "contains": ["shopper", "web"] },
+    { "id": "b_cde", "name": "Cardholder Data Env (private)", "contains": ["api", "vault"] }
+  ]
+}
