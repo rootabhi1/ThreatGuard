@@ -322,12 +322,37 @@ def _evidence_context(system: dict) -> dict:
             "user_reachable": user_reachable}
 
 
-def _component_evidence(title: str, category: str, component: dict, ctx: dict) -> str:
+# Named evidence signals a catalog rule can declare via its "evidence" field.
+# Each maps to a check against the per-analysis context / component. This lets a
+# rule state its precondition explicitly instead of relying on title keywords.
+_EVIDENCE_SIGNALS = {
+    "unencrypted_flow": lambda cid, ctype, ctx: cid in ctx["unencrypted_touch"],
+    "exposed":          lambda cid, ctype, ctx: cid in ctx["exposed"],
+    "user_reachable":   lambda cid, ctype, ctx: cid in ctx["user_reachable"],
+    "is_store":         lambda cid, ctype, ctx: ctype in _STORE_TYPES,
+    "always":           lambda cid, ctype, ctx: True,
+    "none":             lambda cid, ctype, ctx: False,
+}
+
+
+def _component_evidence(rule: dict, category: str, component: dict, ctx: dict) -> str:
     """"evidenced" if the model proves this component-level threat's precondition,
-    else "baseline". Rules with no specific evidence signal stay baseline."""
+    else "baseline".
+
+    A rule may declare its precondition explicitly with an "evidence" field naming
+    one of _EVIDENCE_SIGNALS — that is authoritative. Rules without it fall back to
+    a coarse keyword heuristic. Rules matching neither stay baseline."""
     cid = component.get("id")
     ctype = component.get("type", "")
-    t = f"{title} {category}".lower()
+
+    signal = rule.get("evidence")
+    if signal is not None:
+        check = _EVIDENCE_SIGNALS.get(signal)
+        if check is not None:
+            return "evidenced" if check(cid, ctype, ctx) else "baseline"
+
+    # Fallback: keyword heuristic for rules that don't declare an evidence signal.
+    t = f"{rule.get('title', '')} {category}".lower()
 
     def _hit(*keys):
         return any(k in t for k in keys)
@@ -374,7 +399,7 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                         "flow_id": None,
                         "mitigations": rule["mitigations"],
                         "source": "rule-based",
-                        "tier": _component_evidence(rule["title"], category_name, component, ev_ctx),
+                        "tier": _component_evidence(rule, category_name, component, ev_ctx),
                         "dread": _score_dread(rule, component, None),
                     })
 

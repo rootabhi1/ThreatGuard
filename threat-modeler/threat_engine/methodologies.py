@@ -153,18 +153,24 @@ STRIDE = {
                     "title": "Broken access control / missing authz check",
                     "description": "Endpoints fail to verify the caller has permission for the action.",
                     "severity": "Critical",
+                    # Evidenced when the component is reachable on a user path.
+                    "evidence": "user_reachable",
                     "mitigations": ["Centralize authz in middleware", "Default-deny on new routes", "Add automated authz tests per endpoint"],
                 },
                 {
                     "title": "Privilege escalation via mass assignment",
                     "description": "User submits extra fields (e.g., role=admin) and they bind to the model.",
                     "severity": "High",
+                    "evidence": "user_reachable",
                     "mitigations": ["Use explicit allow-lists for input binding", "Separate admin and user DTOs", "Review ORM model exposure"],
                 },
                 {
                     "title": "Container / process escape",
                     "description": "Attacker breaks out of a sandbox to gain host privileges.",
                     "severity": "Critical",
+                    # Infrastructure/runtime concern — a data-flow model can't evidence it,
+                    # so it stays a baseline check rather than a false 'evidenced'.
+                    "evidence": "none",
                     "mitigations": ["Run as non-root", "Drop Linux capabilities", "Apply seccomp / AppArmor profiles"],
                 },
             ],
