@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ThreatGuard — AI-powered security for engineering teams</title>
-<meta name="description" content="STRIDE, DREAD, LINDDUN, PASTA and OWASP Top 10 threat modeling with Claude AI. Open source, self-hostable."/>
+<meta name="description" content="STRIDE, LINDDUN and PASTA threat-modeling methodologies, with DREAD risk scoring and OWASP Top 10 coverage, powered by Claude AI. Open source, self-hostable."/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -181,7 +181,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
 <section class="hero">
   <div class="hero-badge">🛡 Open source · Self-hostable · Claude or OpenAI</div>
   <h1>AI-powered<br/><span>threat modeling</span><br/>for engineering teams</h1>
-  <p class="hero-sub">STRIDE, DREAD, LINDDUN, PASTA and OWASP Top 10 in one tool. Paste a description, upload a diagram, or build a DFD — get a prioritized threat list in seconds.</p>
+  <p class="hero-sub">STRIDE, LINDDUN and PASTA methodologies — plus DREAD risk scoring and OWASP Top 10 coverage — in one tool. Paste a description, upload a diagram, or build a DFD — get a prioritized threat list in seconds.</p>
   <div class="hero-btns">
     <a class="btn-primary" href="#quickstart">🚀 Run locally</a>
     <a class="btn-outline" href="sample-report.html" target="_blank">📄 View sample report</a>
@@ -189,13 +189,13 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
   </div>
 </section>
 
-<!-- METHODOLOGY STRIP -->
+<!-- METHODOLOGY / SCORING / CHECKLIST STRIP -->
 <div class="method-strip">
   <span class="m-pill m-stride">STRIDE</span>
-  <span class="m-pill m-dread">DREAD</span>
   <span class="m-pill m-linddun">LINDDUN</span>
   <span class="m-pill m-pasta">PASTA</span>
-  <span class="m-pill m-owasp">OWASP Top 10 ✦ new</span>
+  <span class="m-pill m-dread">DREAD · scoring</span>
+  <span class="m-pill m-owasp">OWASP Top 10 · checklist ✦ new</span>
 </div>
 
 <!-- BRANCHES -->
@@ -209,9 +209,9 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
       <div>
         <div class="branch-badge"><span class="dot" style="background:#64748b"></span> main</div>
         <div class="branch-title">Original application</div>
-        <div class="branch-desc">The clean, unmodified original codebase. STRIDE, DREAD, LINDDUN, PASTA. Interactive DFD builder, project management, auth, reports.</div>
+        <div class="branch-desc">The clean, unmodified original codebase. STRIDE, LINDDUN and PASTA methodologies with DREAD risk scoring. Interactive DFD builder, project management, auth, reports.</div>
         <div class="stat-row">
-          <div class="stat-item"><div class="stat-n" style="color:#64748b">4</div><div class="stat-l">Frameworks</div></div>
+          <div class="stat-item"><div class="stat-n" style="color:#64748b">4</div><div class="stat-l">Analysis methods</div></div>
           <div class="stat-item"><div class="stat-n" style="color:#64748b">~800</div><div class="stat-l">app.py lines</div></div>
         </div>
         <a class="btn-outline" style="margin-top:16px;display:inline-flex" href="https://github.com/rootabhi1/ThreatGuard/tree/main" target="_blank">View main →</a>
@@ -223,7 +223,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
         <div class="branch-title">All enhancements ✦</div>
         <div class="branch-desc">OWASP Top 10, MITRE ATT&CK mapping, CVSS 4.0, compliance controls, custom rules, dark mode, keyboard shortcuts, share links, AI code fixes, PostgreSQL, health checks, CI/CD, and more.</div>
         <div class="stat-row">
-          <div class="stat-item"><div class="stat-n" style="color:var(--green)">5</div><div class="stat-l">Frameworks</div></div>
+          <div class="stat-item"><div class="stat-n" style="color:var(--green)">5</div><div class="stat-l">Analysis methods</div></div>
           <div class="stat-item"><div class="stat-n" style="color:var(--green)">+15</div><div class="stat-l">New features</div></div>
           <div class="stat-item"><div class="stat-n" style="color:var(--green)">+7</div><div class="stat-l">New endpoints</div></div>
           <div class="stat-item"><div class="stat-n" style="color:var(--green)">78</div><div class="stat-l">Total files</div></div>
