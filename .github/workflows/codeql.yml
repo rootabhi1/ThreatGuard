@@ -16,9 +16,19 @@ jobs:
   analyze:
     name: Analyze (python)
     runs-on: ubuntu-latest
+    # CodeQL result upload needs code scanning enabled. On private repos that
+    # requires GitHub Advanced Security; without it the upload fails with
+    # "Code scanning is not enabled for this repository". Gate the job to public
+    # repos so it stops failing on this private repo, and auto-resumes if the
+    # repo is made public (this repo is a template) or GHAS is enabled — in which
+    # case remove this `if`.
+    if: ${{ github.event.repository.visibility == 'public' }}
     permissions:
       security-events: write
       contents: read
+      # codeql-action reads the workflow run for status/telemetry; without this
+      # it fails with "Resource not accessible by integration" (HTTP 403).
+      actions: read
     steps:
       - uses: actions/checkout@v4
 
