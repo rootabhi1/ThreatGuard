@@ -456,6 +456,7 @@ def to_html(analysis: dict) -> str:
 
   <section class="card">
     <h2>Threats ({summary['total']})</h2>
+    <p style="color:#64748b;font-size:0.85rem;margin:-6px 0 10px">Showing <strong>{summary['by_tier']['evidenced']} evidenced</strong> threats (proven by your model). <strong>{summary['by_tier']['baseline']} baseline</strong> type-based checks are hidden — reveal them with the “Baseline checks” toggle.</p>
     <input type="text" id="search" class="search-box" placeholder="Search threats by title, component, category, CWE, or CVSS vector…" oninput="applyFilters()"/>
     <div class="filter-bar">
       <label>Methodology:</label>
@@ -463,6 +464,8 @@ def to_html(analysis: dict) -> str:
       {meth_chips}
       <label style="margin-left:16px">Cross-boundary only:</label>
       <span class="chip cb" id="cb-toggle" onclick="toggleCb(this)">Off</span>
+      <label style="margin-left:16px" title="Baseline = generic type-based checks not evidenced by your model">Baseline checks:</label>
+      <span class="chip" id="tier-toggle" onclick="toggleTier(this)">Hidden ({summary['by_tier']['baseline']})</span>
       <span style="flex-grow:1"></span>
       <button class="btn" onclick="resetFilters()">Reset filters</button>
       <button class="btn" onclick="expandAll(true)">Expand all</button>
@@ -479,7 +482,7 @@ def to_html(analysis: dict) -> str:
 </div>
 
 <script>
-  const filterState = {{ severity: null, methodology: 'all', cb: false, search: '' }};
+  const filterState = {{ severity: null, methodology: 'all', cb: false, search: '', tier: 'evidenced' }};
   const threats = {threats_js};
 
   function applyFilters() {{
@@ -493,6 +496,7 @@ def to_html(analysis: dict) -> str:
       const cb = !!t.cross_boundary;
 
       let show = true;
+      if (filterState.tier === 'evidenced' && (t.tier || 'baseline') !== 'evidenced') show = false;
       if (filterState.severity && sev !== filterState.severity) show = false;
       if (filterState.methodology !== 'all' && filterState.methodology !== meth) show = false;
       if (filterState.cb && !cb) show = false;
@@ -534,6 +538,15 @@ def to_html(analysis: dict) -> str:
     applyFilters();
   }}
 
+  function toggleTier(el) {{
+    const showing = filterState.tier === 'all';
+    filterState.tier = showing ? 'evidenced' : 'all';
+    const baseline = threats.filter(t => (t.tier || 'baseline') !== 'evidenced').length;
+    el.classList.toggle('active', filterState.tier === 'all');
+    el.textContent = filterState.tier === 'all' ? ('Shown (' + baseline + ')') : ('Hidden (' + baseline + ')');
+    applyFilters();
+  }}
+
   function resetFilters() {{
     filterState.severity = null;
     filterState.methodology = 'all';
@@ -544,6 +557,11 @@ def to_html(analysis: dict) -> str:
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     document.querySelector('.chip[data-meth="all"]').classList.add('active');
     document.getElementById('cb-toggle').textContent = 'Off';
+    filterState.tier = 'evidenced';
+    const _bl = threats.filter(t => (t.tier || 'baseline') !== 'evidenced').length;
+    const _tt = document.getElementById('tier-toggle');
+    _tt.classList.remove('active');
+    _tt.textContent = 'Hidden (' + _bl + ')';
     applyFilters();
   }}
 
@@ -558,8 +576,9 @@ def to_html(analysis: dict) -> str:
     }});
   }}
 
-  // Animate counts on load
+  // Apply the default filter (evidenced only) on load, then animate counts
   document.addEventListener('DOMContentLoaded', () => {{
+    applyFilters();
     document.querySelectorAll('.sev-card .count').forEach(el => {{
       const target = parseInt(el.textContent, 10);
       let cur = 0;

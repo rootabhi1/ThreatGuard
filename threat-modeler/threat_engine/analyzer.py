@@ -283,6 +283,67 @@ def _score_dread(threat: dict, component: dict, flow: dict | None, cross_boundar
 
 
 # ---------------------------------------------------------------------------
+# Applicability evidence
+# Distinguishes threats the model *proves* apply ("evidenced") from generic
+# component-type templates ("baseline"). Baseline threats are still emitted —
+# reports de-emphasize them, never drop them — so recall is preserved.
+# ---------------------------------------------------------------------------
+_STORE_TYPES = {"database", "datastore", "filesystem", "cache", "queue"}
+_USER_TYPES = {"user", "external_entity"}
+
+
+def _evidence_context(system: dict) -> dict:
+    """Per-analysis signals used to decide whether a component-level threat is
+    evidenced by the actual model or is just a type-based baseline check."""
+    components = system.get("components", []) or []
+    flows = system.get("data_flows", []) or []
+    exposed, _blast = _dread_context(system)
+
+    unencrypted_touch: set = set()
+    for f in flows:
+        if not f.get("encrypted", True):
+            for cid in (f.get("from"), f.get("to")):
+                if cid:
+                    unencrypted_touch.add(cid)
+
+    # Components reachable from a user / external entity by following flows.
+    adj: dict[str, list] = {}
+    for f in flows:
+        adj.setdefault(f.get("from"), []).append(f.get("to"))
+    user_reachable: set = set()
+    stack = [c["id"] for c in components if c.get("type") in _USER_TYPES]
+    while stack:
+        for nxt in adj.get(stack.pop(), []):
+            if nxt and nxt not in user_reachable:
+                user_reachable.add(nxt)
+                stack.append(nxt)
+
+    return {"exposed": exposed, "unencrypted_touch": unencrypted_touch,
+            "user_reachable": user_reachable}
+
+
+def _component_evidence(title: str, category: str, component: dict, ctx: dict) -> str:
+    """"evidenced" if the model proves this component-level threat's precondition,
+    else "baseline". Rules with no specific evidence signal stay baseline."""
+    cid = component.get("id")
+    ctype = component.get("type", "")
+    t = f"{title} {category}".lower()
+
+    def _hit(*keys):
+        return any(k in t for k in keys)
+
+    if _hit("in transit", "transmission", "cleartext", "unencrypted", "data-in-transit"):
+        return "evidenced" if cid in ctx["unencrypted_touch"] else "baseline"
+    if _hit("denial of service", "dos", "flooding", "resource exhaustion", "ddos"):
+        return "evidenced" if cid in ctx["exposed"] else "baseline"
+    if _hit("access control", "idor", "direct object", "privilege", "authz", "elevation"):
+        return "evidenced" if cid in ctx["user_reachable"] else "baseline"
+    if _hit("at rest", "stored data", "data exposure at rest"):
+        return "evidenced" if ctype in _STORE_TYPES else "baseline"
+    return "baseline"
+
+
+# ---------------------------------------------------------------------------
 # Core rule-based analysis
 # ---------------------------------------------------------------------------
 def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
@@ -292,6 +353,7 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
     components = system.get("components", [])
     flows = system.get("data_flows", [])
     comp_by_id = {c["id"]: c for c in components}
+    ev_ctx = _evidence_context(system)
 
     # Component-level threats
     for category_name, category in methodology["categories"].items():
@@ -312,6 +374,7 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                         "flow_id": None,
                         "mitigations": rule["mitigations"],
                         "source": "rule-based",
+                        "tier": _component_evidence(rule["title"], category_name, component, ev_ctx),
                         "dread": _score_dread(rule, component, None),
                     })
 
@@ -335,6 +398,7 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "flow_id": flow["id"],
                 "mitigations": ["Enable TLS on this flow", "If internal, enforce mTLS", "Verify cert pinning where relevant"],
                 "source": "rule-based",
+                "tier": "evidenced",
                 "dread": _score_dread({"severity": "High"}, dst, flow),
             })
 
@@ -357,6 +421,7 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "flow_id": flow["id"],
                 "mitigations": ["Add token / mTLS auth on this flow", "Validate caller identity at the receiver"],
                 "source": "rule-based",
+                "tier": "evidenced",
                 "dread": _score_dread({"severity": "High"}, dst, flow),
             })
 
@@ -453,6 +518,7 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "flow_id": flow["id"],
                 "mitigations": tmpl["mitigations"],
                 "source": "rule-based",
+                "tier": "evidenced",
                 "cross_boundary": True,
                 "src_zone": src_zone,
                 "dst_zone": dst_zone,
@@ -542,6 +608,7 @@ Respond with ONLY valid JSON — no prose, no markdown fences. Schema:
             "flow_id": None,
             "mitigations": t.get("mitigations", []),
             "source": "llm-enhanced",
+            "tier": "evidenced",
             "dread": _score_dread({"severity": t.get("severity", "Medium")}, comp, None),
         })
     return out
@@ -621,6 +688,7 @@ def analyze_system(
         "by_category": {},
         "by_component": {},
         "by_methodology": {},
+        "by_tier": {"evidenced": 0, "baseline": 0},
         "rule_based": 0,
         "llm_enhanced": 0,
     }
@@ -629,6 +697,7 @@ def analyze_system(
         summary["by_category"][t["category"]] = summary["by_category"].get(t["category"], 0) + 1
         summary["by_component"][t["component_name"]] = summary["by_component"].get(t["component_name"], 0) + 1
         summary["by_methodology"][t["methodology"]] = summary["by_methodology"].get(t["methodology"], 0) + 1
+        summary["by_tier"][t.get("tier", "baseline")] = summary["by_tier"].get(t.get("tier", "baseline"), 0) + 1
         if t["source"] == "rule-based":
             summary["rule_based"] += 1
         else:

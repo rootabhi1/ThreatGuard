@@ -309,6 +309,16 @@ print(f"  DREAD (scoring lens): {'does NOT generate threats' if 'dread' not in a
 assert "dread" not in all_methodologies_used, "DREAD must not generate threats (it is a scoring lens)"
 assert _dread_scored, "every threat must carry a DREAD score with a risk tier"
 
+# Applicability tiers (precision Phase 1): every threat is evidenced|baseline,
+# flow-condition threats are always evidenced, and both tiers appear across the
+# sampled systems.
+_tiers = [t.get("tier") for t in _all_threats_sampled]
+assert all(x in ("evidenced", "baseline") for x in _tiers), "every threat needs a valid tier"
+_flow_threats = [t for t in _all_threats_sampled if t.get("flow_id")]
+assert all(t.get("tier") == "evidenced" for t in _flow_threats), "flow-condition threats must be evidenced"
+assert "evidenced" in _tiers and "baseline" in _tiers, "both tiers should appear across sampled systems"
+print(f"  Applicability tiers:  evidenced={_tiers.count('evidenced')} · baseline={_tiers.count('baseline')}")
+
 print()
 print("=" * 80)
 print("  ACCURACY ASSESSMENT")
