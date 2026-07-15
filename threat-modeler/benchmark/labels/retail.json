@@ -1,0 +1,10 @@
+{
+  "system": "retail.json",
+  "methodologies": ["stride", "linddun", "pasta"],
+  "notes": "Larger system; assertions kept to high-confidence facts, rest tracked structurally.",
+  "must_be_evidenced": [
+    { "component": "Orders DB (Postgres)", "title_contains": "Broken access control", "why": "user-reachable data store" },
+    { "component": "Orders DB (Postgres)", "title_contains": "Stored data tampering",  "why": "injection into a store on a user path" }
+  ],
+  "must_not_be_evidenced": []
+}

@@ -1,0 +1,110 @@
+{
+  "name": "ShopFast \u2014 Online Retail Platform",
+  "description": "Browser and mobile clients talk to an API gateway, which fans out to an auth service, an orders service backed by PostgreSQL, and an external payment provider. An internal admin portal manages catalog and refunds.",
+  "components": [
+    {
+      "id": "cust",
+      "name": "Customer Browser",
+      "type": "user"
+    },
+    {
+      "id": "mobile",
+      "name": "Mobile App",
+      "type": "user"
+    },
+    {
+      "id": "web",
+      "name": "Web Frontend",
+      "type": "webapp"
+    },
+    {
+      "id": "gw",
+      "name": "API Gateway",
+      "type": "api"
+    },
+    {
+      "id": "auth",
+      "name": "Auth Service",
+      "type": "service"
+    },
+    {
+      "id": "orders",
+      "name": "Orders Service",
+      "type": "service"
+    },
+    {
+      "id": "db",
+      "name": "Orders DB (Postgres)",
+      "type": "database"
+    },
+    {
+      "id": "pay",
+      "name": "Payment Provider",
+      "type": "external"
+    },
+    {
+      "id": "admin",
+      "name": "Admin Portal",
+      "type": "webapp"
+    }
+  ],
+  "data_flows": [
+    {
+      "id": "f1",
+      "from": "cust",
+      "to": "web",
+      "protocol": "HTTPS",
+      "encrypted": true
+    },
+    {
+      "id": "f2",
+      "from": "mobile",
+      "to": "gw",
+      "protocol": "HTTPS",
+      "encrypted": true
+    },
+    {
+      "id": "f3",
+      "from": "web",
+      "to": "gw",
+      "protocol": "HTTPS",
+      "encrypted": true
+    },
+    {
+      "id": "f4",
+      "from": "gw",
+      "to": "auth",
+      "protocol": "HTTPS",
+      "encrypted": true
+    },
+    {
+      "id": "f5",
+      "from": "gw",
+      "to": "orders",
+      "protocol": "HTTP",
+      "encrypted": false
+    },
+    {
+      "id": "f6",
+      "from": "orders",
+      "to": "db",
+      "protocol": "TCP",
+      "encrypted": false
+    },
+    {
+      "id": "f7",
+      "from": "orders",
+      "to": "pay",
+      "protocol": "HTTPS",
+      "encrypted": true
+    },
+    {
+      "id": "f8",
+      "from": "admin",
+      "to": "gw",
+      "protocol": "HTTPS",
+      "encrypted": true
+    }
+  ],
+  "trust_boundaries": []
+}

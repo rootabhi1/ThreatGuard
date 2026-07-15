@@ -1,0 +1,15 @@
+{
+  "system": "login.json",
+  "methodologies": ["stride", "linddun", "pasta"],
+  "notes": "f3 (Auth API -> User Database) is unencrypted; Web App is public; DB is internal.",
+  "must_be_evidenced": [
+    { "component": "User Database", "title_contains": "Unencrypted flow", "why": "f3 has encrypted:false" },
+    { "component": "User Database", "title_contains": "at rest",          "why": "DB is a datastore" },
+    { "component": "Login Web App", "title_contains": "Broken access control", "why": "user-reachable web app" },
+    { "component": "Auth API",      "title_contains": "exposure in transit",  "why": "Auth API is on the unencrypted flow" }
+  ],
+  "must_not_be_evidenced": [
+    { "component": "Login Web App", "title_contains": "Session token hijacking", "why": "no model signal -> baseline check" },
+    { "component": "User Database", "title_contains": "Application-layer DDoS",  "why": "DB is internal, not exposed to a less-trusted zone" }
+  ]
+}
