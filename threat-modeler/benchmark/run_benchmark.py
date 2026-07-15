@@ -97,10 +97,15 @@ def main() -> int:
     passed_labels = sum(r["labels_passed"] for r in reports)
     agg_total = sum(r["total"] for r in reports)
     agg_ev = sum(r["evidenced"] for r in reports)
+    pct = round(100 * passed_labels / max(1, total_labels), 1)
     print("\n" + "=" * 72)
-    print(f"  Aggregate: {len(reports)} systems · {agg_total} threats · "
-          f"{agg_ev} evidenced ({round(agg_ev / max(1, agg_total), 3)} overall ratio)")
-    print(f"  {'PASS' if ok else 'FAIL'} — {passed_labels}/{total_labels} labelled assertions held")
+    # Accuracy = correctness vs expert labels (the metric that should go up).
+    print(f"  ACCURACY (labelled precision): {passed_labels}/{total_labels} assertions held "
+          f"({pct}%)  [{'PASS' if ok else 'FAIL'}]  across {len(reports)} systems")
+    # Composition is NOT accuracy — it just describes the evidenced/total mix and
+    # shifts with catalog size, so don't read it as a quality score.
+    print(f"  composition (not accuracy):    {agg_ev}/{agg_total} evidenced "
+          f"({round(agg_ev / max(1, agg_total), 3)} ratio)")
     print("=" * 72)
     return 0 if ok else 1
 

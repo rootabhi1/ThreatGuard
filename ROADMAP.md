@@ -38,17 +38,25 @@ them is what caused earlier mislabeling:
   fact in your model) or `baseline` (a generic type-based check). Reports default
   to *evidenced*, with a one-click toggle to reveal baseline — high-signal by
   default, nothing dropped.
+- [x] **Measurement harness.** Reference systems with expert-labelled
+  applicable/not (`benchmark/`), so correctness is tracked as a number and
+  regression-gated in CI. Accuracy is the labelled-assertion pass rate — *not*
+  the evidenced/total ratio, which is a composition metric that shifts with
+  catalog size.
+- [x] **Per-rule evidence predicates.** Each rule declares its precondition
+  explicitly via an `evidence` signal; the old keyword heuristic is retired.
+- [x] **Data classification.** Optional `sensitivity` tags (PII / PHI / PCI /
+  secrets) on flows and components move **LINDDUN** privacy threats to evidenced,
+  and drive *class-aware* compliance findings (PHI→HIPAA, PII→GDPR/CCPA,
+  PCI→PCI-DSS).
 
 ### Next
 
-- [ ] **Measurement harness.** Reference systems with expert-labelled
-  applicable/not, so precision and the evidenced ratio are tracked before/after
-  each change — improvements become numbers, not guesses.
-- [ ] **Per-rule evidence predicates.** Replace the coarse keyword buckets with
-  explicit `applies_when` conditions per rule — higher-precision tiering.
-- [ ] **Data classification.** Sensitivity tags (PII / PHI / PCI / secrets) on
-  flows and components — the signal that moves **LINDDUN** and confidentiality
-  threats from baseline to evidenced.
+- [ ] **Expand the labelled corpus.** More reference systems and per-threat
+  labels (ideally a second reviewer) so precision/recall can be quoted with
+  confidence rather than as a small-sample gate.
+- [ ] **Sensitivity in the UI.** Let users tag data classification in the builder
+  so the data-classification precision is reachable without hand-editing JSON.
 - [ ] **Feedback loop.** Persistent "not applicable / accepted" that suppresses a
   threat on re-analysis, plus optional LLM triage of baseline items.
 
