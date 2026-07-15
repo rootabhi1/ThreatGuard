@@ -335,37 +335,18 @@ _EVIDENCE_SIGNALS = {
 }
 
 
-def _component_evidence(rule: dict, category: str, component: dict, ctx: dict) -> str:
+def _component_evidence(rule: dict, component: dict, ctx: dict) -> str:
     """"evidenced" if the model proves this component-level threat's precondition,
     else "baseline".
 
-    A rule may declare its precondition explicitly with an "evidence" field naming
-    one of _EVIDENCE_SIGNALS — that is authoritative. Rules without it fall back to
-    a coarse keyword heuristic. Rules matching neither stay baseline."""
-    cid = component.get("id")
-    ctype = component.get("type", "")
-
-    signal = rule.get("evidence")
-    if signal is not None:
-        check = _EVIDENCE_SIGNALS.get(signal)
-        if check is not None:
-            return "evidenced" if check(cid, ctype, ctx) else "baseline"
-
-    # Fallback: keyword heuristic for rules that don't declare an evidence signal.
-    t = f"{rule.get('title', '')} {category}".lower()
-
-    def _hit(*keys):
-        return any(k in t for k in keys)
-
-    if _hit("in transit", "transmission", "cleartext", "unencrypted", "data-in-transit"):
-        return "evidenced" if cid in ctx["unencrypted_touch"] else "baseline"
-    if _hit("denial of service", "dos", "flooding", "resource exhaustion", "ddos"):
-        return "evidenced" if cid in ctx["exposed"] else "baseline"
-    if _hit("access control", "idor", "direct object", "privilege", "authz", "elevation"):
-        return "evidenced" if cid in ctx["user_reachable"] else "baseline"
-    if _hit("at rest", "stored data", "data exposure at rest"):
-        return "evidenced" if ctype in _STORE_TYPES else "baseline"
-    return "baseline"
+    A rule declares its precondition with an "evidence" field naming one of
+    _EVIDENCE_SIGNALS. Every built-in catalog rule is annotated; a rule with no
+    (or an unrecognized) signal — e.g. a user-defined custom rule — defaults to
+    "baseline", so it is surfaced but not falsely promoted to evidenced."""
+    check = _EVIDENCE_SIGNALS.get(rule.get("evidence"))
+    if check is None:
+        return "baseline"
+    return "evidenced" if check(component.get("id"), component.get("type", ""), ctx) else "baseline"
 
 
 # ---------------------------------------------------------------------------
@@ -399,7 +380,7 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                         "flow_id": None,
                         "mitigations": rule["mitigations"],
                         "source": "rule-based",
-                        "tier": _component_evidence(rule, category_name, component, ev_ctx),
+                        "tier": _component_evidence(rule, component, ev_ctx),
                         "dread": _score_dread(rule, component, None),
                     })
 

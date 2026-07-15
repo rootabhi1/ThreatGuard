@@ -31,18 +31,21 @@ STRIDE = {
             "threats": [
                 {
                     "title": "Authentication bypass via credential stuffing",
+                    "evidence": "none",
                     "description": "Attackers reuse leaked credentials to impersonate legitimate users.",
                     "severity": "High",
                     "mitigations": ["Implement MFA", "Rate-limit login attempts", "Monitor for credential stuffing patterns", "Use passkeys / WebAuthn where possible"],
                 },
                 {
                     "title": "Session token hijacking",
+                    "evidence": "none",
                     "description": "Attacker steals or predicts a session token to impersonate a user.",
                     "severity": "High",
                     "mitigations": ["Use HTTPOnly + Secure + SameSite cookies", "Rotate tokens on privilege change", "Bind tokens to client fingerprint"],
                 },
                 {
                     "title": "API key / service identity spoofing",
+                    "evidence": "none",
                     "description": "An attacker obtains or forges an API key to act as a trusted service.",
                     "severity": "High",
                     "mitigations": ["Use short-lived tokens (mTLS / JWT with rotation)", "Store keys in a secrets manager", "Audit key usage and anomalous source IPs"],
@@ -55,18 +58,21 @@ STRIDE = {
             "threats": [
                 {
                     "title": "Data-in-transit modification",
+                    "evidence": "unencrypted_flow",
                     "description": "Attacker on the network path alters request/response payloads.",
                     "severity": "High",
                     "mitigations": ["Enforce TLS 1.2+ on all flows", "Use HSTS", "Pin certificates for service-to-service calls"],
                 },
                 {
                     "title": "Stored data tampering via injection",
+                    "evidence": "user_reachable",
                     "description": "SQL/NoSQL/command injection alters records or schema.",
                     "severity": "Critical",
                     "mitigations": ["Use parameterized queries", "Validate and sanitize inputs", "Apply least-privilege DB users"],
                 },
                 {
                     "title": "Config / secret tampering",
+                    "evidence": "none",
                     "description": "Unauthorized changes to runtime config alter security behavior.",
                     "severity": "High",
                     "mitigations": ["Sign config bundles", "Audit config changes", "Restrict write access via IAM"],
@@ -79,12 +85,14 @@ STRIDE = {
             "threats": [
                 {
                     "title": "Insufficient audit logging",
+                    "evidence": "none",
                     "description": "Critical user actions cannot be reliably attributed after the fact.",
                     "severity": "Medium",
                     "mitigations": ["Log auth, privilege changes, and write operations", "Ship logs to tamper-evident storage", "Include user, timestamp, source IP, action"],
                 },
                 {
                     "title": "Log tampering",
+                    "evidence": "none",
                     "description": "An attacker with access modifies or deletes audit trails.",
                     "severity": "High",
                     "mitigations": ["Stream logs off-host immediately", "Use append-only / WORM log storage", "Sign log batches"],
@@ -97,24 +105,28 @@ STRIDE = {
             "threats": [
                 {
                     "title": "Sensitive data exposure in transit",
+                    "evidence": "unencrypted_flow",
                     "description": "PII, secrets, or tokens transmitted over unencrypted channels.",
                     "severity": "High",
                     "mitigations": ["Enforce TLS for all internal & external flows", "Disable plaintext fallbacks", "Inspect with DLP scanners"],
                 },
                 {
                     "title": "Sensitive data exposure at rest",
+                    "evidence": "is_store",
                     "description": "Stored PII / secrets accessible without proper authorization.",
                     "severity": "High",
                     "mitigations": ["Encrypt at rest (AES-256)", "Tokenize / hash sensitive fields", "Apply row-level access control"],
                 },
                 {
                     "title": "Verbose error messages / stack traces",
+                    "evidence": "none",
                     "description": "Error responses leak implementation details to attackers.",
                     "severity": "Medium",
                     "mitigations": ["Return generic errors to clients", "Log detailed errors server-side only", "Disable debug mode in production"],
                 },
                 {
                     "title": "Insecure direct object reference (IDOR)",
+                    "evidence": "user_reachable",
                     "description": "User can access another user's resources by guessing IDs.",
                     "severity": "High",
                     "mitigations": ["Enforce object-level authz on every request", "Use unguessable IDs (UUIDs)", "Add object-ownership tests in CI"],
@@ -127,18 +139,21 @@ STRIDE = {
             "threats": [
                 {
                     "title": "Resource exhaustion via unbounded input",
+                    "evidence": "exposed",
                     "description": "Large payloads or unbounded loops exhaust CPU/memory.",
                     "severity": "Medium",
                     "mitigations": ["Set request size limits", "Apply timeouts on all I/O", "Use circuit breakers on downstreams"],
                 },
                 {
                     "title": "Application-layer DDoS",
+                    "evidence": "exposed",
                     "description": "Attacker floods expensive endpoints (e.g., search, login).",
                     "severity": "High",
                     "mitigations": ["Rate-limit per IP/user/key", "Front with WAF/CDN with DDoS protection", "Add CAPTCHA on abusive endpoints"],
                 },
                 {
                     "title": "Algorithmic complexity attack",
+                    "evidence": "exposed",
                     "description": "Crafted inputs trigger worst-case algorithm behavior (e.g., regex DoS).",
                     "severity": "Medium",
                     "mitigations": ["Avoid catastrophic regex patterns", "Cap input sizes", "Use timeouts on parsers"],
@@ -205,6 +220,7 @@ LINDDUN = {
             "threats": [
                 {
                     "title": "Cross-service user linkability",
+                    "evidence": "none",
                     "description": "Identifiers (emails, device IDs) let separate datasets be joined to profile a user.",
                     "severity": "Medium",
                     "mitigations": ["Use per-context pseudonyms", "Avoid global IDs in analytics", "Apply k-anonymity for shared datasets"],
@@ -217,6 +233,7 @@ LINDDUN = {
             "threats": [
                 {
                     "title": "Re-identification of anonymized data",
+                    "evidence": "none",
                     "description": "Quasi-identifiers (zip, DOB, gender) re-identify users in 'anonymous' exports.",
                     "severity": "High",
                     "mitigations": ["Apply differential privacy on aggregates", "Generalize quasi-identifiers", "Audit re-identification risk before release"],
@@ -229,6 +246,7 @@ LINDDUN = {
             "threats": [
                 {
                     "title": "Forced attribution of sensitive actions",
+                    "evidence": "none",
                     "description": "User cannot deny a sensitive action even when they should have plausible deniability.",
                     "severity": "Low",
                     "mitigations": ["Offer ephemeral / deniable modes where appropriate", "Avoid logging more than needed"],
@@ -241,6 +259,7 @@ LINDDUN = {
             "threats": [
                 {
                     "title": "Account enumeration via differential responses",
+                    "evidence": "user_reachable",
                     "description": "Login / signup / password reset reveal whether an account exists.",
                     "severity": "Medium",
                     "mitigations": ["Return identical responses regardless of account existence", "Constant-time comparisons"],
@@ -253,12 +272,14 @@ LINDDUN = {
             "threats": [
                 {
                     "title": "Excessive data collection",
+                    "evidence": "none",
                     "description": "System collects more PII than needed for its purpose.",
                     "severity": "Medium",
                     "mitigations": ["Apply data minimization", "Document lawful basis per field", "Run privacy impact assessments"],
                 },
                 {
                     "title": "Third-party data leakage",
+                    "evidence": "none",
                     "description": "PII shared with analytics/ad SDKs without consent.",
                     "severity": "High",
                     "mitigations": ["Vendor review + DPAs", "Consent management platform", "Block third-party trackers by default"],
@@ -271,6 +292,7 @@ LINDDUN = {
             "threats": [
                 {
                     "title": "Lack of transparent privacy notice",
+                    "evidence": "none",
                     "description": "Users don't know what data is collected or for what purpose.",
                     "severity": "Medium",
                     "mitigations": ["Clear, layered privacy notice", "Just-in-time consent prompts", "Subject access / export tooling"],
@@ -283,6 +305,7 @@ LINDDUN = {
             "threats": [
                 {
                     "title": "GDPR / CCPA / HIPAA gaps",
+                    "evidence": "none",
                     "description": "Missing DSAR handling, retention policies, or data residency controls.",
                     "severity": "High",
                     "mitigations": ["Map data flows to applicable regs", "Automate DSAR pipeline", "Set retention TTLs by data class"],
@@ -312,6 +335,7 @@ PASTA = {
             "threats": [
                 {
                     "title": "Manual step — map business impact & asset owners",
+                    "evidence": "none",
                     "description": "PASTA Stage 1 requires defining business objectives and impact tiers. The tool does NOT determine this automatically: assign an owner and a business-impact tier to each component, and record revenue/regulatory exposure.",
                     "severity": "Info",
                     "mitigations": ["Assign asset owner", "Tag asset with business impact tier", "Include in BCP/DR scope"],
@@ -324,6 +348,7 @@ PASTA = {
             "threats": [
                 {
                     "title": "Manual step — enumerate dependencies & run SCA",
+                    "evidence": "none",
                     "description": "PASTA Stage 2 requires a dependency/SBOM inventory and CVE analysis. The tool does NOT scan dependencies: run SCA (e.g. dependabot/trivy) and attach the SBOM to complete this stage.",
                     "severity": "Info",
                     "mitigations": ["Continuous SCA scanning", "Pin and patch dependencies", "Track SBOM"],
@@ -336,6 +361,7 @@ PASTA = {
             "threats": [
                 {
                     "title": "Auto-derived — review decomposition & boundary crossings",
+                    "evidence": "none",
                     "description": "PASTA Stage 3 is automated by this tool: see the generated DFD, the inferred trust boundaries, and the per-flow cross-boundary findings. Review them and confirm every entry point and trust boundary is correct.",
                     "severity": "Info",
                     "mitigations": ["Enforce authn at every boundary", "Validate inputs server-side", "Use mTLS between services"],
@@ -348,6 +374,7 @@ PASTA = {
             "threats": [
                 {
                     "title": "Manual step — define threat actors & TTPs",
+                    "evidence": "none",
                     "description": "PASTA Stage 4 requires profiling plausible adversaries and their techniques. The tool does NOT infer threat actors: map actor tiers (script-kiddie → nation-state) and relevant MITRE ATT&CK TTPs to your surfaces.",
                     "severity": "Info",
                     "mitigations": ["Document actor tiers and motives", "Map TTPs (MITRE ATT&CK) to surfaces"],
@@ -360,6 +387,7 @@ PASTA = {
             "threats": [
                 {
                     "title": "Partial — review STRIDE/OWASP findings, then add testing",
+                    "evidence": "none",
                     "description": "PASTA Stage 5 correlates weaknesses. The STRIDE and OWASP findings in this report are a starting point, but the tool does NOT run SAST/DAST: add dynamic and static testing results to complete the picture.",
                     "severity": "Info",
                     "mitigations": ["Adopt OWASP ASVS", "Run SAST + DAST in CI", "Threat-test on each release"],
@@ -372,6 +400,7 @@ PASTA = {
             "threats": [
                 {
                     "title": "Manual step — build attack trees",
+                    "evidence": "none",
                     "description": "PASTA Stage 6 requires constructing attack trees. The tool does NOT generate attack trees: model plausible kill-chains (e.g. phish → token theft → admin) for the highest-risk flows and rank them by likelihood × impact.",
                     "severity": "Info",
                     "mitigations": ["Run purple-team exercises", "Model attack trees and rank by likelihood × impact"],
@@ -384,6 +413,7 @@ PASTA = {
             "threats": [
                 {
                     "title": "Partial — use severity/DREAD scores, then assign risk owners",
+                    "evidence": "none",
                     "description": "PASTA Stage 7 quantifies and prioritizes risk. The tool provides severity and DREAD scores per threat as inputs, but does NOT record risk decisions: track each risk to an explicit accept/mitigate/transfer/avoid decision with an owner.",
                     "severity": "Info",
                     "mitigations": ["Track each risk to a decision (accept/mitigate/transfer/avoid)", "Re-review quarterly"],
