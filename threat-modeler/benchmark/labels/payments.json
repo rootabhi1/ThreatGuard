@@ -1,0 +1,13 @@
+{
+  "system": "payments.json",
+  "methodologies": ["stride", "linddun", "pasta"],
+  "notes": "Finance feature with zones; several unencrypted internal flows into the ledger.",
+  "must_be_evidenced": [
+    { "component": "Ledger Database", "title_contains": "Unencrypted flow", "why": "payments->ledger is encrypted:false" },
+    { "component": "Ledger Database", "title_contains": "Sensitive data exposure at rest", "why": "ledger is a store" },
+    { "component": "Payments Service", "title_contains": "Sensitive data exposure in transit", "why": "on unencrypted flows" }
+  ],
+  "must_not_be_evidenced": [
+    { "component": "Ledger Database", "title_contains": "Container / process escape", "why": "infra concern, not model-evidenced" }
+  ]
+}

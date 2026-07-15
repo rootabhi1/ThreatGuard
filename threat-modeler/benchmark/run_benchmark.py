@@ -95,7 +95,11 @@ def main() -> int:
             print(f"      ✗ {f}")
     total_labels = sum(r["labels_checked"] for r in reports)
     passed_labels = sum(r["labels_passed"] for r in reports)
+    agg_total = sum(r["total"] for r in reports)
+    agg_ev = sum(r["evidenced"] for r in reports)
     print("\n" + "=" * 72)
+    print(f"  Aggregate: {len(reports)} systems · {agg_total} threats · "
+          f"{agg_ev} evidenced ({round(agg_ev / max(1, agg_total), 3)} overall ratio)")
     print(f"  {'PASS' if ok else 'FAIL'} — {passed_labels}/{total_labels} labelled assertions held")
     print("=" * 72)
     return 0 if ok else 1

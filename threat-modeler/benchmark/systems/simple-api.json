@@ -1,0 +1,38 @@
+{
+  "name": "Simple API service",
+  "description": "A user calls a REST API backed by a database.",
+  "components": [
+    {
+      "id": "user",
+      "name": "User",
+      "type": "user"
+    },
+    {
+      "id": "api",
+      "name": "REST API",
+      "type": "api"
+    },
+    {
+      "id": "db",
+      "name": "Database",
+      "type": "database"
+    }
+  ],
+  "data_flows": [
+    {
+      "id": "f1",
+      "from": "user",
+      "to": "api",
+      "protocol": "HTTPS",
+      "encrypted": true
+    },
+    {
+      "id": "f2",
+      "from": "api",
+      "to": "db",
+      "protocol": "TCP",
+      "encrypted": false
+    }
+  ],
+  "trust_boundaries": []
+}

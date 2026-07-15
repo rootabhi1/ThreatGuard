@@ -1,0 +1,15 @@
+{
+  "system": "simple-api.json",
+  "methodologies": ["stride", "linddun", "pasta"],
+  "notes": "user->api unauthenticated; api->db unencrypted+unauthenticated; no zones (inferred).",
+  "must_be_evidenced": [
+    { "component": "Database", "title_contains": "Unencrypted flow", "why": "api->db is encrypted:false" },
+    { "component": "Database", "title_contains": "Sensitive data exposure at rest", "why": "DB is a store" },
+    { "component": "REST API", "title_contains": "Sensitive data exposure in transit", "why": "API is on the unencrypted flow" },
+    { "component": "REST API", "title_contains": "Broken access control", "why": "user-reachable API" }
+  ],
+  "must_not_be_evidenced": [
+    { "component": "Database", "title_contains": "Container / process escape", "why": "infra concern, not model-evidenced" },
+    { "component": "Database", "title_contains": "Application-layer DDoS", "why": "DB is not exposed to a less-trusted zone" }
+  ]
+}

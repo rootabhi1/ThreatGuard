@@ -1,0 +1,14 @@
+{
+  "system": "saas-app.json",
+  "methodologies": ["stride", "linddun", "pasta"],
+  "notes": "3 zones; api->db unencrypted; api->cache unencrypted+unauthenticated.",
+  "must_be_evidenced": [
+    { "component": "PostgreSQL", "title_contains": "Unencrypted flow", "why": "api->db is encrypted:false" },
+    { "component": "PostgreSQL", "title_contains": "Sensitive data exposure at rest", "why": "DB is a store" },
+    { "component": "API Server", "title_contains": "Sensitive data exposure in transit", "why": "API is on an unencrypted flow" },
+    { "component": "API Server", "title_contains": "Broken access control", "why": "user-reachable API" }
+  ],
+  "must_not_be_evidenced": [
+    { "component": "PostgreSQL", "title_contains": "Container / process escape", "why": "infra concern, not model-evidenced" }
+  ]
+}

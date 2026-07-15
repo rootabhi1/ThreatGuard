@@ -1,0 +1,36 @@
+{
+  "name": "Fund Transfer / Payments Feature",
+  "description": "Customer initiates a money transfer from the web/mobile app. Requests hit the API gateway, are authenticated, screened for fraud, then settled via an external payment processor and written to the ledger. Notifications and audit records are emitted asynchronously.",
+  "components": [
+    { "id": "customer",   "name": "Customer",            "type": "user" },
+    { "id": "webapp",     "name": "Payments Web App",    "type": "webapp" },
+    { "id": "mobile",     "name": "Mobile App",          "type": "mobile_app" },
+    { "id": "gateway",    "name": "API Gateway",         "type": "api" },
+    { "id": "authsvc",    "name": "Auth Service",        "type": "auth_service" },
+    { "id": "payments",   "name": "Payments Service",    "type": "api" },
+    { "id": "fraud",      "name": "Fraud Screening",     "type": "api" },
+    { "id": "ledger",     "name": "Ledger Database",     "type": "database" },
+    { "id": "queue",      "name": "Notification Queue",  "type": "queue" },
+    { "id": "audit",      "name": "Audit Log Store",     "type": "datastore" },
+    { "id": "processor",  "name": "Payment Processor",   "type": "payment_service" }
+  ],
+  "data_flows": [
+    { "id": "f1",  "from": "customer",  "to": "webapp",    "label": "Initiate transfer",   "protocol": "HTTPS", "auth": "session",     "encrypted": true },
+    { "id": "f2",  "from": "customer",  "to": "mobile",    "label": "Initiate transfer",   "protocol": "HTTPS", "auth": "session",     "encrypted": true },
+    { "id": "f3",  "from": "webapp",    "to": "gateway",   "label": "POST /transfer",      "protocol": "HTTPS", "auth": "bearer",      "encrypted": true },
+    { "id": "f4",  "from": "mobile",    "to": "gateway",   "label": "POST /transfer",      "protocol": "HTTPS", "auth": "bearer",      "encrypted": true },
+    { "id": "f5",  "from": "gateway",   "to": "authsvc",   "label": "Validate token",      "protocol": "HTTPS", "auth": "mtls",        "encrypted": true },
+    { "id": "f6",  "from": "gateway",   "to": "payments",  "label": "Forward transfer",    "protocol": "HTTP",  "auth": "none",        "encrypted": false },
+    { "id": "f7",  "from": "payments",  "to": "fraud",     "label": "Risk score",          "protocol": "HTTPS", "auth": "bearer",      "encrypted": true },
+    { "id": "f8",  "from": "payments",  "to": "ledger",    "label": "Write debit/credit",  "protocol": "TCP",   "auth": "credentials", "encrypted": false },
+    { "id": "f9",  "from": "payments",  "to": "processor", "label": "Settle payment",      "protocol": "HTTPS", "auth": "apikey",      "encrypted": true },
+    { "id": "f10", "from": "payments",  "to": "queue",     "label": "Emit notification",   "protocol": "TCP",   "auth": "none",        "encrypted": false },
+    { "id": "f11", "from": "payments",  "to": "audit",     "label": "Write audit record",  "protocol": "TCP",   "auth": "credentials", "encrypted": true }
+  ],
+  "trust_boundaries": [
+    { "id": "b_public",   "name": "Public / Internet",       "contains": ["customer", "webapp", "mobile"] },
+    { "id": "b_edge",     "name": "DMZ / Edge",              "contains": ["gateway"] },
+    { "id": "b_core",     "name": "Internal Core (private)", "contains": ["authsvc", "payments", "fraud", "ledger", "queue", "audit"] },
+    { "id": "b_external", "name": "External Processors",     "contains": ["processor"] }
+  ]
+}

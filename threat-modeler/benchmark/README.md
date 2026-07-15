@@ -3,6 +3,10 @@
 Measures the accuracy of the engine's **`evidenced`** tier (see issue #32) so
 precision improvements can be validated with numbers instead of guesses.
 
+Current corpus: **5 reference systems, 24 expert-labelled assertions.** More
+systems and labels raise confidence in the reported precision — contributions
+welcome.
+
 ## What it does
 
 `run_benchmark.py` analyzes each reference system in `systems/` and reports:
