@@ -1,6 +1,6 @@
 # 🛡 ThreatGuard — Automated Threat Modeling
 
-> Threat modeling for engineering teams — STRIDE, DREAD, LINDDUN, PASTA and OWASP Top 10, with CVSS/CWE/MITRE ATT&CK scoring and compliance mapping. Works fully offline; optionally enriched by an LLM (Claude **or** any OpenAI-compatible model).
+> Threat modeling for engineering teams — the STRIDE, LINDDUN and PASTA methodologies, with DREAD risk scoring and OWASP Top 10 coverage, plus CVSS/CWE/MITRE ATT&CK scoring and compliance mapping. Works fully offline; optionally enriched by an LLM (Claude **or** any OpenAI-compatible model).
 
 [![CI](https://github.com/rootabhi1/ThreatGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/rootabhi1/ThreatGuard/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/rootabhi1/ThreatGuard/actions/workflows/codeql.yml/badge.svg)](https://github.com/rootabhi1/ThreatGuard/actions/workflows/codeql.yml)
@@ -52,7 +52,7 @@ a replacement for their judgment.
 
 ThreatGuard turns a description of a system — typed, drawn on a canvas, or **uploaded as an architecture diagram** — into a structured threat model: identified threats, severity and CVSS scores, CWE and MITRE ATT&CK references, mapped compliance controls, a data-flow diagram with trust boundaries, and exportable reports.
 
-- **Five methodologies** — STRIDE, DREAD, LINDDUN, PASTA, OWASP Top 10, applied by a deterministic rule engine (no API key required).
+- **Three threat-modeling methodologies** — STRIDE, LINDDUN and PASTA — applied by a deterministic rule engine (no API key required), plus **DREAD** risk scoring on every threat and an **OWASP Top 10** coverage checklist. (DREAD is a scoring model and OWASP Top 10 is an awareness reference — neither is a threat-modeling methodology.)
 - **Rich scoring** — CVSS 3.1 & 4.0, CWE, MITRE ATT&CK technique/tactic, and SOC 2 / ISO 27001 / PCI-DSS control mapping.
 - **Trust boundaries & DFD** — boundaries are auto-inferred when none are defined, cross-boundary flows are flagged, and a labelled data-flow diagram is rendered.
 - **Diagram upload** — drop in a PNG/JPEG/WebP architecture diagram; with a vision-capable LLM it is turned into a system model, otherwise you get an editable starting point.

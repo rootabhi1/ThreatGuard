@@ -1,7 +1,15 @@
 
+# NOTE: The OWASP Top 10 is a standard *awareness document* — a ranked list of the
+# most critical web-application security risks. It is NOT a threat-modeling
+# methodology (unlike STRIDE / LINDDUN / PASTA). It is exposed here as a coverage
+# *checklist*: its risk categories are applied to components as a completeness aid,
+# and individual findings are separately cross-linked to the relevant Top-10 risk
+# (see detail.OWASP_LINKS). It must never be presented as a threat-modeling
+# methodology in the UI, API, or docs.
 OWASP_TOP10 = {
     "name": "OWASP Top 10",
-    "description": "The 10 most critical web application security risks (OWASP 2021)",
+    "kind": "checklist",
+    "description": "Coverage checklist based on the OWASP Top 10 web-application security risks (2021). An awareness reference, not a threat-modeling methodology.",
     "categories": {
         "A01 Broken Access Control": {
             "description": "Access restrictions not enforced",
@@ -61,6 +69,7 @@ component types / data flow attributes to applicable threats.
 # ---------- STRIDE ----------
 STRIDE = {
     "name": "STRIDE",
+    "kind": "methodology",
     "description": "Microsoft's threat model: Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege",
     "categories": {
         "Spoofing": {
@@ -210,53 +219,25 @@ STRIDE = {
     },
 }
 
-# ---------- DREAD (scoring overlay) ----------
+# ---------- DREAD (risk-scoring lens, NOT a threat generator) ----------
+# DREAD is a risk-*rating* model, not a threat-enumeration methodology: it scores
+# an already-identified threat on five axes (Damage, Reproducibility,
+# Exploitability, Affected users, Discoverability). It does not, on its own,
+# produce threats. In this tool DREAD is therefore applied as a scoring lens over
+# every threat found by the real methodologies (see analyzer._score_dread), rather
+# than as a selectable generator. `categories` is intentionally empty so that
+# selecting DREAD never fabricates axis-named pseudo-threats.
 DREAD = {
     "name": "DREAD",
-    "description": "Risk-rating model: Damage, Reproducibility, Exploitability, Affected users, Discoverability (1-10 each)",
-    "categories": {
-        "Risk Rating": {
-            "description": "Score each component's existing threats on 5 axes",
-            "applies_to": ["*"],
-            "threats": [
-                {
-                    "title": "High-damage data exposure (D)",
-                    "description": "If exploited, breach would expose regulated data (PII, PHI, PCI).",
-                    "severity": "High",
-                    "mitigations": ["Map data classifications", "Apply encryption + tokenization", "Run DLP on egress"],
-                },
-                {
-                    "title": "Easily reproducible exploit (R)",
-                    "description": "Attack works the same way every time — no race or timing dependency.",
-                    "severity": "High",
-                    "mitigations": ["Add randomized rate limits / nonces", "Patch deterministic logic flaws first"],
-                },
-                {
-                    "title": "Low exploitability barrier (E)",
-                    "description": "Any unauthenticated attacker can attempt the exploit.",
-                    "severity": "Critical",
-                    "mitigations": ["Require auth on the affected surface", "Add WAF rule for the pattern"],
-                },
-                {
-                    "title": "Wide blast radius — affected users (A)",
-                    "description": "A single exploit impacts most or all users of the system.",
-                    "severity": "Critical",
-                    "mitigations": ["Add per-tenant isolation", "Cap session/token scope"],
-                },
-                {
-                    "title": "High discoverability (D)",
-                    "description": "Vulnerability is visible to anyone scanning the system.",
-                    "severity": "High",
-                    "mitigations": ["Reduce attack surface", "Hide internal interfaces from the public network"],
-                },
-            ],
-        },
-    },
+    "kind": "scoring",
+    "description": "Risk-scoring lens applied to identified threats — Damage, Reproducibility, Exploitability, Affected users, Discoverability (1-10 each). Not a threat generator; every threat already carries a DREAD score.",
+    "categories": {},
 }
 
 # ---------- LINDDUN (privacy) ----------
 LINDDUN = {
     "name": "LINDDUN",
+    "kind": "methodology",
     "description": "Privacy threat model: Linkability, Identifiability, Non-repudiation, Detectability, Disclosure of information, Unawareness, Non-compliance",
     "categories": {
         "Linkability": {
@@ -352,91 +333,100 @@ LINDDUN = {
     },
 }
 
-# ---------- PASTA (process-oriented; we surface threat patterns) ----------
+# ---------- PASTA (7-stage process scaffold) ----------
+# PASTA is a process-oriented, 7-stage methodology. A static rule engine cannot
+# *execute* a multi-stage risk process, so this tool does not claim to. What it
+# provides is an honest scaffold: for each stage it emits a checklist item that
+# states plainly whether the tool auto-derived anything for that stage or whether
+# the stage still requires manual work. Only Stage 3 (Decomposition) is genuinely
+# automated here — it is backed by the real DFD, trust-boundary inference, and the
+# cross-boundary rules in analyzer.py. Every other stage is flagged as manual so a
+# reader is never misled into thinking a full PASTA process was performed.
 PASTA = {
     "name": "PASTA",
-    "description": "Process for Attack Simulation and Threat Analysis — 7-stage risk-centric methodology",
+    "kind": "methodology",
+    "description": "Process for Attack Simulation and Threat Analysis — a 7-stage risk-centric process. This tool automates Stage 3 (decomposition) and surfaces the remaining stages as a manual checklist scaffold; it does not execute the full process end-to-end.",
     "categories": {
         "Stage 1 — Business Objectives": {
-            "description": "Identify business impact of compromise",
+            "description": "Identify business impact of compromise (manual stage)",
             "applies_to": ["*"],
             "threats": [
                 {
-                    "title": "Unmapped business-critical asset",
-                    "description": "Component handles revenue/regulated data but has no documented owner or risk tier.",
-                    "severity": "Medium",
+                    "title": "Manual step — map business impact & asset owners",
+                    "description": "PASTA Stage 1 requires defining business objectives and impact tiers. The tool does NOT determine this automatically: assign an owner and a business-impact tier to each component, and record revenue/regulatory exposure.",
+                    "severity": "Info",
                     "mitigations": ["Assign asset owner", "Tag asset with business impact tier", "Include in BCP/DR scope"],
                 },
             ],
         },
         "Stage 2 — Technical Scope": {
-            "description": "Define infrastructure and dependencies",
+            "description": "Define infrastructure and dependencies (manual stage)",
             "applies_to": ["*"],
             "threats": [
                 {
-                    "title": "Unknown / outdated dependency",
-                    "description": "Third-party library with known CVEs in the dependency graph.",
-                    "severity": "High",
+                    "title": "Manual step — enumerate dependencies & run SCA",
+                    "description": "PASTA Stage 2 requires a dependency/SBOM inventory and CVE analysis. The tool does NOT scan dependencies: run SCA (e.g. dependabot/trivy) and attach the SBOM to complete this stage.",
+                    "severity": "Info",
                     "mitigations": ["Continuous SCA scanning", "Pin and patch dependencies", "Track SBOM"],
                 },
             ],
         },
         "Stage 3 — Application Decomposition": {
-            "description": "Map data flows, trust boundaries, entry points",
+            "description": "Map data flows, trust boundaries, entry points (auto-derived)",
             "applies_to": ["webapp", "api", "data_flow"],
             "threats": [
                 {
-                    "title": "Implicit trust across boundary",
-                    "description": "Data crosses a trust boundary without authn/authz/validation.",
-                    "severity": "High",
+                    "title": "Auto-derived — review decomposition & boundary crossings",
+                    "description": "PASTA Stage 3 is automated by this tool: see the generated DFD, the inferred trust boundaries, and the per-flow cross-boundary findings. Review them and confirm every entry point and trust boundary is correct.",
+                    "severity": "Info",
                     "mitigations": ["Enforce authn at every boundary", "Validate inputs server-side", "Use mTLS between services"],
                 },
             ],
         },
         "Stage 4 — Threat Analysis": {
-            "description": "Identify likely threat actors and TTPs",
+            "description": "Identify likely threat actors and TTPs (manual stage)",
             "applies_to": ["*"],
             "threats": [
                 {
-                    "title": "Threat actor profile not defined",
-                    "description": "No mapping of plausible adversaries (script kiddie → nation-state) to system surfaces.",
-                    "severity": "Low",
+                    "title": "Manual step — define threat actors & TTPs",
+                    "description": "PASTA Stage 4 requires profiling plausible adversaries and their techniques. The tool does NOT infer threat actors: map actor tiers (script-kiddie → nation-state) and relevant MITRE ATT&CK TTPs to your surfaces.",
+                    "severity": "Info",
                     "mitigations": ["Document actor tiers and motives", "Map TTPs (MITRE ATT&CK) to surfaces"],
                 },
             ],
         },
         "Stage 5 — Vulnerability Analysis": {
-            "description": "Find weaknesses",
+            "description": "Correlate weaknesses (partially auto-derived)",
             "applies_to": ["webapp", "api", "database", "auth_service"],
             "threats": [
                 {
-                    "title": "OWASP Top-10 class weakness present",
-                    "description": "Missing controls for injection, broken access, SSRF, etc.",
-                    "severity": "High",
+                    "title": "Partial — review STRIDE/OWASP findings, then add testing",
+                    "description": "PASTA Stage 5 correlates weaknesses. The STRIDE and OWASP findings in this report are a starting point, but the tool does NOT run SAST/DAST: add dynamic and static testing results to complete the picture.",
+                    "severity": "Info",
                     "mitigations": ["Adopt OWASP ASVS", "Run SAST + DAST in CI", "Threat-test on each release"],
                 },
             ],
         },
         "Stage 6 — Attack Modeling": {
-            "description": "Build attack trees",
+            "description": "Build attack trees (manual stage)",
             "applies_to": ["*"],
             "threats": [
                 {
-                    "title": "Untested attack path",
-                    "description": "Plausible kill-chain (e.g., phish → token theft → admin) not exercised.",
-                    "severity": "Medium",
+                    "title": "Manual step — build attack trees",
+                    "description": "PASTA Stage 6 requires constructing attack trees. The tool does NOT generate attack trees: model plausible kill-chains (e.g. phish → token theft → admin) for the highest-risk flows and rank them by likelihood × impact.",
+                    "severity": "Info",
                     "mitigations": ["Run purple-team exercises", "Model attack trees and rank by likelihood × impact"],
                 },
             ],
         },
         "Stage 7 — Risk & Impact Analysis": {
-            "description": "Quantify and prioritize",
+            "description": "Quantify and prioritize (partially auto-derived)",
             "applies_to": ["*"],
             "threats": [
                 {
-                    "title": "No residual-risk acceptance",
-                    "description": "Risks are listed but not formally accepted/transferred/mitigated by an owner.",
-                    "severity": "Low",
+                    "title": "Partial — use severity/DREAD scores, then assign risk owners",
+                    "description": "PASTA Stage 7 quantifies and prioritizes risk. The tool provides severity and DREAD scores per threat as inputs, but does NOT record risk decisions: track each risk to an explicit accept/mitigate/transfer/avoid decision with an owner.",
+                    "severity": "Info",
                     "mitigations": ["Track each risk to a decision (accept/mitigate/transfer/avoid)", "Re-review quarterly"],
                 },
             ],

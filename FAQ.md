@@ -2,8 +2,9 @@
 
 ## Why use AI at all?
 
-ThreatGuard's core is a **deterministic rule engine** — STRIDE / DREAD / LINDDUN
-/ PASTA / OWASP applied to your components and data flows. That works with no AI
+ThreatGuard's core is a **deterministic rule engine** — the STRIDE, LINDDUN and
+PASTA methodologies applied to your components and data flows, with DREAD risk
+scoring on every threat and an OWASP Top 10 coverage checklist. That works with no AI
 and gives reproducible results. AI is layered on top to help with the fuzzy
 parts: turning a plain-English description (or an architecture image) into a
 structured model, suggesting context-specific threats, and drafting fixes. AI

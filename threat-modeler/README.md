@@ -45,7 +45,7 @@ Management sees the same editor in **read-only** mode (pan/zoom/inspect, no edit
 
 ## Methodologies & scoring
 
-STRIDE / DREAD / LINDDUN / PASTA / OWASP Top 10, applied automatically. Each threat carries CVSS 3.1 + 4.0, a CWE, MITRE ATT&CK technique/tactic, and SOC 2 / ISO 27001 / PCI-DSS control mapping. A plain-English description — or an **uploaded architecture diagram** (PNG/JPEG/WebP) — auto-extracts components, flows, and trust boundaries.
+STRIDE, LINDDUN and PASTA methodologies, applied automatically, with DREAD risk scoring on every threat and an OWASP Top 10 coverage checklist. Each threat carries CVSS 3.1 + 4.0, a CWE, MITRE ATT&CK technique/tactic, and SOC 2 / ISO 27001 / PCI-DSS control mapping. A plain-English description — or an **uploaded architecture diagram** (PNG/JPEG/WebP) — auto-extracts components, flows, and trust boundaries.
 
 Reports: Markdown, interactive HTML (with embedded DFD), PDF, a CSV risk register, and an executive summary.
 
@@ -74,7 +74,7 @@ threat-modeler/
 ├── auth/                        # RBAC: permission registry, JWT, dependencies
 ├── db/                          # SQLite schema + domain CRUD
 ├── threat_engine/
-│   ├── methodologies.py         # STRIDE / DREAD / LINDDUN / PASTA / OWASP rules
+│   ├── methodologies.py         # STRIDE / LINDDUN / PASTA methodologies + DREAD scoring + OWASP checklist
 │   ├── analyzer.py              # Rule engine + extraction; infers trust boundaries
 │   ├── trust_boundaries.py      # Heuristic + LLM boundary inference
 │   ├── dfd.py                   # Server-side static SVG (used in reports)

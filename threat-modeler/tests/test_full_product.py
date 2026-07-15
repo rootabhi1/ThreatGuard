@@ -132,9 +132,17 @@ check(a, "threat model delete", C.get(f"/api/threat-models/{tmp_tm['id']}", head
 # ============ E. THREAT ENGINE ============
 a = area("E. Threat Engine")
 from threat_engine import analyze_system
-for m in ["stride", "dread", "linddun", "pasta", "owasp"]:
+# Threat-generating methods (STRIDE/LINDDUN/PASTA methodologies + the OWASP
+# checklist) must produce threats. DREAD is a risk-scoring lens, not a generator:
+# it must produce NO threats of its own but must score every threat instead.
+for m in ["stride", "linddun", "pasta", "owasp"]:
     res = analyze_system(SYSTEM, [m])
-    check(a, f"methodology '{m}' produces threats", res["summary"]["total"] > 0, f"{res['summary']['total']} threats")
+    check(a, f"method '{m}' produces threats", res["summary"]["total"] > 0, f"{res['summary']['total']} threats")
+dread_only = analyze_system(SYSTEM, ["dread"])
+check(a, "DREAD generates no threats (scoring lens)", dread_only["summary"]["total"] == 0, f"{dread_only['summary']['total']} threats")
+_scored = analyze_system(SYSTEM, ["stride"])["threats"]
+check(a, "every threat carries a DREAD score + tier",
+      all(isinstance(t.get("dread"), dict) and "tier" in t["dread"] for t in _scored))
 multi = analyze_system(SYSTEM, ["stride", "owasp"])
 t0 = multi["threats"][0]
 check(a, "dedup merges methodologies", any("+" in (t.get("methodology") or "") for t in multi["threats"]) or len(multi["threats"]) > 0)

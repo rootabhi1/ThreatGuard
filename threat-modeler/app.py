@@ -726,7 +726,8 @@ async def admin_audit_log(
 # ===========================================================================
 @app.get("/api/methodologies")
 async def list_methodologies(user: dict = Depends(get_current_user)):
-    return {k: {"name": m["name"], "categories": list(m["categories"].keys())}
+    return {k: {"name": m["name"], "kind": m.get("kind", "methodology"),
+                "categories": list(m["categories"].keys())}
             for k, m in METHODOLOGIES.items()}
 
 
@@ -944,6 +945,7 @@ async def canvas_page(request: Request):
     methodologies_ctx = {
         k: {
             "name": m["name"],
+            "kind": m.get("kind", "methodology"),
             "description": m.get("description", ""),
             "categories": list(m["categories"].keys()),
         }

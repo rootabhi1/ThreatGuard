@@ -138,31 +138,147 @@ def _infer_boundaries_for_extracted(components: list[dict], source_text: str) ->
 SEVERITY_RANK = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1, "Info": 0}
 
 
-def _score_dread(threat: dict, component: dict, flow: dict | None, cross_boundary: bool = False) -> dict:
-    """Approximate DREAD scores from threat severity + flow attributes.
-    Returns ints 1-10 for D/R/E/A/D and a total."""
-    base = {"Critical": 9, "High": 7, "Medium": 5, "Low": 3, "Info": 2}.get(threat["severity"], 5)
-    damage = base
+def _dread_tier(total: int) -> str:
+    """Bucket a DREAD total (5-50) into a decision-useful risk tier."""
+    if total >= 40:
+        return "Critical"
+    if total >= 30:
+        return "High"
+    if total >= 20:
+        return "Medium"
+    return "Low"
+
+
+# Zone-name hints reused for DREAD exposure classification (mirrors the notion in
+# _untrusted_input_crossings): a component is "exposed" if it sits in a public/edge
+# zone, or receives a flow from a less-trusted (or boundary-less) source.
+_LESS_TRUSTED_ZONE_HINTS = ("dmz", "public", "edge", "front", "customer",
+                            "partner", "external", "untrusted", "perimeter", "internet")
+
+
+def _dread_context(system: dict) -> tuple[set, dict]:
+    """Compute, once per analysis, the signals DREAD's axes depend on:
+      - exposed_ids: components reachable from a less-trusted / public zone
+      - blast_by_id: how many data flows touch each component (its degree)
+    """
+    components = system.get("components", []) or []
+    flows = system.get("data_flows", []) or []
+    boundaries = system.get("trust_boundaries", []) or []
+
+    comp_to_boundary: dict[str, dict] = {}
+    for b in boundaries:
+        for cid in b.get("contains", []):
+            comp_to_boundary[cid] = b
+
+    def _less_trusted(b: dict | None) -> bool:
+        if b is None:
+            return True  # no boundary = external = untrusted
+        return any(h in b["name"].lower() for h in _LESS_TRUSTED_ZONE_HINTS)
+
+    exposed_ids: set = set()
+    # Components living in a less-trusted zone are directly exposed.
+    for c in components:
+        if _less_trusted(comp_to_boundary.get(c["id"])):
+            exposed_ids.add(c["id"])
+
+    blast_by_id: dict[str, int] = {}
+    for f in flows:
+        src, dst = f.get("from"), f.get("to")
+        for cid in (src, dst):
+            if cid:
+                blast_by_id[cid] = blast_by_id.get(cid, 0) + 1
+        # A destination that receives input from a less-trusted source is exposed.
+        if dst and _less_trusted(comp_to_boundary.get(src)):
+            exposed_ids.add(dst)
+
+    return exposed_ids, blast_by_id
+
+
+# Component types that store/process regulated or otherwise sensitive data —
+# raises the Damage axis independently of the threat's severity label.
+_SENSITIVE_TYPES = {"database", "datastore", "payment_service", "auth_service", "filesystem"}
+# Deterministic threat classes (work identically every attempt) — raises Reproducibility.
+_DETERMINISTIC_HINTS = ("injection", "sql", "idor", "access control", "misconfig",
+                        "default credential", "hardcoded", "unencrypted", "unauthenticated",
+                        "missing authz", "mass assignment")
+# Threat classes that advertise their own presence — raises Discoverability.
+_SELF_ADVERTISING_HINTS = ("verbose error", "stack trace", "enumeration", "default credential",
+                           "missing security header", "unencrypted", "information disclosure")
+
+
+def _score_dread(threat: dict, component: dict, flow: dict | None, cross_boundary: bool = False,
+                 *, exposure: bool | None = None, blast: int | None = None) -> dict:
+    """DREAD risk score derived from *independent* signals rather than five copies
+    of the severity label. Each axis reads a different property of the model:
+
+      Damage          severity + sensitivity of the data the component holds
+      Reproducibility whether the attack is deterministic / the flow is unauthenticated
+      Exploitability  reachability from a less-trusted zone + missing transport encryption
+      Affected users  blast radius (flow fan-in/out, cross-boundary, central component types)
+      Discoverability public/edge exposure + self-advertising threat classes
+
+    `exposure` (reachable from a less-trusted/public zone) and `blast` (number of
+    flows touching the component) are optional context computed once per analysis;
+    when omitted the function degrades to the local signals it can see. Returns
+    ints 1-10 for D/R/E/A/D, a total (5-50), and a risk tier.
+    """
+    base = {"Critical": 9, "High": 7, "Medium": 5, "Low": 3, "Info": 2}.get(threat.get("severity"), 5)
+    ctype = component.get("type", "")
+    title_cat = f"{threat.get('title', '')} {threat.get('category', '')}".lower()
+    auth = (flow.get("auth") if flow else "") or ""
+    auth_low = auth.strip().lower()
+    unauthenticated = auth_low in ("", "none", "n/a")
+    strong_auth = auth_low in ("mtls", "mutual-tls", "client-cert")
+    unencrypted = bool(flow) and not flow.get("encrypted", True)
+
+    # Damage — what's at stake if it's exploited
+    damage = base + (1 if ctype in _SENSITIVE_TYPES else 0)
+
+    # Reproducibility — can an attacker repeat it reliably?
     reproducibility = base - 1
+    if any(h in title_cat for h in _DETERMINISTIC_HINTS):
+        reproducibility += 2
+    if flow and unauthenticated:
+        reproducibility += 1
+
+    # Exploitability — how much stands between the attacker and the exploit
     exploitability = base
-    affected = base if component["type"] in ("webapp", "api", "auth_service", "database") else base - 2
-    discoverability = base
-    if flow and not flow.get("encrypted", True):
-        discoverability += 1
+    if exposure:
+        exploitability += 2
+    if unencrypted:
         exploitability += 1
+    if strong_auth:
+        exploitability -= 2
+    elif flow and unauthenticated:
+        exploitability += 1
+
+    # Affected users — blast radius
+    affected = base if ctype in ("webapp", "api", "auth_service", "database") else base - 2
     if cross_boundary:
-        # Crossing trust zones expands the blast radius and discoverability
         affected += 2
+    if blast:
+        affected += min(3, blast // 2)
+
+    # Discoverability — how visible the weakness is
+    discoverability = base
+    if exposure:
+        discoverability += 2
+    if unencrypted:
         discoverability += 1
-    vals = [damage, reproducibility, exploitability, affected, discoverability]
-    vals = [max(1, min(10, v)) for v in vals]
+    if any(h in title_cat for h in _SELF_ADVERTISING_HINTS):
+        discoverability += 1
+
+    vals = [max(1, min(10, v)) for v in
+            (damage, reproducibility, exploitability, affected, discoverability)]
+    total = sum(vals)
     return {
         "D_damage": vals[0],
         "R_reproducibility": vals[1],
         "E_exploitability": vals[2],
         "A_affected_users": vals[3],
         "D_discoverability": vals[4],
-        "total": sum(vals),
+        "total": total,
+        "tier": _dread_tier(total),
     }
 
 
@@ -465,6 +581,11 @@ def analyze_system(
     for mkey in methodology_keys:
         if mkey not in METHODOLOGIES:
             continue
+        # DREAD (and any other "scoring" kind) is a risk-scoring lens, not a threat
+        # generator — it is applied to every threat below, never selected to produce
+        # its own findings. Skip generation so it can't fabricate pseudo-threats.
+        if METHODOLOGIES[mkey].get("kind") == "scoring":
+            continue
         rule_threats = _rule_based_threats(system, mkey)
         all_threats.extend(rule_threats)
 
@@ -472,11 +593,19 @@ def analyze_system(
             llm_threats = _llm_enhance(system, mkey, rule_threats)
             all_threats.extend(llm_threats)
 
+    # Per-analysis context for DREAD's independent axes: which components are
+    # exposed to a less-trusted zone, and each component's blast radius (flow degree).
+    exposed_ids, blast_by_id = _dread_context(system)
+
     # Enrich each threat with CVSS, CWE, and per-threat detail
     for t in all_threats:
         component = comp_by_id.get(t.get("component_id"))
         flow = flow_by_id.get(t.get("flow_id")) if t.get("flow_id") else None
         cb = bool(t.get("cross_boundary"))
+        # Authoritative DREAD score, now that full system context is available.
+        cid = t.get("component_id")
+        t["dread"] = _score_dread(t, component or {}, flow, cross_boundary=cb,
+                                  exposure=cid in exposed_ids, blast=blast_by_id.get(cid, 0))
         enrich_threat_with_scoring(t, component or {}, flow, cross_boundary=cb)
         enrich_threat_with_detail(
             t, component or {}, flow, components, flows,

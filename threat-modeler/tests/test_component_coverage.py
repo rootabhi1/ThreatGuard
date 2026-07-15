@@ -293,10 +293,21 @@ all_methodologies_used = set()
 for r in results_summary:
     all_methodologies_used.update(r["by_methodology"].keys())
 
-print(f"  STRIDE applied:  {'YES' if 'stride' in all_methodologies_used else 'NO'}")
-print(f"  DREAD applied:   {'YES' if 'dread' in all_methodologies_used else 'NO'}")
-print(f"  LINDDUN applied: {'YES' if 'linddun' in all_methodologies_used else 'NO'}")
-print(f"  PASTA applied:   {'YES' if 'pasta' in all_methodologies_used else 'NO'}")
+# DREAD is a scoring lens, not a threat-generating methodology: it must NOT appear
+# as a source of threats, but every threat must carry a DREAD score instead.
+_all_threats_sampled = []
+for system in SYSTEMS.values():
+    _all_threats_sampled.extend(analyze(system, ALL_METHODOLOGIES)["threats"])
+_dread_scored = all(isinstance(t.get("dread"), dict) and "tier" in t["dread"]
+                    for t in _all_threats_sampled)
+
+print(f"  STRIDE applied:       {'YES' if 'stride' in all_methodologies_used else 'NO'}")
+print(f"  LINDDUN applied:      {'YES' if 'linddun' in all_methodologies_used else 'NO'}")
+print(f"  PASTA applied:        {'YES' if 'pasta' in all_methodologies_used else 'NO'}")
+print(f"  DREAD (scoring lens): {'does NOT generate threats' if 'dread' not in all_methodologies_used else 'ERROR: generated threats'}"
+      f" · all threats scored: {'YES' if _dread_scored else 'NO'}")
+assert "dread" not in all_methodologies_used, "DREAD must not generate threats (it is a scoring lens)"
+assert _dread_scored, "every threat must carry a DREAD score with a risk tier"
 
 print()
 print("=" * 80)
