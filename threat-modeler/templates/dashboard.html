@@ -65,7 +65,7 @@
       </svg>
     </div>
     <div class="empty-state-title">No threat models yet</div>
-    <div class="empty-state-desc">Create your first threat model to start analyzing your system. Describe it in plain English — we'll extract components and run STRIDE, DREAD, LINDDUN, and PASTA analysis automatically.</div>
+    <div class="empty-state-desc">Create your first threat model to start analyzing your system. Describe it in plain English — we'll extract components and run STRIDE, LINDDUN, and PASTA analysis automatically, with DREAD risk scoring and OWASP/CWE/MITRE mapping.</div>
     <button id="btn-new-tm-empty" class="btn btn-primary">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
       Create Threat Model
@@ -113,16 +113,11 @@
 
       <div class="field">
         <label class="field-label">Methodologies</label>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
           <label class="toggle-card">
             <input type="checkbox" name="methodology" value="stride" checked>
             <div class="toggle-card-title">STRIDE</div>
             <div class="toggle-card-sub">Microsoft</div>
-          </label>
-          <label class="toggle-card">
-            <input type="checkbox" name="methodology" value="dread">
-            <div class="toggle-card-title">DREAD</div>
-            <div class="toggle-card-sub">Risk score</div>
           </label>
           <label class="toggle-card">
             <input type="checkbox" name="methodology" value="linddun">
@@ -134,6 +129,9 @@
             <div class="toggle-card-title">PASTA</div>
             <div class="toggle-card-sub">Attacker-view</div>
           </label>
+        </div>
+        <div class="field-help" style="margin-top: 0.5rem;">
+          <strong>DREAD</strong> risk scoring and <strong>OWASP</strong> references are applied automatically — they are a scoring lens and a reference mapping, not methodologies you select.
         </div>
       </div>
 
