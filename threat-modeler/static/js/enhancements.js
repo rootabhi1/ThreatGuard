@@ -699,7 +699,11 @@
       btn.title = 'Keyboard shortcuts';
       btn.style.cssText = 'padding:4px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:11px;cursor:pointer;background:white;margin-left:4px;';
       btn.addEventListener('click', showShortcutsHelp);
-      toolbar.querySelector('.flex.items-center.gap-1\.5') && toolbar.querySelector('.flex.items-center.gap-1\.5').appendChild(btn);
+      // Note: the '1.5' in gap-1.5 must be escaped as '1\\.5' — inside a JS
+      // string a lone '\.' collapses to '.', producing the invalid selector
+      // '.gap-1.5' and a thrown DOMException.
+      const toolbarRow = toolbar.querySelector('.flex.items-center.gap-1\\.5');
+      if (toolbarRow) toolbarRow.appendChild(btn);
     }
   }
 
@@ -1010,8 +1014,7 @@
         category:    document.getElementById('rule-category').value || 'Custom',
         description: document.getElementById('rule-description').value.trim(),
         mitigations: document.getElementById('rule-mitigations').value
-                       .split('
-').map(s => s.trim()).filter(Boolean),
+                       .split('\n').map(s => s.trim()).filter(Boolean),
         applies_to:  document.getElementById('rule-applies-to').value
                        .split(',').map(s => s.trim()).filter(Boolean),
       };

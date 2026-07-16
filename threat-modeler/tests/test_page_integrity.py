@@ -319,14 +319,23 @@ t("auth.js and ui.js loaded before {% block body %}",
   t_auth_loaded_before_inline_script)
 
 
-def t_tailwind_cdn_loaded():
-    """Tailwind CDN is loaded so utility classes work everywhere."""
+def t_tailwind_vendored_not_cdn():
+    """Tailwind is vendored locally (compiled stylesheet), not pulled from the
+    runtime CDN. The Play CDN (cdn.tailwindcss.com) is unsuitable for production
+    and makes the whole UI depend on an external host being reachable from every
+    browser — an offline / CDN-blocked network rendered the app fully unstyled.
+    The compiled stylesheet must exist and be linked; the CDN must be gone."""
     base = (PROJECT_ROOT / "templates" / "_base.html").read_text(encoding="utf-8")
-    assert "cdn.tailwindcss.com" in base, \
-        "Tailwind CDN not in _base.html — utility classes won't work"
+    assert "cdn.tailwindcss.com" not in base, \
+        "Tailwind Play CDN must not be used — vendor the compiled stylesheet instead"
+    assert "/static/css/tailwind.css" in base, \
+        "_base.html must link the vendored /static/css/tailwind.css"
+    css = PROJECT_ROOT / "static" / "css" / "tailwind.css"
+    assert css.exists() and css.stat().st_size > 5000, \
+        "vendored static/css/tailwind.css is missing or too small — run scripts/build_css.sh"
 
 
-t("Tailwind CDN is loaded in _base.html", t_tailwind_cdn_loaded)
+t("Tailwind is vendored locally, not via CDN", t_tailwind_vendored_not_cdn)
 
 
 # ---------------------------------------------------------------------------

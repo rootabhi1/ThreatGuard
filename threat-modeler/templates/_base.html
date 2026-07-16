@@ -7,22 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
-              400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
-              800: '#3730a3', 900: '#312e81',
-            },
-          },
-        },
-      },
-    };
-  </script>
+  <!-- Tailwind is vendored (compiled from templates + JS) so the UI needs no
+       external CDN at runtime — it renders fully offline / on locked-down
+       networks. Rebuild with scripts/build_css.sh after changing classes. -->
+  <link rel="stylesheet" href="/static/css/tailwind.css">
   <link rel="stylesheet" href="/static/css/app.css">
   <script src="/static/js/auth.js"></script>
   <script src="/static/js/ui.js"></script>

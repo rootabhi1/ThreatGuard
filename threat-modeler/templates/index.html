@@ -4,21 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Automated Threat Modeling</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<!-- Tailwind is vendored locally (no runtime CDN) — see scripts/build_css.sh -->
+<link rel="stylesheet" href="/static/css/tailwind.css" />
 <link rel="stylesheet" href="/static/css/app.css" />
 <link rel="stylesheet" href="/static/css/mobile.css" />
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          brand: { 50: '#eff6ff', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' },
-          slate: { 950: '#020617' },
-        }
-      }
-    }
-  }
-</script>
 <style>
 /* ── Upload tab ─────────────────────────────────── */
 #dropzone {
