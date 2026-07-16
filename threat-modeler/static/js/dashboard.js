@@ -220,6 +220,19 @@
 
       UI.hideModal('modal-new-tm');
       UI.toast(`Created "${tm.name}" — ${analysis.summary.total} threats identified`, 'success');
+      // If AI enhancement was requested, tell the truth about what it did
+      // instead of leaving the user to discover "LLM: No" in the report later.
+      const st = analysis.llm_status;
+      if (useLlm && st) {
+        if (st.state === 'error')
+          UI.toast(`AI enhancement failed: ${st.error}. Showing rule-based results only.`, 'error', 9000);
+        else if (st.state === 'unavailable')
+          UI.toast('AI enhancement was requested, but no API key is configured on the server.', 'error', 9000);
+        else if (st.state === 'no_additions')
+          UI.toast('AI enhancement ran — no threats beyond the rule engine for this system.', 'info');
+        else if (st.state === 'enhanced')
+          UI.toast(`AI enhancement added ${st.added} context-specific threat(s).`, 'success');
+      }
       await loadAll();
       openDetail(tm.id);
     } catch (err) {

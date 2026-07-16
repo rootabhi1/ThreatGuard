@@ -36,6 +36,18 @@ import os
 import re
 
 
+# The message from the most recent complete_* failure (or None if the last call
+# succeeded / was never made). Callers read this via last_error() to surface *why*
+# an LLM step fell back, instead of the failure being swallowed silently.
+_last_error: str | None = None
+
+
+def last_error() -> str | None:
+    """Diagnostic for the most recent complete_text / complete_vision call:
+    the failure message, or None if it succeeded."""
+    return _last_error
+
+
 # ---------------------------------------------------------------------------
 # Provider / model resolution
 # ---------------------------------------------------------------------------
@@ -66,6 +78,12 @@ def _text_model() -> str:
     return os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8")
 
 
+def text_model() -> str:
+    """The text model that will be used for the resolved provider — for display
+    in reports and diagnostics."""
+    return _text_model()
+
+
 def _vision_model() -> str:
     if provider() == "openai":
         return os.getenv("OPENAI_VISION_MODEL", os.getenv("OPENAI_MODEL", "gpt-4o"))
@@ -83,14 +101,18 @@ def strip_fences(text: str) -> str:
 # Text completion
 # ---------------------------------------------------------------------------
 def complete_text(prompt: str, *, max_tokens: int = 2000, system: str | None = None) -> str | None:
+    global _last_error
+    _last_error = None
     key = _api_key()
     if not key:
+        _last_error = "no API key configured"
         return None
     try:
         if provider() == "openai":
             return _openai_text(key, prompt, max_tokens, system)
         return _anthropic_text(key, prompt, max_tokens, system)
     except Exception as e:  # never raise into callers
+        _last_error = f"{type(e).__name__}: {e}"
         print(f"[llm:{provider()}] text completion failed: {e}")
         return None
 
@@ -124,8 +146,11 @@ def _openai_text(key, prompt, max_tokens, system):
 # ---------------------------------------------------------------------------
 def complete_vision(prompt: str, image_bytes: bytes, media_type: str,
                     *, max_tokens: int = 3000) -> str | None:
+    global _last_error
+    _last_error = None
     key = _api_key()
     if not key:
+        _last_error = "no API key configured"
         return None
     try:
         b64 = base64.standard_b64encode(image_bytes).decode()
@@ -133,6 +158,7 @@ def complete_vision(prompt: str, image_bytes: bytes, media_type: str,
             return _openai_vision(key, prompt, b64, media_type, max_tokens)
         return _anthropic_vision(key, prompt, b64, media_type, max_tokens)
     except Exception as e:
+        _last_error = f"{type(e).__name__}: {e}"
         print(f"[llm:{provider()}] vision completion failed: {e}")
         return None
 

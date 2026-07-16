@@ -585,12 +585,17 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Optional LLM enhancement via Claude API
 # ---------------------------------------------------------------------------
-def _llm_enhance(system: dict, methodology_key: str, base_threats: list[dict]) -> list[dict]:
+def _llm_enhance(system: dict, methodology_key: str, base_threats: list[dict]) -> tuple[list[dict], str | None]:
     """If an LLM provider is configured, ask it to suggest additional
-    context-specific threats. Falls back silently if unavailable."""
-    from .llm import complete_text, llm_available, strip_fences
+    context-specific threats.
+
+    Returns (threats, error). ``error`` is None on success (including the valid
+    case of zero additional threats); otherwise it's a short message explaining
+    why the LLM step produced nothing, so the caller can report it honestly
+    instead of falling back silently."""
+    from .llm import complete_text, llm_available, last_error, strip_fences
     if not llm_available():
-        return []
+        return [], "no API key configured"
 
     methodology = METHODOLOGIES[methodology_key]
 
@@ -625,11 +630,11 @@ Respond with ONLY valid JSON — no prose, no markdown fences. Schema:
     try:
         text = complete_text(prompt, max_tokens=2000)
         if not text:
-            return []
+            return [], last_error() or "the model returned an empty response"
         parsed = json.loads(strip_fences(text))
     except Exception as e:
         print(f"[llm_enhance] failed: {e}")
-        return []
+        return [], f"could not parse the model response ({type(e).__name__})"
 
     comp_by_name = {c["name"]: c for c in system.get("components", [])}
     out = []
@@ -653,7 +658,7 @@ Respond with ONLY valid JSON — no prose, no markdown fences. Schema:
             "tier": "evidenced",
             "dread": _score_dread({"severity": t.get("severity", "Medium")}, comp, None),
         })
-    return out
+    return out, None
 
 
 # ---------------------------------------------------------------------------
@@ -687,6 +692,8 @@ def analyze_system(
     comp_by_id = {c["id"]: c for c in components}
     flow_by_id = {f["id"]: f for f in flows}
 
+    llm_error: str | None = None  # first LLM-enhancement failure, if any
+
     for mkey in methodology_keys:
         if mkey not in METHODOLOGIES:
             continue
@@ -700,8 +707,10 @@ def analyze_system(
         all_threats.extend(rule_threats)
 
         if use_llm:
-            llm_threats = _llm_enhance(system, mkey, rule_threats)
+            llm_threats, err = _llm_enhance(system, mkey, rule_threats)
             all_threats.extend(llm_threats)
+            if err and llm_error is None:
+                llm_error = err
 
     # Per-analysis context for DREAD's independent axes: which components are
     # exposed to a less-trusted zone, and each component's blast radius (flow degree).
@@ -745,6 +754,32 @@ def analyze_system(
         else:
             summary["llm_enhanced"] += 1
 
+    # Honest, self-describing account of what the LLM step actually did, so the
+    # UI and reports never silently claim "LLM: No" when the truth is "you asked
+    # for it but the call failed" or "it ran but found nothing new".
+    from .llm import llm_available as _llm_available, provider as _provider, text_model as _text_model_fn
+    added = summary["llm_enhanced"]
+    available = _llm_available()
+    if not use_llm:
+        state = "off"          # user did not ask for LLM enhancement
+    elif not available:
+        state = "unavailable"  # asked, but no API key configured
+    elif llm_error:
+        state = "error"        # asked, key present, but the call failed
+    elif added > 0:
+        state = "enhanced"     # asked and added N context-specific threats
+    else:
+        state = "no_additions"  # asked, ran cleanly, found nothing beyond rules
+    llm_status = {
+        "requested": use_llm,
+        "available": available,
+        "provider": _provider() if available else None,
+        "model": _text_model_fn() if available else None,
+        "added": added,
+        "error": llm_error,
+        "state": state,
+    }
+
     return {
         "system": system,
         "threats": all_threats,
@@ -755,8 +790,36 @@ def analyze_system(
         # if a caller passes them, so they can never be presented as methodologies.
         "methodologies_used": [k for k in methodology_keys
                                if METHODOLOGIES.get(k, {}).get("kind", "methodology") == "methodology"],
-        "llm_used": use_llm and summary["llm_enhanced"] > 0,
+        # True only when the LLM actually contributed threats — kept for
+        # backward compatibility with stored analyses and existing callers.
+        "llm_used": use_llm and added > 0,
+        "llm_status": llm_status,
     }
+
+
+def summarize_llm_status(analysis: dict) -> str:
+    """A short, honest human-readable label for the LLM step, used by reports.
+
+    Falls back to the legacy ``llm_used`` boolean for analyses saved before
+    ``llm_status`` existed, so old reports keep rendering."""
+    st = analysis.get("llm_status")
+    if not st:
+        return "Yes" if analysis.get("llm_used") else "No"
+    state = st.get("state")
+    prov = st.get("provider") or "LLM"
+    model = st.get("model") or ""
+    tag = f"{prov} · {model}".strip(" ·") if model else prov
+    if state == "off":
+        return "No (not requested)"
+    if state == "unavailable":
+        return "No — requested, but no API key configured (rules-only)"
+    if state == "error":
+        return f"No — requested, but the {prov} call failed: {st.get('error')} (rules-only fallback)"
+    if state == "no_additions":
+        return f"Yes ({tag}) — no threats beyond the rule engine"
+    if state == "enhanced":
+        return f"Yes ({tag}) — added {st.get('added')} context-specific threat(s)"
+    return "Yes" if analysis.get("llm_used") else "No"
 
 
 def _untrusted_input_crossings(system: dict, all_threats: list[dict]) -> list[dict]:

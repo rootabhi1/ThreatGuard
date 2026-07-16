@@ -5,6 +5,7 @@ import io
 from datetime import datetime
 
 from .dfd import render_dfd_svg
+from .analyzer import summarize_llm_status
 
 
 def to_markdown(analysis: dict) -> str:
@@ -21,7 +22,7 @@ def to_markdown(analysis: dict) -> str:
     lines.append("")
     lines.append(f"**Generated:** {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
     lines.append(f"**Methodologies:** {', '.join(analysis['methodologies_used']).upper()}")
-    lines.append(f"**LLM-enhanced:** {'Yes' if analysis['llm_used'] else 'No'}")
+    lines.append(f"**LLM-enhanced:** {summarize_llm_status(analysis)}")
     lines.append("")
 
     if system.get("description"):
@@ -312,7 +313,7 @@ def to_pdf(analysis: dict) -> bytes:
     story.append(Paragraph(
         f"Generated {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')} &nbsp;|&nbsp; "
         f"Methodologies: {', '.join(analysis['methodologies_used']).upper()} &nbsp;|&nbsp; "
-        f"LLM-enhanced: {'Yes' if analysis['llm_used'] else 'No'}", small))
+        f"LLM-enhanced: {summarize_llm_status(analysis)}", small))
     story.append(Spacer(1, 0.18 * inch))
 
     if system.get("description"):

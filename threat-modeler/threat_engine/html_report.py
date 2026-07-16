@@ -17,6 +17,7 @@ import html as html_lib
 from datetime import datetime
 
 from .dfd import render_dfd_svg
+from .analyzer import summarize_llm_status
 
 
 def _esc(s):
@@ -396,7 +397,7 @@ def to_html(analysis: dict) -> str:
     <div class="meta">
       <span><strong>Generated:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</span>
       <span><strong>Methodologies:</strong> {', '.join(_esc(m.upper()) for m in analysis['methodologies_used'])}</span>
-      <span><strong>LLM-enhanced:</strong> {'Yes' if analysis['llm_used'] else 'No'}</span>
+      <span><strong>LLM-enhanced:</strong> {_esc(summarize_llm_status(analysis))}</span>
     </div>
   </header>
 
