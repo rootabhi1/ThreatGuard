@@ -108,14 +108,28 @@
   // =========================================================================
   //  New TM modal
   // =========================================================================
+  const canCreateFeature = Auth.hasPermission('feature.create') || (me.user && me.user.role === 'admin');
+
   function populateFeatureSelect() {
     const sel = document.getElementById('select-feature');
     const help = document.getElementById('feature-help');
     if (allFeatures.length === 0) {
       sel.innerHTML = '<option value="">No features available</option>';
       sel.disabled = true;
-      help.textContent = 'No features yet. Ask an admin to grant you access.';
-      help.classList.add('field-help-error');
+      if (canCreateFeature) {
+        // Admins can unblock themselves in one click instead of hunting for the
+        // Releases & Features admin screen — the #1 fresh-deploy friction point.
+        help.classList.remove('field-help-error');
+        help.innerHTML =
+          'No features yet. ' +
+          '<button type="button" id="btn-seed-workspace" class="btn btn-secondary btn-sm" style="margin:6px 0;">Create starter workspace</button> ' +
+          '<span class="text-xs text-light">or set up your own in <a href="/admin" style="color:var(--c-brand);font-weight:600;">Admin → Releases &amp; Features</a>.</span>';
+        const seedBtn = document.getElementById('btn-seed-workspace');
+        if (seedBtn) seedBtn.addEventListener('click', createStarterWorkspace);
+      } else {
+        help.textContent = 'No features yet. Ask an admin to grant you access.';
+        help.classList.add('field-help-error');
+      }
       return;
     }
     sel.disabled = false;
@@ -123,6 +137,45 @@
       allFeatures.map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join('');
     help.textContent = `${allFeatures.length} feature(s) you have access to.`;
     help.classList.remove('field-help-error');
+  }
+
+  // One-click starter workspace for admins on a deployment that has no features
+  // yet (e.g. an existing install created before first-run seeding). Reuses the
+  // normal release + feature endpoints, then re-populates and auto-selects it.
+  async function createStarterWorkspace(e) {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+    try {
+      const relResp = await Auth.fetch('/api/releases', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Initial Release',
+          description: 'Starter release — rename or add your own in Admin → Releases & Features.',
+        }),
+      });
+      if (!relResp.ok) throw new Error((await relResp.json()).detail || 'Could not create release');
+      const rel = await relResp.json();
+      const featResp = await Auth.fetch('/api/features', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          release_id: rel.id,
+          name: 'General',
+          description: 'Starter feature — a home for your first threat model.',
+        }),
+      });
+      if (!featResp.ok) throw new Error((await featResp.json()).detail || 'Could not create feature');
+      const feat = await featResp.json();
+      await loadAll();
+      populateFeatureSelect();
+      const sel = document.getElementById('select-feature');
+      if (sel) sel.value = String(feat.id);
+      UI.toast('Starter workspace created — you can create a threat model now.', 'success');
+    } catch (err) {
+      UI.toast(err.message || 'Could not create starter workspace', 'error', 8000);
+      btn.disabled = false;
+      btn.textContent = 'Create starter workspace';
+    }
   }
 
   async function updateLlmStatusBadge() {
@@ -220,6 +273,19 @@
 
       UI.hideModal('modal-new-tm');
       UI.toast(`Created "${tm.name}" — ${analysis.summary.total} threats identified`, 'success');
+      // If AI enhancement was requested, tell the truth about what it did
+      // instead of leaving the user to discover "LLM: No" in the report later.
+      const st = analysis.llm_status;
+      if (useLlm && st) {
+        if (st.state === 'error')
+          UI.toast(`AI enhancement failed: ${st.error}. Showing rule-based results only.`, 'error', 9000);
+        else if (st.state === 'unavailable')
+          UI.toast('AI enhancement was requested, but no API key is configured on the server.', 'error', 9000);
+        else if (st.state === 'no_additions')
+          UI.toast('AI enhancement ran — no threats beyond the rule engine for this system.', 'info');
+        else if (st.state === 'enhanced')
+          UI.toast(`AI enhancement added ${st.added} context-specific threat(s).`, 'success');
+      }
       await loadAll();
       openDetail(tm.id);
     } catch (err) {
