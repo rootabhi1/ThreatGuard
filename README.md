@@ -42,7 +42,7 @@
 | Feature | Details |
 |---------|---------|
 | 📝 **Text-to-Threat-Model** | Describe your system in plain English — engine auto-extracts components, data flows, trust boundaries |
-| 🔍 **Multi-Methodology** | STRIDE, DREAD, PASTA, LINDDUN — run simultaneously |
+| 🔍 **Multi-Methodology** | STRIDE, LINDDUN, PASTA — run simultaneously, with DREAD risk scoring & OWASP reference mapping applied automatically |
 | 🤖 **Claude AI Enhancement** | Optional — context-specific threats, smarter trust boundaries, richer mitigations |
 | 🏢 **Full RBAC** | Admin / Management / User roles with feature-level access control |
 | 📊 **DFD Auto-Generator** | SVG data flow diagrams with Internet / DMZ / App / Data trust zones |
