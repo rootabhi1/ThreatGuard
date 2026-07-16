@@ -21,7 +21,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Depends, UploadFile, File, Form
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -609,8 +609,8 @@ async def threat_model_report(
     fmt: str,
     user: dict = Depends(get_current_user),
 ):
-    if fmt not in ("markdown", "html", "pdf"):
-        raise HTTPException(400, "Format must be markdown, html, or pdf")
+    if fmt not in ("markdown", "html", "pdf", "csv"):
+        raise HTTPException(400, "Format must be markdown, html, pdf, or csv")
     tm = domain.get_threat_model(tid)
     if not tm:
         raise HTTPException(404)
@@ -625,6 +625,11 @@ async def threat_model_report(
     if fmt == "html":
         return Response(to_html(analysis), media_type="text/html",
                         headers={"Content-Disposition": f'attachment; filename="{fname}.html"'})
+    if fmt == "csv":
+        threats = analysis.get("threats", [])
+        system_name = (analysis.get("system", {}) or {}).get("name", "System")
+        return Response(_risk_register_csv(threats, system_name), media_type="text/csv",
+                        headers={"Content-Disposition": _content_disposition(f"risk_register_{system_name.replace(' ', '_')}.csv")})
     return Response(to_pdf(analysis), media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{fname}.pdf"'})
 
@@ -938,27 +943,12 @@ async def management_page(request: Request):
     return templates.TemplateResponse(request, "management.html", {})
 
 
-@app.get("/canvas", response_class=HTMLResponse)
-async def canvas_page(request: Request):
-    """Legacy canvas UI — the threat-modeling interface from before Stage 1.
-    Still has the old API calls hard-coded; will need rewiring in a follow-up."""
-    methodologies_ctx = {
-        k: {
-            "name": m["name"],
-            "kind": m.get("kind", "methodology"),
-            "description": m.get("description", ""),
-            "categories": list(m["categories"].keys()),
-        }
-        for k, m in METHODOLOGIES.items()
-    }
-    return templates.TemplateResponse(
-        request, "index.html",
-        {
-            "methodologies": methodologies_ctx,
-            "llm_available": _llm_available(),
-            "llm_provider": _llm_provider(),
-        }
-    )
+@app.get("/canvas", include_in_schema=False)
+async def canvas_page():
+    """Retired legacy canvas UI. Its features (templates, risk matrix, attack
+    paths, CSV export) now live in the authenticated dashboard, so old links
+    redirect there instead of serving the unauthenticated, non-persistent page."""
+    return RedirectResponse(url="/dashboard", status_code=307)
 
 
 # ===========================================================================
