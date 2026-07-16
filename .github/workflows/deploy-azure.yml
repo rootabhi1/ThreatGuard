@@ -20,7 +20,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Use OIDC federation — no client secrets stored. See notes at the bottom.
       - name: Azure login (OIDC)
