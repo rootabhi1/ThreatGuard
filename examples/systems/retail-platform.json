@@ -35,7 +35,10 @@
     {
       "id": "db",
       "name": "Orders DB (Postgres)",
-      "type": "database"
+      "type": "database",
+      "sensitivity": [
+        "pii"
+      ]
     },
     {
       "id": "pay",
@@ -96,7 +99,10 @@
       "from": "orders",
       "to": "pay",
       "protocol": "HTTPS",
-      "encrypted": true
+      "encrypted": true,
+      "sensitivity": [
+        "pci"
+      ]
     },
     {
       "id": "f8",
