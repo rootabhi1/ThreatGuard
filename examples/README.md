@@ -24,7 +24,6 @@ use: a `name`, `description`, `components`, `data_flows`, and optional
 
 - `simple-api.md` — Markdown report generated from `simple-api.json`
 - `simple-api.csv` — the CSV risk register for the same system
-- `sample-report-2026-05-13.html` — an earlier full HTML report
 
 A rich, interactive HTML report for the retail platform is at
 [`../docs/sample-report.html`](../docs/sample-report.html).
@@ -41,7 +40,7 @@ component builder (or describe your system in plain English, or upload a diagram
 TOKEN=...   # from POST /api/auth/login
 curl -s -X POST http://localhost:8000/api/analyze \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d "{\"system\": $(cat examples/systems/simple-api.json), \"methodologies\": [\"stride\",\"owasp\"], \"use_llm\": false}"
+  -d "{\"system\": $(cat examples/systems/simple-api.json), \"methodologies\": [\"stride\",\"linddun\",\"pasta\"], \"use_llm\": false}"
 ```
 
 **Via the CLI** — with the app running (the defaults match `run.sh`):
@@ -50,7 +49,7 @@ curl -s -X POST http://localhost:8000/api/analyze \
 cd threat-modeler
 python cli/atm_cli.py analyze \
   --system-file ../examples/systems/simple-api.json \
-  --frameworks stride,owasp --output-md report.md
+  --frameworks stride,linddun,pasta --output-md report.md
 # Override creds with ATM_USER / ATM_PASS, or pass a token via ATM_TOKEN.
 ```
 

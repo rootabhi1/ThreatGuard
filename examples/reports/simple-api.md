@@ -1,7 +1,7 @@
 # Threat Model Report: Simple API service
 
-**Generated:** 2026-07-05 05:27 UTC
-**Methodologies:** STRIDE, OWASP
+**Generated:** 2026-07-16 03:09 UTC
+**Methodologies:** STRIDE, LINDDUN, PASTA
 **LLM-enhanced:** No
 
 ## System Description
@@ -22,19 +22,19 @@ A user calls a REST API backed by a database.
 
 ## Executive Summary
 
-- **Total threats identified:** 64
-- **Rule-based:** 64  |  **LLM-enhanced:** 0
-- **Cross-boundary threats:** 8
+- **Total threats identified:** 91
+- **Rule-based:** 91  |  **LLM-enhanced:** 0
+- **Cross-boundary threats:** 12
 
 ### Threats by severity
 
 | Severity | Count |
 |---|---|
-| Critical | 18 |
-| High | 36 |
-| Medium | 10 |
-| Low | 0 |
-| Info | 0 |
+| Critical | 7 |
+| High | 51 |
+| Medium | 14 |
+| Low | 1 |
+| Info | 18 |
 
 ## System Components
 
@@ -83,7 +83,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 
 - REST API → Database () — TCP, auth: none, encrypted: NO
 
-**Cross-boundary threats affecting this zone:** 4
+**Cross-boundary threats affecting this zone:** 6
 
 ### 🛡 Data tier
 
@@ -95,11 +95,11 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 
 - REST API → Database () — TCP, auth: none, encrypted: NO
 
-**Cross-boundary threats affecting this zone:** 4
+**Cross-boundary threats affecting this zone:** 6
 
 ## Identified Threats
 
-### Critical (18)
+### Critical (7)
 
 #### Stored data tampering via injection
 
@@ -109,7 +109,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.3** (High) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
+- **DREAD:** D=10, R=10, E=9, A=9, D=9 → **Total 47/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -138,7 +138,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.6** (High) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L`
 - **CVSS 4.0:** **6.3** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
+- **DREAD:** D=10, R=10, E=9, A=9, D=9 → **Total 47/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -167,7 +167,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.6** (High) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L`
 - **CVSS 4.0:** **6.3** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
+- **DREAD:** D=10, R=8, E=9, A=9, D=9 → **Total 45/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -197,7 +197,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 4.0:** **7.4** (High) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:L`
 - **Boundary crossing:** Application tier → Data tier
 - **Source:** rule-based
-- **DREAD:** D=9, R=8, E=10, A=10, D=10 → **Total 47/50**
+- **DREAD:** D=10, R=9, E=10, A=10, D=10 → **Total 49/50**
 
 **📍 Where the threat exists:** On the data flow **REST API → Database** (label: *—*, protocol: TCP, auth: none, encrypted: no), crossing the trust boundary from `Application tier` into `Data tier`. The receiving component is **Database** (`database`).
 
@@ -226,7 +226,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **8.3** (High) — `CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L`
 - **CVSS 4.0:** **6.3** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
+- **DREAD:** D=9, R=10, E=10, A=10, D=10 → **Total 49/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -255,7 +255,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **8.3** (High) — `CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L`
 - **CVSS 4.0:** **6.3** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
+- **DREAD:** D=9, R=8, E=10, A=10, D=10 → **Total 47/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -285,7 +285,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 4.0:** **7.4** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:L`
 - **Boundary crossing:** Internet → Application tier
 - **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=10, D=10 → **Total 46/50**
+- **DREAD:** D=9, R=9, E=10, A=10, D=10 → **Total 48/50**
 
 **📍 Where the threat exists:** On the data flow **User → REST API** (label: *—*, protocol: HTTPS, auth: none, encrypted: yes), crossing the trust boundary from `Internet` into `Application tier`. The receiving component is **REST API** (`api`).
 
@@ -306,315 +306,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 
 **🔗 References:** [A01:2021 — Broken Access Control](https://owasp.org/Top10/A01_2021-Broken_Access_Control/) · [STRIDE reference](https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats) · [CWE-441 — Confused Deputy](https://cwe.mitre.org/data/definitions/441.html)
 
-#### Sensitive data stored in plaintext
-
-- **Methodology / Category:** OWASP Top 10 → A02 Cryptographic Failures
-- **Affected component:** Database (`database`)
-- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
-- **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
-- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
-- **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
-
-**📍 Where the threat exists:** Within component **Database** (`database`).
-
-**📝 Description:** PII or passwords stored without encryption.
-
-**⚔️ Attack scenario:**
-
-1. Attacker probes Database via reachable inputs.
-2. Identifies the weakness named by this threat (A02 Cryptographic Failures).
-3. Crafts an exploit specific to the affected component type (database).
-4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
-
-**🛡 How to mitigate:**
-
-- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
-- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
-
-**🔗 References:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
-
-#### SQL injection via unsanitised input
-
-- **Methodology / Category:** OWASP Top 10 → A03 Injection
-- **Affected component:** Database (`database`)
-- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
-- **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
-- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
-- **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
-
-**📍 Where the threat exists:** Within component **Database** (`database`).
-
-**📝 Description:** Attacker manipulates SQL queries.
-
-**⚔️ Attack scenario:**
-
-1. Attacker probes Database via reachable inputs.
-2. Identifies the weakness named by this threat (A03 Injection).
-3. Crafts an exploit specific to the affected component type (database).
-4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
-
-**🛡 How to mitigate:**
-
-- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
-- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
-
-**🔗 References:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
-
-#### Command injection via shell execution
-
-- **Methodology / Category:** OWASP Top 10 → A03 Injection
-- **Affected component:** Database (`database`)
-- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
-- **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
-- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
-- **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
-
-**📍 Where the threat exists:** Within component **Database** (`database`).
-
-**📝 Description:** User input passed to OS shell.
-
-**⚔️ Attack scenario:**
-
-1. Attacker probes Database via reachable inputs.
-2. Identifies the weakness named by this threat (A03 Injection).
-3. Crafts an exploit specific to the affected component type (database).
-4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
-
-**🛡 How to mitigate:**
-
-- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
-- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
-
-**🔗 References:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
-
-#### Default credentials left on service
-
-- **Methodology / Category:** OWASP Top 10 → A05 Security Misconfiguration
-- **Affected component:** Database (`database`)
-- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
-- **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
-- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
-- **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
-
-**📍 Where the threat exists:** Within component **Database** (`database`).
-
-**📝 Description:** Admin password left at factory default.
-
-**⚔️ Attack scenario:**
-
-1. Attacker probes Database via reachable inputs.
-2. Identifies the weakness named by this threat (A05 Security Misconfiguration).
-3. Crafts an exploit specific to the affected component type (database).
-4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
-
-**🛡 How to mitigate:**
-
-- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
-- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
-
-**🔗 References:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
-
-#### Missing function-level access control
-
-- **Methodology / Category:** OWASP Top 10 → A01 Broken Access Control
-- **Affected component:** REST API (`api`)
-- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
-- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
-- **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
-
-**📍 Where the threat exists:** Within component **REST API** (`api`).
-
-**📝 Description:** Admin endpoints accessible to low-privilege users.
-
-**⚔️ Attack scenario:**
-
-1. Attacker probes REST API via reachable inputs.
-2. Identifies the weakness named by this threat (A01 Broken Access Control).
-3. Crafts an exploit specific to the affected component type (api).
-4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
-
-**🛡 How to mitigate:**
-
-- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
-- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
-
-**🔗 References:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-
-#### Sensitive data stored in plaintext
-
-- **Methodology / Category:** OWASP Top 10 → A02 Cryptographic Failures
-- **Affected component:** REST API (`api`)
-- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
-- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
-- **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
-
-**📍 Where the threat exists:** Within component **REST API** (`api`).
-
-**📝 Description:** PII or passwords stored without encryption.
-
-**⚔️ Attack scenario:**
-
-1. Attacker probes REST API via reachable inputs.
-2. Identifies the weakness named by this threat (A02 Cryptographic Failures).
-3. Crafts an exploit specific to the affected component type (api).
-4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
-
-**🛡 How to mitigate:**
-
-- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
-- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
-
-**🔗 References:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-
-#### SQL injection via unsanitised input
-
-- **Methodology / Category:** OWASP Top 10 → A03 Injection
-- **Affected component:** REST API (`api`)
-- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
-- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
-- **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
-
-**📍 Where the threat exists:** Within component **REST API** (`api`).
-
-**📝 Description:** Attacker manipulates SQL queries.
-
-**⚔️ Attack scenario:**
-
-1. Attacker probes REST API via reachable inputs.
-2. Identifies the weakness named by this threat (A03 Injection).
-3. Crafts an exploit specific to the affected component type (api).
-4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
-
-**🛡 How to mitigate:**
-
-- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
-- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
-
-**🔗 References:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-
-#### Command injection via shell execution
-
-- **Methodology / Category:** OWASP Top 10 → A03 Injection
-- **Affected component:** REST API (`api`)
-- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
-- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
-- **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
-
-**📍 Where the threat exists:** Within component **REST API** (`api`).
-
-**📝 Description:** User input passed to OS shell.
-
-**⚔️ Attack scenario:**
-
-1. Attacker probes REST API via reachable inputs.
-2. Identifies the weakness named by this threat (A03 Injection).
-3. Crafts an exploit specific to the affected component type (api).
-4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
-
-**🛡 How to mitigate:**
-
-- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
-- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
-
-**🔗 References:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-
-#### Default credentials left on service
-
-- **Methodology / Category:** OWASP Top 10 → A05 Security Misconfiguration
-- **Affected component:** REST API (`api`)
-- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
-- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
-- **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
-
-**📍 Where the threat exists:** Within component **REST API** (`api`).
-
-**📝 Description:** Admin password left at factory default.
-
-**⚔️ Attack scenario:**
-
-1. Attacker probes REST API via reachable inputs.
-2. Identifies the weakness named by this threat (A05 Security Misconfiguration).
-3. Crafts an exploit specific to the affected component type (api).
-4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
-
-**🛡 How to mitigate:**
-
-- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
-- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
-
-**🔗 References:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-
-#### Weak or absent MFA on privileged accounts
-
-- **Methodology / Category:** OWASP Top 10 → A07 Authentication Failures
-- **Affected component:** REST API (`api`)
-- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
-- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
-- **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
-
-**📍 Where the threat exists:** Within component **REST API** (`api`).
-
-**📝 Description:** Admin accounts authenticated by password only.
-
-**⚔️ Attack scenario:**
-
-1. Attacker probes REST API via reachable inputs.
-2. Identifies the weakness named by this threat (A07 Authentication Failures).
-3. Crafts an exploit specific to the affected component type (api).
-4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
-
-**🛡 How to mitigate:**
-
-- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
-- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
-
-**🔗 References:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-
-#### SSRF via user-supplied URL parameter
-
-- **Methodology / Category:** OWASP Top 10 → A10 Server-Side Request Forgery
-- **Affected component:** REST API (`api`)
-- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
-- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
-- **Source:** rule-based
-- **DREAD:** D=9, R=8, E=9, A=9, D=9 → **Total 44/50**
-
-**📍 Where the threat exists:** Within component **REST API** (`api`).
-
-**📝 Description:** Attacker makes server fetch internal metadata endpoints.
-
-**⚔️ Attack scenario:**
-
-1. Attacker probes REST API via reachable inputs.
-2. Identifies the weakness named by this threat (A10 Server-Side Request Forgery).
-3. Crafts an exploit specific to the affected component type (api).
-4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
-
-**🛡 How to mitigate:**
-
-- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
-- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
-
-**🔗 References:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-
-### High (36)
+### High (51)
 
 #### Data-in-transit modification
 
@@ -624,7 +316,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.3** (High) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=8, R=6, E=7, A=7, D=7 → **Total 35/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -653,7 +345,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.3** (High) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=8, R=6, E=7, A=7, D=7 → **Total 35/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -682,7 +374,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.3** (High) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=8, R=6, E=7, A=7, D=7 → **Total 35/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -711,7 +403,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=8, R=6, E=7, A=7, D=8 → **Total 36/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -740,7 +432,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=8, R=6, E=7, A=7, D=8 → **Total 36/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -769,7 +461,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=8, R=8, E=7, A=7, D=8 → **Total 38/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -798,7 +490,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.3** (High) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:H`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:H/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=8, R=6, E=7, A=7, D=7 → **Total 35/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -827,7 +519,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.6** (High) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L`
 - **CVSS 4.0:** **6.3** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=8, R=8, E=7, A=7, D=7 → **Total 37/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -856,7 +548,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=8, A=7, D=8 → **Total 36/50**
+- **DREAD:** D=8, R=9, E=9, A=7, D=9 → **Total 42/50**
 
 **📍 Where the threat exists:** On the data flow **REST API → Database** (label: *—*, protocol: TCP, auth: none, encrypted: no). The receiving component is **Database** (`database`).
 
@@ -885,7 +577,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=8, A=7, D=8 → **Total 36/50**
+- **DREAD:** D=8, R=9, E=9, A=7, D=8 → **Total 41/50**
 
 **📍 Where the threat exists:** On the data flow **REST API → Database** (label: *—*, protocol: TCP, auth: none, encrypted: no). The receiving component is **Database** (`database`).
 
@@ -915,7 +607,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 4.0:** **5.8** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:H/SI:L/SA:N`
 - **Boundary crossing:** Application tier → Data tier
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=8, A=9, D=9 → **Total 39/50**
+- **DREAD:** D=8, R=7, E=9, A=9, D=8 → **Total 41/50**
 
 **📍 Where the threat exists:** On the data flow **REST API → Database** (label: *—*, protocol: TCP, auth: none, encrypted: no), crossing the trust boundary from `Application tier` into `Data tier`. The receiving component is **Database** (`database`).
 
@@ -945,7 +637,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 4.0:** **5.8** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:N/SC:L/SI:H/SA:N`
 - **Boundary crossing:** Application tier → Data tier
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=8, A=9, D=9 → **Total 39/50**
+- **DREAD:** D=8, R=7, E=9, A=9, D=8 → **Total 41/50**
 
 **📍 Where the threat exists:** On the data flow **REST API → Database** (label: *—*, protocol: TCP, auth: none, encrypted: no), crossing the trust boundary from `Application tier` into `Data tier`. The receiving component is **Database** (`database`).
 
@@ -975,7 +667,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 4.0:** **5.8** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:H/SI:L/SA:N`
 - **Boundary crossing:** Application tier → Data tier
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=8, A=9, D=9 → **Total 39/50**
+- **DREAD:** D=8, R=7, E=9, A=9, D=9 → **Total 42/50**
 
 **📍 Where the threat exists:** On the data flow **REST API → Database** (label: *—*, protocol: TCP, auth: none, encrypted: no), crossing the trust boundary from `Application tier` into `Data tier`. The receiving component is **Database** (`database`).
 
@@ -1004,7 +696,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=6, E=9, A=8, D=9 → **Total 39/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1033,7 +725,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=6, E=9, A=8, D=9 → **Total 39/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1062,7 +754,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=6, E=9, A=8, D=9 → **Total 39/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1091,7 +783,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=6, E=9, A=8, D=9 → **Total 39/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1120,7 +812,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=6, E=9, A=8, D=10 → **Total 40/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1149,7 +841,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=6, E=9, A=8, D=10 → **Total 40/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1178,7 +870,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=8, E=9, A=8, D=10 → **Total 42/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1207,7 +899,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=6, E=9, A=8, D=9 → **Total 39/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1236,7 +928,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **8.3** (High) — `CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L`
 - **CVSS 4.0:** **6.3** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=8, E=9, A=8, D=9 → **Total 41/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1265,7 +957,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=9, E=10, A=8, D=9 → **Total 43/50**
 
 **📍 Where the threat exists:** On the data flow **User → REST API** (label: *—*, protocol: HTTPS, auth: none, encrypted: yes). The receiving component is **REST API** (`api`).
 
@@ -1295,7 +987,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 4.0:** **8.1** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:H/SI:L/SA:N`
 - **Boundary crossing:** Internet → Application tier
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=9, D=8 → **Total 37/50**
+- **DREAD:** D=7, R=7, E=10, A=10, D=9 → **Total 43/50**
 
 **📍 Where the threat exists:** On the data flow **User → REST API** (label: *—*, protocol: HTTPS, auth: none, encrypted: yes), crossing the trust boundary from `Internet` into `Application tier`. The receiving component is **REST API** (`api`).
 
@@ -1325,7 +1017,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 4.0:** **8.1** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:H/VA:N/SC:L/SI:H/SA:N`
 - **Boundary crossing:** Internet → Application tier
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=9, D=8 → **Total 37/50**
+- **DREAD:** D=7, R=7, E=10, A=10, D=9 → **Total 43/50**
 
 **📍 Where the threat exists:** On the data flow **User → REST API** (label: *—*, protocol: HTTPS, auth: none, encrypted: yes), crossing the trust boundary from `Internet` into `Application tier`. The receiving component is **REST API** (`api`).
 
@@ -1355,7 +1047,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 4.0:** **8.1** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:H/SI:L/SA:N`
 - **Boundary crossing:** Internet → Application tier
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=9, D=8 → **Total 37/50**
+- **DREAD:** D=7, R=7, E=10, A=10, D=10 → **Total 44/50**
 
 **📍 Where the threat exists:** On the data flow **User → REST API** (label: *—*, protocol: HTTPS, auth: none, encrypted: yes), crossing the trust boundary from `Internet` into `Application tier`. The receiving component is **REST API** (`api`).
 
@@ -1384,7 +1076,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=5, D=7 → **Total 32/50**
+- **DREAD:** D=7, R=6, E=9, A=5, D=9 → **Total 36/50**
 
 **📍 Where the threat exists:** Within component **User** (`user`).
 
@@ -1413,7 +1105,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=5, D=7 → **Total 32/50**
+- **DREAD:** D=7, R=6, E=9, A=5, D=9 → **Total 36/50**
 
 **📍 Where the threat exists:** Within component **User** (`user`).
 
@@ -1442,7 +1134,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=5, D=7 → **Total 32/50**
+- **DREAD:** D=7, R=6, E=9, A=5, D=9 → **Total 36/50**
 
 **📍 Where the threat exists:** Within component **User** (`user`).
 
@@ -1463,24 +1155,81 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 
 **🔗 References:** [A07:2021 — Identification and Authentication Failures](https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/) · [STRIDE reference](https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats) · [CWE-287 — Improper Authentication](https://cwe.mitre.org/data/definitions/287.html)
 
-#### Cleartext transmission of credentials
+#### Re-identification of anonymized data
 
-- **Methodology / Category:** OWASP Top 10 → A02 Cryptographic Failures
+- **Methodology / Category:** LINDDUN → Identifiability
 - **Affected component:** Database (`database`)
-- **CWE:** [CWE-319 — Cleartext Transmission of Sensitive Information](https://cwe.mitre.org/data/definitions/319.html)
+- **CWE:** [CWE-359 — Privacy Violation](https://cwe.mitre.org/data/definitions/359.html)
 - **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=8, R=6, E=7, A=7, D=7 → **Total 35/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
-**📝 Description:** Passwords transmitted over HTTP.
+**📝 Description:** Quasi-identifiers (zip, DOB, gender) re-identify users in 'anonymous' exports.
+
+**⚔️ Attack scenario:**
+
+1. Attacker collects records emitted by Database (logs, events, telemetry, public outputs).
+2. Uses quasi-identifiers (timestamps, IPs, device fingerprints, behavioral patterns) to link multiple records to the same individual.
+3. Builds a behavior profile that reveals identity even though no single record contains an explicit identifier.
+4. Privacy violation — re-identification, surveillance, or unauthorized profiling.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-359 — Privacy Violation](https://cwe.mitre.org/data/definitions/359.html)
+
+#### Third-party data leakage
+
+- **Methodology / Category:** LINDDUN → Disclosure of information
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+- **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
+- **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=8, R=6, E=7, A=7, D=7 → **Total 35/50**
+
+**📍 Where the threat exists:** Within component **Database** (`database`).
+
+**📝 Description:** PII shared with analytics/ad SDKs without consent.
+
+**⚔️ Attack scenario:**
+
+1. Attacker reaches Database via a legitimate or guessable channel.
+2. Triggers an error, edge case, or verbose endpoint that returns more information than necessary (stack traces, internal IDs, debug data, full PII fields).
+3. Aggregates leaked information from multiple requests to build a profile of the system or its users.
+4. Uses the harvested information to plan a targeted attack, reset accounts, or commit fraud.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply field-level access control on responses** — The data layer enforces what the calling principal is allowed to see. Don't rely on the UI to hide fields.
+- _[preventive]_ **Strip debug detail from error responses** — Production responses return a stable error code and a correlation ID. Stack traces, SQL errors, and internal IDs go to logs only.
+- _[preventive]_ **Encrypt data at rest with key separation** — For database, enable storage-level encryption with a CMK distinct from the encryption-at-rest key for adjacent stores. Rotate annually.
+
+**🔗 References:** [A02:2021 — Cryptographic Failures](https://owasp.org/Top10/A02_2021-Cryptographic_Failures/) · [LINDDUN reference](https://linddun.org/) · [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+
+#### GDPR / CCPA gaps for personal data
+
+- **Methodology / Category:** LINDDUN → Non-compliance
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+- **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
+- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=8, R=6, E=7, A=7, D=7 → **Total 35/50**
+
+**📍 Where the threat exists:** Within component **Database** (`database`).
+
+**📝 Description:** Personal data (PII) triggers GDPR / CCPA duties: lawful basis, DSAR handling, retention limits, and data-residency controls.
 
 **⚔️ Attack scenario:**
 
 1. Attacker probes Database via reachable inputs.
-2. Identifies the weakness named by this threat (A02 Cryptographic Failures).
+2. Identifies the weakness named by this threat (Non-compliance).
 3. Crafts an exploit specific to the affected component type (database).
 4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
 
@@ -1489,17 +1238,73 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
 - _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
 
-**🔗 References:** [CWE-319 — Cleartext Transmission of Sensitive Information](https://cwe.mitre.org/data/definitions/319.html)
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+
+#### HIPAA gaps for health data (PHI)
+
+- **Methodology / Category:** LINDDUN → Non-compliance
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+- **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
+- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=8, R=6, E=7, A=7, D=7 → **Total 35/50**
+
+**📍 Where the threat exists:** Within component **Database** (`database`).
+
+**📝 Description:** Protected health information triggers HIPAA duties: BAAs, minimum-necessary access, audit controls, and breach notification.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes Database via reachable inputs.
+2. Identifies the weakness named by this threat (Non-compliance).
+3. Crafts an exploit specific to the affected component type (database).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+
+#### PCI-DSS gaps for cardholder data
+
+- **Methodology / Category:** LINDDUN → Non-compliance
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+- **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
+- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=8, R=6, E=7, A=7, D=7 → **Total 35/50**
+
+**📍 Where the threat exists:** Within component **Database** (`database`).
+
+**📝 Description:** Cardholder data triggers PCI-DSS: scope segmentation, tokenization / no-store of PANs, and key management.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes Database via reachable inputs.
+2. Identifies the weakness named by this threat (Non-compliance).
+3. Crafts an exploit specific to the affected component type (database).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
 
 #### Unencrypted flow: REST API → Database
 
-- **Methodology / Category:** OWASP Top 10 → Disclosure of information
+- **Methodology / Category:** LINDDUN → Disclosure of information
 - **Affected component:** Database (`database`)
 - **CWE:** [CWE-319 — Cleartext Transmission of Sensitive Information](https://cwe.mitre.org/data/definitions/319.html)
 - **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=8, A=7, D=8 → **Total 36/50**
+- **DREAD:** D=8, R=9, E=9, A=7, D=9 → **Total 42/50**
 
 **📍 Where the threat exists:** On the data flow **REST API → Database** (label: *—*, protocol: TCP, auth: none, encrypted: no). The receiving component is **Database** (`database`).
 
@@ -1518,17 +1323,17 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - _[preventive]_ **Enforce certificate validation** — Verify hostname, validate the chain to a known CA, pin certificates or use a private CA for internal services. Disable cipher fallbacks to NULL/EXPORT/RC4.
 - _[detective]_ **Scan for cleartext fallbacks** — Add a network-policy / NetworkPolicy / security-group rule that drops any traffic on the cleartext port. Alert if it ever fires.
 
-**🔗 References:** [A02:2021 — Cryptographic Failures](https://owasp.org/Top10/A02_2021-Cryptographic_Failures/) · [CWE-319 — Cleartext Transmission of Sensitive Information](https://cwe.mitre.org/data/definitions/319.html)
+**🔗 References:** [A02:2021 — Cryptographic Failures](https://owasp.org/Top10/A02_2021-Cryptographic_Failures/) · [LINDDUN reference](https://linddun.org/) · [CWE-319 — Cleartext Transmission of Sensitive Information](https://cwe.mitre.org/data/definitions/319.html)
 
 #### Unauthenticated flow: REST API → Database
 
-- **Methodology / Category:** OWASP Top 10 → Stage 3 — Application Decomposition
+- **Methodology / Category:** LINDDUN → Stage 3 — Application Decomposition
 - **Affected component:** Database (`database`)
 - **CWE:** [CWE-306 — Missing Authentication for Critical Function](https://cwe.mitre.org/data/definitions/306.html)
 - **CVSS 3.1:** **6.3** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N`
 - **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=8, A=7, D=8 → **Total 36/50**
+- **DREAD:** D=8, R=9, E=9, A=7, D=8 → **Total 41/50**
 
 **📍 Where the threat exists:** On the data flow **REST API → Database** (label: *—*, protocol: TCP, auth: none, encrypted: no). The receiving component is **Database** (`database`).
 
@@ -1547,26 +1352,85 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - _[preventive]_ **Reject anonymous traffic at the receiver as well** — Defense in depth: even if the gateway rule fails, the receiving component should reject any request lacking a valid principal.
 - _[detective]_ **Rate-limit unauthenticated probes** — Apply a low-tolerance rate limit to requests that lack credentials (5/min per source IP) and alert on sustained failures.
 
-**🔗 References:** [CWE-306 — Missing Authentication for Critical Function](https://cwe.mitre.org/data/definitions/306.html)
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-306 — Missing Authentication for Critical Function](https://cwe.mitre.org/data/definitions/306.html)
 
-#### Insecure Direct Object Reference (IDOR)
+#### Cross-boundary PII transfer: REST API → Database 🚧 *cross-boundary*
 
-- **Methodology / Category:** OWASP Top 10 → A01 Broken Access Control
-- **Affected component:** REST API (`api`)
-- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
-- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
-- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Methodology / Category:** LINDDUN → Disclosure of information
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+- **CVSS 3.1:** **6.8** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N`
+- **CVSS 4.0:** **5.8** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:H/SI:L/SA:N`
+- **Boundary crossing:** Application tier → Data tier
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=8, R=7, E=9, A=9, D=8 → **Total 41/50**
+
+**📍 Where the threat exists:** On the data flow **REST API → Database** (label: *—*, protocol: TCP, auth: none, encrypted: no), crossing the trust boundary from `Application tier` into `Data tier`. The receiving component is **Database** (`database`).
+
+**📝 Description:** Personal data crossing trust boundaries triggers data-protection obligations (purpose, consent, residency, processor agreements).
+
+**⚔️ Attack scenario:**
+
+1. Attacker reaches Database via a legitimate or guessable channel.
+2. Triggers an error, edge case, or verbose endpoint that returns more information than necessary (stack traces, internal IDs, debug data, full PII fields).
+3. Aggregates leaked information from multiple requests to build a profile of the system or its users.
+4. Uses the harvested information to plan a targeted attack, reset accounts, or commit fraud.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply field-level access control on responses** — The data layer enforces what the calling principal is allowed to see. Don't rely on the UI to hide fields.
+- _[preventive]_ **Strip debug detail from error responses** — Production responses return a stable error code and a correlation ID. Stack traces, SQL errors, and internal IDs go to logs only.
+- _[preventive]_ **Encrypt data at rest with key separation** — For database, enable storage-level encryption with a CMK distinct from the encryption-at-rest key for adjacent stores. Rotate annually.
+
+**🔗 References:** [A02:2021 — Cryptographic Failures](https://owasp.org/Top10/A02_2021-Cryptographic_Failures/) · [LINDDUN reference](https://linddun.org/) · [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+
+#### Third-party data leakage
+
+- **Methodology / Category:** LINDDUN → Disclosure of information
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+- **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
+- **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=7, R=6, E=9, A=8, D=9 → **Total 39/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
-**📝 Description:** User accesses other users data by modifying IDs.
+**📝 Description:** PII shared with analytics/ad SDKs without consent.
+
+**⚔️ Attack scenario:**
+
+1. Attacker reaches REST API via a legitimate or guessable channel.
+2. Triggers an error, edge case, or verbose endpoint that returns more information than necessary (stack traces, internal IDs, debug data, full PII fields).
+3. Aggregates leaked information from multiple requests to build a profile of the system or its users.
+4. Uses the harvested information to plan a targeted attack, reset accounts, or commit fraud.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply field-level access control on responses** — The data layer enforces what the calling principal is allowed to see. Don't rely on the UI to hide fields.
+- _[preventive]_ **Strip debug detail from error responses** — Production responses return a stable error code and a correlation ID. Stack traces, SQL errors, and internal IDs go to logs only.
+- _[preventive]_ **Encrypt data at rest with key separation** — For api, enable storage-level encryption with a CMK distinct from the encryption-at-rest key for adjacent stores. Rotate annually.
+
+**🔗 References:** [A02:2021 — Cryptographic Failures](https://owasp.org/Top10/A02_2021-Cryptographic_Failures/) · [LINDDUN reference](https://linddun.org/) · [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+
+#### GDPR / CCPA gaps for personal data
+
+- **Methodology / Category:** LINDDUN → Non-compliance
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=7, R=6, E=9, A=8, D=9 → **Total 39/50**
+
+**📍 Where the threat exists:** Within component **REST API** (`api`).
+
+**📝 Description:** Personal data (PII) triggers GDPR / CCPA duties: lawful basis, DSAR handling, retention limits, and data-residency controls.
 
 **⚔️ Attack scenario:**
 
 1. Attacker probes REST API via reachable inputs.
-2. Identifies the weakness named by this threat (A01 Broken Access Control).
+2. Identifies the weakness named by this threat (Non-compliance).
 3. Crafts an exploit specific to the affected component type (api).
 4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
 
@@ -1575,26 +1439,26 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
 - _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
 
-**🔗 References:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
 
-#### Cleartext transmission of credentials
+#### HIPAA gaps for health data (PHI)
 
-- **Methodology / Category:** OWASP Top 10 → A02 Cryptographic Failures
+- **Methodology / Category:** LINDDUN → Non-compliance
 - **Affected component:** REST API (`api`)
-- **CWE:** [CWE-319 — Cleartext Transmission of Sensitive Information](https://cwe.mitre.org/data/definitions/319.html)
+- **CWE:** [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
 - **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
 - **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=6, E=9, A=8, D=9 → **Total 39/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
-**📝 Description:** Passwords transmitted over HTTP.
+**📝 Description:** Protected health information triggers HIPAA duties: BAAs, minimum-necessary access, audit controls, and breach notification.
 
 **⚔️ Attack scenario:**
 
 1. Attacker probes REST API via reachable inputs.
-2. Identifies the weakness named by this threat (A02 Cryptographic Failures).
+2. Identifies the weakness named by this threat (Non-compliance).
 3. Crafts an exploit specific to the affected component type (api).
 4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
 
@@ -1603,26 +1467,26 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
 - _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
 
-**🔗 References:** [CWE-319 — Cleartext Transmission of Sensitive Information](https://cwe.mitre.org/data/definitions/319.html)
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
 
-#### No rate limiting on login endpoint
+#### PCI-DSS gaps for cardholder data
 
-- **Methodology / Category:** OWASP Top 10 → A07 Authentication Failures
+- **Methodology / Category:** LINDDUN → Non-compliance
 - **Affected component:** REST API (`api`)
-- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+- **CWE:** [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
 - **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
 - **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=6, E=9, A=8, D=9 → **Total 39/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
-**📝 Description:** Brute-force and credential stuffing possible.
+**📝 Description:** Cardholder data triggers PCI-DSS: scope segmentation, tokenization / no-store of PANs, and key management.
 
 **⚔️ Attack scenario:**
 
 1. Attacker probes REST API via reachable inputs.
-2. Identifies the weakness named by this threat (A07 Authentication Failures).
+2. Identifies the weakness named by this threat (Non-compliance).
 3. Crafts an exploit specific to the affected component type (api).
 4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
 
@@ -1631,17 +1495,17 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
 - _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
 
-**🔗 References:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
 
 #### Unauthenticated flow: User → REST API
 
-- **Methodology / Category:** OWASP Top 10 → Stage 3 — Application Decomposition
+- **Methodology / Category:** LINDDUN → Stage 3 — Application Decomposition
 - **Affected component:** REST API (`api`)
 - **CWE:** [CWE-306 — Missing Authentication for Critical Function](https://cwe.mitre.org/data/definitions/306.html)
 - **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
 - **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=7, R=6, E=7, A=7, D=7 → **Total 34/50**
+- **DREAD:** D=7, R=9, E=10, A=8, D=9 → **Total 43/50**
 
 **📍 Where the threat exists:** On the data flow **User → REST API** (label: *—*, protocol: HTTPS, auth: none, encrypted: yes). The receiving component is **REST API** (`api`).
 
@@ -1660,9 +1524,268 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - _[preventive]_ **Reject anonymous traffic at the receiver as well** — Defense in depth: even if the gateway rule fails, the receiving component should reject any request lacking a valid principal.
 - _[detective]_ **Rate-limit unauthenticated probes** — Apply a low-tolerance rate limit to requests that lack credentials (5/min per source IP) and alert on sustained failures.
 
-**🔗 References:** [CWE-306 — Missing Authentication for Critical Function](https://cwe.mitre.org/data/definitions/306.html)
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-306 — Missing Authentication for Critical Function](https://cwe.mitre.org/data/definitions/306.html)
 
-### Medium (10)
+#### Cross-boundary PII transfer: User → REST API 🚧 *cross-boundary*
+
+- **Methodology / Category:** LINDDUN → Disclosure of information
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+- **CVSS 3.1:** **8.6** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:N`
+- **CVSS 4.0:** **8.1** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:H/SI:L/SA:N`
+- **Boundary crossing:** Internet → Application tier
+- **Source:** rule-based
+- **DREAD:** D=7, R=7, E=10, A=10, D=9 → **Total 43/50**
+
+**📍 Where the threat exists:** On the data flow **User → REST API** (label: *—*, protocol: HTTPS, auth: none, encrypted: yes), crossing the trust boundary from `Internet` into `Application tier`. The receiving component is **REST API** (`api`).
+
+**📝 Description:** Personal data crossing trust boundaries triggers data-protection obligations (purpose, consent, residency, processor agreements).
+
+**⚔️ Attack scenario:**
+
+1. Attacker reaches REST API via a legitimate or guessable channel.
+2. Triggers an error, edge case, or verbose endpoint that returns more information than necessary (stack traces, internal IDs, debug data, full PII fields).
+3. Aggregates leaked information from multiple requests to build a profile of the system or its users.
+4. Uses the harvested information to plan a targeted attack, reset accounts, or commit fraud.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply field-level access control on responses** — The data layer enforces what the calling principal is allowed to see. Don't rely on the UI to hide fields.
+- _[preventive]_ **Strip debug detail from error responses** — Production responses return a stable error code and a correlation ID. Stack traces, SQL errors, and internal IDs go to logs only.
+- _[preventive]_ **Encrypt data at rest with key separation** — For api, enable storage-level encryption with a CMK distinct from the encryption-at-rest key for adjacent stores. Rotate annually.
+
+**🔗 References:** [A02:2021 — Cryptographic Failures](https://owasp.org/Top10/A02_2021-Cryptographic_Failures/) · [LINDDUN reference](https://linddun.org/) · [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+
+#### GDPR / CCPA gaps for personal data
+
+- **Methodology / Category:** LINDDUN → Non-compliance
+- **Affected component:** User (`user`)
+- **CWE:** [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=7, R=6, E=9, A=5, D=9 → **Total 36/50**
+
+**📍 Where the threat exists:** Within component **User** (`user`).
+
+**📝 Description:** Personal data (PII) triggers GDPR / CCPA duties: lawful basis, DSAR handling, retention limits, and data-residency controls.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes User via reachable inputs.
+2. Identifies the weakness named by this threat (Non-compliance).
+3. Crafts an exploit specific to the affected component type (user).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around User. Review applicability of OWASP ASVS controls for user components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+
+#### HIPAA gaps for health data (PHI)
+
+- **Methodology / Category:** LINDDUN → Non-compliance
+- **Affected component:** User (`user`)
+- **CWE:** [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=7, R=6, E=9, A=5, D=9 → **Total 36/50**
+
+**📍 Where the threat exists:** Within component **User** (`user`).
+
+**📝 Description:** Protected health information triggers HIPAA duties: BAAs, minimum-necessary access, audit controls, and breach notification.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes User via reachable inputs.
+2. Identifies the weakness named by this threat (Non-compliance).
+3. Crafts an exploit specific to the affected component type (user).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around User. Review applicability of OWASP ASVS controls for user components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+
+#### PCI-DSS gaps for cardholder data
+
+- **Methodology / Category:** LINDDUN → Non-compliance
+- **Affected component:** User (`user`)
+- **CWE:** [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=7, R=6, E=9, A=5, D=9 → **Total 36/50**
+
+**📍 Where the threat exists:** Within component **User** (`user`).
+
+**📝 Description:** Cardholder data triggers PCI-DSS: scope segmentation, tokenization / no-store of PANs, and key management.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes User via reachable inputs.
+2. Identifies the weakness named by this threat (Non-compliance).
+3. Crafts an exploit specific to the affected component type (user).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around User. Review applicability of OWASP ASVS controls for user components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+
+#### Unencrypted flow: REST API → Database
+
+- **Methodology / Category:** PASTA → Disclosure of information
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-319 — Cleartext Transmission of Sensitive Information](https://cwe.mitre.org/data/definitions/319.html)
+- **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
+- **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=8, R=9, E=9, A=7, D=9 → **Total 42/50**
+
+**📍 Where the threat exists:** On the data flow **REST API → Database** (label: *—*, protocol: TCP, auth: none, encrypted: no). The receiving component is **Database** (`database`).
+
+**📝 Description:** Data flow '' uses TCP without encryption.
+
+**⚔️ Attack scenario:**
+
+1. Attacker gains read access to the network path (sniffing on shared LAN, compromised router, hostile cloud tenant, malicious admin).
+2. Captures cleartext traffic on the TCP channel.
+3. Extracts credentials, session tokens, PII, or business secrets from packet captures.
+4. Uses the credentials to impersonate Database or the calling component, or sells/leaks the captured data.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Enable TLS 1.3 (or 1.2 with strong ciphers) on the flow** — Replace plain TCP with its TLS variant. For databases use TLS-enabled drivers; for queues like AMQP/Kafka, configure broker certs and require client TLS.
+- _[preventive]_ **Enforce certificate validation** — Verify hostname, validate the chain to a known CA, pin certificates or use a private CA for internal services. Disable cipher fallbacks to NULL/EXPORT/RC4.
+- _[detective]_ **Scan for cleartext fallbacks** — Add a network-policy / NetworkPolicy / security-group rule that drops any traffic on the cleartext port. Alert if it ever fires.
+
+**🔗 References:** [A02:2021 — Cryptographic Failures](https://owasp.org/Top10/A02_2021-Cryptographic_Failures/) · [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-319 — Cleartext Transmission of Sensitive Information](https://cwe.mitre.org/data/definitions/319.html)
+
+#### Unauthenticated flow: REST API → Database
+
+- **Methodology / Category:** PASTA → Stage 3 — Application Decomposition
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-306 — Missing Authentication for Critical Function](https://cwe.mitre.org/data/definitions/306.html)
+- **CVSS 3.1:** **6.3** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N`
+- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=8, R=9, E=9, A=7, D=8 → **Total 41/50**
+
+**📍 Where the threat exists:** On the data flow **REST API → Database** (label: *—*, protocol: TCP, auth: none, encrypted: no). The receiving component is **Database** (`database`).
+
+**📝 Description:** Data flow has no authentication mechanism declared.
+
+**⚔️ Attack scenario:**
+
+1. Attacker discovers the endpoint at Database (port scan, leaked config, error messages, or DNS enumeration).
+2. Sends requests directly without any credentials, since the flow does not require authentication.
+3. Database processes the request as if it came from a trusted caller and returns data or executes the action.
+4. Attacker enumerates data, modifies records, or chains to other internal services from this entry point.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Require an authentication mechanism on every external-facing flow** — Bearer tokens (OAuth2/OIDC) for human-driven calls, mutual TLS or signed JWT for service-to-service. Block requests that arrive without credentials at the gateway, before they reach the application.
+- _[preventive]_ **Reject anonymous traffic at the receiver as well** — Defense in depth: even if the gateway rule fails, the receiving component should reject any request lacking a valid principal.
+- _[detective]_ **Rate-limit unauthenticated probes** — Apply a low-tolerance rate limit to requests that lack credentials (5/min per source IP) and alert on sustained failures.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-306 — Missing Authentication for Critical Function](https://cwe.mitre.org/data/definitions/306.html)
+
+#### Implicit trust across decomposition boundary: REST API → Database 🚧 *cross-boundary*
+
+- **Methodology / Category:** PASTA → Stage 3 — Application Decomposition
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+- **CVSS 3.1:** **8.7** (High) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:N`
+- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:L/SI:L/SA:N`
+- **Boundary crossing:** Application tier → Data tier
+- **Source:** rule-based
+- **DREAD:** D=8, R=7, E=9, A=9, D=8 → **Total 41/50**
+
+**📍 Where the threat exists:** On the data flow **REST API → Database** (label: *—*, protocol: TCP, auth: none, encrypted: no), crossing the trust boundary from `Application tier` into `Data tier`. The receiving component is **Database** (`database`).
+
+**📝 Description:** Decomposition mapped a boundary between 'Application tier' and 'Data tier' but implicit trust persists across it.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes Database via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 3 — Application Decomposition).
+3. Crafts an exploit specific to the affected component type (database).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+
+#### Unauthenticated flow: User → REST API
+
+- **Methodology / Category:** PASTA → Stage 3 — Application Decomposition
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-306 — Missing Authentication for Critical Function](https://cwe.mitre.org/data/definitions/306.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=7, R=9, E=10, A=8, D=9 → **Total 43/50**
+
+**📍 Where the threat exists:** On the data flow **User → REST API** (label: *—*, protocol: HTTPS, auth: none, encrypted: yes). The receiving component is **REST API** (`api`).
+
+**📝 Description:** Data flow has no authentication mechanism declared.
+
+**⚔️ Attack scenario:**
+
+1. Attacker discovers the endpoint at REST API (port scan, leaked config, error messages, or DNS enumeration).
+2. Sends requests directly without any credentials, since the flow does not require authentication.
+3. REST API processes the request as if it came from a trusted caller and returns data or executes the action.
+4. Attacker enumerates data, modifies records, or chains to other internal services from this entry point.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Require an authentication mechanism on every external-facing flow** — Bearer tokens (OAuth2/OIDC) for human-driven calls, mutual TLS or signed JWT for service-to-service. Block requests that arrive without credentials at the gateway, before they reach the application.
+- _[preventive]_ **Reject anonymous traffic at the receiver as well** — Defense in depth: even if the gateway rule fails, the receiving component should reject any request lacking a valid principal.
+- _[detective]_ **Rate-limit unauthenticated probes** — Apply a low-tolerance rate limit to requests that lack credentials (5/min per source IP) and alert on sustained failures.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-306 — Missing Authentication for Critical Function](https://cwe.mitre.org/data/definitions/306.html)
+
+#### Implicit trust across decomposition boundary: User → REST API 🚧 *cross-boundary*
+
+- **Methodology / Category:** PASTA → Stage 3 — Application Decomposition
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+- **CVSS 3.1:** **10.0** (Critical) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:L/SI:L/SA:N`
+- **Boundary crossing:** Internet → Application tier
+- **Source:** rule-based
+- **DREAD:** D=7, R=7, E=10, A=10, D=9 → **Total 43/50**
+
+**📍 Where the threat exists:** On the data flow **User → REST API** (label: *—*, protocol: HTTPS, auth: none, encrypted: yes), crossing the trust boundary from `Internet` into `Application tier`. The receiving component is **REST API** (`api`).
+
+**📝 Description:** Decomposition mapped a boundary between 'Internet' and 'Application tier' but implicit trust persists across it.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes REST API via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 3 — Application Decomposition).
+3. Crafts an exploit specific to the affected component type (api).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+
+### Medium (14)
 
 #### Insufficient audit logging
 
@@ -1672,7 +1795,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.3** (High) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=5, R=4, E=5, A=5, D=5 → **Total 24/50**
+- **DREAD:** D=6, R=4, E=5, A=5, D=5 → **Total 25/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -1701,7 +1824,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=5, R=4, E=5, A=5, D=5 → **Total 24/50**
+- **DREAD:** D=6, R=4, E=5, A=5, D=6 → **Total 26/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -1730,7 +1853,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.3** (High) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:H`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:H/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=5, R=4, E=5, A=5, D=5 → **Total 24/50**
+- **DREAD:** D=6, R=4, E=5, A=5, D=5 → **Total 25/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -1759,7 +1882,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.3** (High) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:H`
 - **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:H/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=5, R=4, E=5, A=5, D=5 → **Total 24/50**
+- **DREAD:** D=6, R=4, E=5, A=5, D=5 → **Total 25/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
@@ -1788,7 +1911,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=5, R=4, E=5, A=5, D=5 → **Total 24/50**
+- **DREAD:** D=5, R=4, E=7, A=6, D=7 → **Total 29/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1817,7 +1940,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=5, R=4, E=5, A=5, D=5 → **Total 24/50**
+- **DREAD:** D=5, R=4, E=7, A=6, D=8 → **Total 30/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1846,7 +1969,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=5, R=4, E=5, A=5, D=5 → **Total 24/50**
+- **DREAD:** D=5, R=4, E=7, A=6, D=7 → **Total 29/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1875,7 +1998,7 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H`
 - **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=5, R=4, E=5, A=5, D=5 → **Total 24/50**
+- **DREAD:** D=5, R=4, E=7, A=6, D=7 → **Total 29/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
@@ -1896,52 +2019,109 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 
 **🔗 References:** [A05:2021 — Security Misconfiguration](https://owasp.org/Top10/A05_2021-Security_Misconfiguration/) · [STRIDE reference](https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats) · [CWE-400 — Uncontrolled Resource Consumption (DoS)](https://cwe.mitre.org/data/definitions/400.html)
 
-#### Missing security headers
+#### Cross-service user linkability
 
-- **Methodology / Category:** OWASP Top 10 → A05 Security Misconfiguration
+- **Methodology / Category:** LINDDUN → Linkability
 - **Affected component:** Database (`database`)
-- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+- **CWE:** [CWE-359 — Privacy Violation](https://cwe.mitre.org/data/definitions/359.html)
 - **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
 - **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=5, R=4, E=5, A=5, D=5 → **Total 24/50**
+- **DREAD:** D=6, R=4, E=5, A=5, D=5 → **Total 25/50**
 
 **📍 Where the threat exists:** Within component **Database** (`database`).
 
-**📝 Description:** CSP, X-Frame-Options, HSTS absent.
+**📝 Description:** Identifiers (emails, device IDs) let separate datasets be joined to profile a user.
 
 **⚔️ Attack scenario:**
 
-1. Attacker probes Database via reachable inputs.
-2. Identifies the weakness named by this threat (A05 Security Misconfiguration).
-3. Crafts an exploit specific to the affected component type (database).
-4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+1. Attacker collects records emitted by Database (logs, events, telemetry, public outputs).
+2. Uses quasi-identifiers (timestamps, IPs, device fingerprints, behavioral patterns) to link multiple records to the same individual.
+3. Builds a behavior profile that reveals identity even though no single record contains an explicit identifier.
+4. Privacy violation — re-identification, surveillance, or unauthorized profiling.
 
 **🛡 How to mitigate:**
 
 - _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
 - _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
 
-**🔗 References:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-359 — Privacy Violation](https://cwe.mitre.org/data/definitions/359.html)
 
-#### Missing security headers
+#### Excessive data collection
 
-- **Methodology / Category:** OWASP Top 10 → A05 Security Misconfiguration
+- **Methodology / Category:** LINDDUN → Disclosure of information
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+- **CVSS 3.1:** **5.7** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N`
+- **CVSS 4.0:** **5.2** (Medium) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=6, R=4, E=5, A=5, D=5 → **Total 25/50**
+
+**📍 Where the threat exists:** Within component **Database** (`database`).
+
+**📝 Description:** System collects more PII than needed for its purpose.
+
+**⚔️ Attack scenario:**
+
+1. Attacker reaches Database via a legitimate or guessable channel.
+2. Triggers an error, edge case, or verbose endpoint that returns more information than necessary (stack traces, internal IDs, debug data, full PII fields).
+3. Aggregates leaked information from multiple requests to build a profile of the system or its users.
+4. Uses the harvested information to plan a targeted attack, reset accounts, or commit fraud.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply field-level access control on responses** — The data layer enforces what the calling principal is allowed to see. Don't rely on the UI to hide fields.
+- _[preventive]_ **Strip debug detail from error responses** — Production responses return a stable error code and a correlation ID. Stack traces, SQL errors, and internal IDs go to logs only.
+- _[preventive]_ **Encrypt data at rest with key separation** — For database, enable storage-level encryption with a CMK distinct from the encryption-at-rest key for adjacent stores. Rotate annually.
+
+**🔗 References:** [A02:2021 — Cryptographic Failures](https://owasp.org/Top10/A02_2021-Cryptographic_Failures/) · [LINDDUN reference](https://linddun.org/) · [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+
+#### Cross-service user linkability
+
+- **Methodology / Category:** LINDDUN → Linkability
 - **Affected component:** REST API (`api`)
-- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+- **CWE:** [CWE-359 — Privacy Violation](https://cwe.mitre.org/data/definitions/359.html)
 - **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
 - **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
 - **Source:** rule-based
-- **DREAD:** D=5, R=4, E=5, A=5, D=5 → **Total 24/50**
+- **DREAD:** D=5, R=4, E=7, A=6, D=7 → **Total 29/50**
 
 **📍 Where the threat exists:** Within component **REST API** (`api`).
 
-**📝 Description:** CSP, X-Frame-Options, HSTS absent.
+**📝 Description:** Identifiers (emails, device IDs) let separate datasets be joined to profile a user.
+
+**⚔️ Attack scenario:**
+
+1. Attacker collects records emitted by REST API (logs, events, telemetry, public outputs).
+2. Uses quasi-identifiers (timestamps, IPs, device fingerprints, behavioral patterns) to link multiple records to the same individual.
+3. Builds a behavior profile that reveals identity even though no single record contains an explicit identifier.
+4. Privacy violation — re-identification, surveillance, or unauthorized profiling.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-359 — Privacy Violation](https://cwe.mitre.org/data/definitions/359.html)
+
+#### Account enumeration via differential responses
+
+- **Methodology / Category:** LINDDUN → Detectability
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-359 — Privacy Violation](https://cwe.mitre.org/data/definitions/359.html)
+- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=5, R=4, E=7, A=6, D=8 → **Total 30/50**
+
+**📍 Where the threat exists:** Within component **REST API** (`api`).
+
+**📝 Description:** Login / signup / password reset reveal whether an account exists.
 
 **⚔️ Attack scenario:**
 
 1. Attacker probes REST API via reachable inputs.
-2. Identifies the weakness named by this threat (A05 Security Misconfiguration).
+2. Identifies the weakness named by this threat (Detectability).
 3. Crafts an exploit specific to the affected component type (api).
 4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
 
@@ -1950,4 +2130,598 @@ Flows where untrusted (or less-trusted) input crosses into an internal trust zon
 - _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
 - _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
 
-**🔗 References:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-359 — Privacy Violation](https://cwe.mitre.org/data/definitions/359.html)
+
+#### Excessive data collection
+
+- **Methodology / Category:** LINDDUN → Disclosure of information
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+- **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`
+- **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=5, R=4, E=7, A=6, D=7 → **Total 29/50**
+
+**📍 Where the threat exists:** Within component **REST API** (`api`).
+
+**📝 Description:** System collects more PII than needed for its purpose.
+
+**⚔️ Attack scenario:**
+
+1. Attacker reaches REST API via a legitimate or guessable channel.
+2. Triggers an error, edge case, or verbose endpoint that returns more information than necessary (stack traces, internal IDs, debug data, full PII fields).
+3. Aggregates leaked information from multiple requests to build a profile of the system or its users.
+4. Uses the harvested information to plan a targeted attack, reset accounts, or commit fraud.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply field-level access control on responses** — The data layer enforces what the calling principal is allowed to see. Don't rely on the UI to hide fields.
+- _[preventive]_ **Strip debug detail from error responses** — Production responses return a stable error code and a correlation ID. Stack traces, SQL errors, and internal IDs go to logs only.
+- _[preventive]_ **Encrypt data at rest with key separation** — For api, enable storage-level encryption with a CMK distinct from the encryption-at-rest key for adjacent stores. Rotate annually.
+
+**🔗 References:** [A02:2021 — Cryptographic Failures](https://owasp.org/Top10/A02_2021-Cryptographic_Failures/) · [LINDDUN reference](https://linddun.org/) · [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+
+#### Lack of transparent privacy notice
+
+- **Methodology / Category:** LINDDUN → Unawareness
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-359 — Privacy Violation](https://cwe.mitre.org/data/definitions/359.html)
+- **CVSS 3.1:** **0.0** (None) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=5, R=4, E=7, A=6, D=7 → **Total 29/50**
+
+**📍 Where the threat exists:** Within component **REST API** (`api`).
+
+**📝 Description:** Users don't know what data is collected or for what purpose.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes REST API via reachable inputs.
+2. Identifies the weakness named by this threat (Unawareness).
+3. Crafts an exploit specific to the affected component type (api).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [LINDDUN reference](https://linddun.org/) · [CWE-359 — Privacy Violation](https://cwe.mitre.org/data/definitions/359.html)
+
+### Low (1)
+
+#### Forced attribution of sensitive actions
+
+- **Methodology / Category:** LINDDUN → Non-repudiation
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+- **CVSS 3.1:** **7.5** (High) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N`
+- **CVSS 4.0:** **7.0** (High) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=3, R=2, E=5, A=4, D=5 → **Total 19/50**
+
+**📍 Where the threat exists:** Within component **REST API** (`api`).
+
+**📝 Description:** User cannot deny a sensitive action even when they should have plausible deniability.
+
+**⚔️ Attack scenario:**
+
+1. User performs a sensitive action through REST API (a transfer, a permission change, a deletion).
+2. Audit logs are absent, incomplete, or modifiable by the same principal who performed the action.
+3. User later denies having performed the action, or an attacker covers their tracks.
+4. Without tamper-evident logs, neither responsible party can be identified — leading to fraud, dispute, or regulatory exposure.
+
+**🛡 How to mitigate:**
+
+- _[detective]_ **Emit tamper-evident audit logs** — Sign log entries (HMAC chain, hash-linked) so insertion or deletion is detectable. Forward to a separate, append-only system the action's principal cannot administer.
+- _[detective]_ **Capture sufficient detail per audit event** — Who (authenticated principal, not just session ID), what (specific action and target), when (UTC, monotonic-clock-corroborated), where (source IP, request ID), why (correlated to the upstream business event).
+- _[detective]_ **Periodic log integrity verification** — Schedule daily integrity checks on the audit log chain. Alert on any gap.
+
+**🔗 References:** [A09:2021 — Security Logging and Monitoring Failures](https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/) · [LINDDUN reference](https://linddun.org/) · [CWE-778 — Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html)
+
+### Info (18)
+
+#### Manual step — map business impact & asset owners
+
+- **Methodology / Category:** PASTA → Stage 1 — Business Objectives
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+- **CVSS 3.1:** **6.3** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N`
+- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=3, R=1, E=2, A=2, D=2 → **Total 10/50**
+
+**📍 Where the threat exists:** Within component **Database** (`database`).
+
+**📝 Description:** PASTA Stage 1 requires defining business objectives and impact tiers. The tool does NOT determine this automatically: assign an owner and a business-impact tier to each component, and record revenue/regulatory exposure.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes Database via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 1 — Business Objectives).
+3. Crafts an exploit specific to the affected component type (database).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+
+#### Manual step — enumerate dependencies & run SCA
+
+- **Methodology / Category:** PASTA → Stage 2 — Technical Scope
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+- **CVSS 3.1:** **6.3** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N`
+- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=3, R=1, E=2, A=2, D=2 → **Total 10/50**
+
+**📍 Where the threat exists:** Within component **Database** (`database`).
+
+**📝 Description:** PASTA Stage 2 requires a dependency/SBOM inventory and CVE analysis. The tool does NOT scan dependencies: run SCA (e.g. dependabot/trivy) and attach the SBOM to complete this stage.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes Database via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 2 — Technical Scope).
+3. Crafts an exploit specific to the affected component type (database).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+
+#### Manual step — define threat actors & TTPs
+
+- **Methodology / Category:** PASTA → Stage 4 — Threat Analysis
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+- **CVSS 3.1:** **6.3** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N`
+- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=3, R=1, E=2, A=2, D=2 → **Total 10/50**
+
+**📍 Where the threat exists:** Within component **Database** (`database`).
+
+**📝 Description:** PASTA Stage 4 requires profiling plausible adversaries and their techniques. The tool does NOT infer threat actors: map actor tiers (script-kiddie → nation-state) and relevant MITRE ATT&CK TTPs to your surfaces.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes Database via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 4 — Threat Analysis).
+3. Crafts an exploit specific to the affected component type (database).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+
+#### Partial — review STRIDE/OWASP findings, then add testing
+
+- **Methodology / Category:** PASTA → Stage 5 — Vulnerability Analysis
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+- **CVSS 3.1:** **6.3** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N`
+- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=3, R=1, E=2, A=2, D=2 → **Total 10/50**
+
+**📍 Where the threat exists:** Within component **Database** (`database`).
+
+**📝 Description:** PASTA Stage 5 correlates weaknesses. The STRIDE and OWASP findings in this report are a starting point, but the tool does NOT run SAST/DAST: add dynamic and static testing results to complete the picture.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes Database via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 5 — Vulnerability Analysis).
+3. Crafts an exploit specific to the affected component type (database).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+
+#### Manual step — build attack trees
+
+- **Methodology / Category:** PASTA → Stage 6 — Attack Modeling
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+- **CVSS 3.1:** **6.3** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N`
+- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=3, R=1, E=2, A=2, D=2 → **Total 10/50**
+
+**📍 Where the threat exists:** Within component **Database** (`database`).
+
+**📝 Description:** PASTA Stage 6 requires constructing attack trees. The tool does NOT generate attack trees: model plausible kill-chains (e.g. phish → token theft → admin) for the highest-risk flows and rank them by likelihood × impact.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes Database via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 6 — Attack Modeling).
+3. Crafts an exploit specific to the affected component type (database).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+
+#### Partial — use severity/DREAD scores, then assign risk owners
+
+- **Methodology / Category:** PASTA → Stage 7 — Risk & Impact Analysis
+- **Affected component:** Database (`database`)
+- **CWE:** [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+- **CVSS 3.1:** **6.3** (Medium) — `CVSS:3.1/AV:A/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N`
+- **CVSS 4.0:** **2.1** (Low) — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=3, R=1, E=2, A=2, D=2 → **Total 10/50**
+
+**📍 Where the threat exists:** Within component **Database** (`database`).
+
+**📝 Description:** PASTA Stage 7 quantifies and prioritizes risk. The tool provides severity and DREAD scores per threat as inputs, but does NOT record risk decisions: track each risk to an explicit accept/mitigate/transfer/avoid decision with an owner.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes Database via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 7 — Risk & Impact Analysis).
+3. Crafts an exploit specific to the affected component type (database).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around Database. Review applicability of OWASP ASVS controls for database components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
+
+#### Manual step — map business impact & asset owners
+
+- **Methodology / Category:** PASTA → Stage 1 — Business Objectives
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=2, R=1, E=4, A=3, D=4 → **Total 14/50**
+
+**📍 Where the threat exists:** Within component **REST API** (`api`).
+
+**📝 Description:** PASTA Stage 1 requires defining business objectives and impact tiers. The tool does NOT determine this automatically: assign an owner and a business-impact tier to each component, and record revenue/regulatory exposure.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes REST API via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 1 — Business Objectives).
+3. Crafts an exploit specific to the affected component type (api).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+
+#### Manual step — enumerate dependencies & run SCA
+
+- **Methodology / Category:** PASTA → Stage 2 — Technical Scope
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=2, R=1, E=4, A=3, D=4 → **Total 14/50**
+
+**📍 Where the threat exists:** Within component **REST API** (`api`).
+
+**📝 Description:** PASTA Stage 2 requires a dependency/SBOM inventory and CVE analysis. The tool does NOT scan dependencies: run SCA (e.g. dependabot/trivy) and attach the SBOM to complete this stage.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes REST API via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 2 — Technical Scope).
+3. Crafts an exploit specific to the affected component type (api).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+
+#### Auto-derived — review decomposition & boundary crossings
+
+- **Methodology / Category:** PASTA → Stage 3 — Application Decomposition
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=2, R=1, E=4, A=3, D=4 → **Total 14/50**
+
+**📍 Where the threat exists:** Within component **REST API** (`api`).
+
+**📝 Description:** PASTA Stage 3 is automated by this tool: see the generated DFD, the inferred trust boundaries, and the per-flow cross-boundary findings. Review them and confirm every entry point and trust boundary is correct.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes REST API via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 3 — Application Decomposition).
+3. Crafts an exploit specific to the affected component type (api).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+
+#### Manual step — define threat actors & TTPs
+
+- **Methodology / Category:** PASTA → Stage 4 — Threat Analysis
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=2, R=1, E=4, A=3, D=4 → **Total 14/50**
+
+**📍 Where the threat exists:** Within component **REST API** (`api`).
+
+**📝 Description:** PASTA Stage 4 requires profiling plausible adversaries and their techniques. The tool does NOT infer threat actors: map actor tiers (script-kiddie → nation-state) and relevant MITRE ATT&CK TTPs to your surfaces.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes REST API via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 4 — Threat Analysis).
+3. Crafts an exploit specific to the affected component type (api).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+
+#### Partial — review STRIDE/OWASP findings, then add testing
+
+- **Methodology / Category:** PASTA → Stage 5 — Vulnerability Analysis
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=2, R=1, E=4, A=3, D=4 → **Total 14/50**
+
+**📍 Where the threat exists:** Within component **REST API** (`api`).
+
+**📝 Description:** PASTA Stage 5 correlates weaknesses. The STRIDE and OWASP findings in this report are a starting point, but the tool does NOT run SAST/DAST: add dynamic and static testing results to complete the picture.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes REST API via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 5 — Vulnerability Analysis).
+3. Crafts an exploit specific to the affected component type (api).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+
+#### Manual step — build attack trees
+
+- **Methodology / Category:** PASTA → Stage 6 — Attack Modeling
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=2, R=1, E=4, A=3, D=4 → **Total 14/50**
+
+**📍 Where the threat exists:** Within component **REST API** (`api`).
+
+**📝 Description:** PASTA Stage 6 requires constructing attack trees. The tool does NOT generate attack trees: model plausible kill-chains (e.g. phish → token theft → admin) for the highest-risk flows and rank them by likelihood × impact.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes REST API via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 6 — Attack Modeling).
+3. Crafts an exploit specific to the affected component type (api).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+
+#### Partial — use severity/DREAD scores, then assign risk owners
+
+- **Methodology / Category:** PASTA → Stage 7 — Risk & Impact Analysis
+- **Affected component:** REST API (`api`)
+- **CWE:** [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=2, R=1, E=4, A=3, D=4 → **Total 14/50**
+
+**📍 Where the threat exists:** Within component **REST API** (`api`).
+
+**📝 Description:** PASTA Stage 7 quantifies and prioritizes risk. The tool provides severity and DREAD scores per threat as inputs, but does NOT record risk decisions: track each risk to an explicit accept/mitigate/transfer/avoid decision with an owner.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes REST API via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 7 — Risk & Impact Analysis).
+3. Crafts an exploit specific to the affected component type (api).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around REST API. Review applicability of OWASP ASVS controls for api components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-20 — Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)
+
+#### Manual step — map business impact & asset owners
+
+- **Methodology / Category:** PASTA → Stage 1 — Business Objectives
+- **Affected component:** User (`user`)
+- **CWE:** [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=2, R=1, E=4, A=1, D=4 → **Total 12/50**
+
+**📍 Where the threat exists:** Within component **User** (`user`).
+
+**📝 Description:** PASTA Stage 1 requires defining business objectives and impact tiers. The tool does NOT determine this automatically: assign an owner and a business-impact tier to each component, and record revenue/regulatory exposure.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes User via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 1 — Business Objectives).
+3. Crafts an exploit specific to the affected component type (user).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around User. Review applicability of OWASP ASVS controls for user components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+
+#### Manual step — enumerate dependencies & run SCA
+
+- **Methodology / Category:** PASTA → Stage 2 — Technical Scope
+- **Affected component:** User (`user`)
+- **CWE:** [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=2, R=1, E=4, A=1, D=4 → **Total 12/50**
+
+**📍 Where the threat exists:** Within component **User** (`user`).
+
+**📝 Description:** PASTA Stage 2 requires a dependency/SBOM inventory and CVE analysis. The tool does NOT scan dependencies: run SCA (e.g. dependabot/trivy) and attach the SBOM to complete this stage.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes User via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 2 — Technical Scope).
+3. Crafts an exploit specific to the affected component type (user).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around User. Review applicability of OWASP ASVS controls for user components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+
+#### Manual step — define threat actors & TTPs
+
+- **Methodology / Category:** PASTA → Stage 4 — Threat Analysis
+- **Affected component:** User (`user`)
+- **CWE:** [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=2, R=1, E=4, A=1, D=4 → **Total 12/50**
+
+**📍 Where the threat exists:** Within component **User** (`user`).
+
+**📝 Description:** PASTA Stage 4 requires profiling plausible adversaries and their techniques. The tool does NOT infer threat actors: map actor tiers (script-kiddie → nation-state) and relevant MITRE ATT&CK TTPs to your surfaces.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes User via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 4 — Threat Analysis).
+3. Crafts an exploit specific to the affected component type (user).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around User. Review applicability of OWASP ASVS controls for user components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+
+#### Manual step — build attack trees
+
+- **Methodology / Category:** PASTA → Stage 6 — Attack Modeling
+- **Affected component:** User (`user`)
+- **CWE:** [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=2, R=1, E=4, A=1, D=4 → **Total 12/50**
+
+**📍 Where the threat exists:** Within component **User** (`user`).
+
+**📝 Description:** PASTA Stage 6 requires constructing attack trees. The tool does NOT generate attack trees: model plausible kill-chains (e.g. phish → token theft → admin) for the highest-risk flows and rank them by likelihood × impact.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes User via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 6 — Attack Modeling).
+3. Crafts an exploit specific to the affected component type (user).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around User. Review applicability of OWASP ASVS controls for user components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+
+#### Partial — use severity/DREAD scores, then assign risk owners
+
+- **Methodology / Category:** PASTA → Stage 7 — Risk & Impact Analysis
+- **Affected component:** User (`user`)
+- **CWE:** [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)
+- **CVSS 3.1:** **6.5** (Medium) — `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N`
+- **CVSS 4.0:** **5.5** (Medium) — `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N`
+- **Source:** rule-based
+- **DREAD:** D=2, R=1, E=4, A=1, D=4 → **Total 12/50**
+
+**📍 Where the threat exists:** Within component **User** (`user`).
+
+**📝 Description:** PASTA Stage 7 quantifies and prioritizes risk. The tool provides severity and DREAD scores per threat as inputs, but does NOT record risk decisions: track each risk to an explicit accept/mitigate/transfer/avoid decision with an owner.
+
+**⚔️ Attack scenario:**
+
+1. Attacker probes User via reachable inputs.
+2. Identifies the weakness named by this threat (Stage 7 — Risk & Impact Analysis).
+3. Crafts an exploit specific to the affected component type (user).
+4. Successful exploitation leads to the impact described — loss of confidentiality, integrity, availability, or privacy.
+
+**🛡 How to mitigate:**
+
+- _[preventive]_ **Apply defense-in-depth controls** — Layer authentication, authorization, validation, and monitoring around User. Review applicability of OWASP ASVS controls for user components.
+- _[detective]_ **Add monitoring for the threat indicators** — Define detection signals for this threat and forward to your SIEM. Set thresholds based on baseline traffic.
+
+**🔗 References:** [PASTA reference](https://owasp.org/www-pdf-archive/PASTA-Pre-Production-Threat-Modeling.pdf) · [CWE-693 — Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html)

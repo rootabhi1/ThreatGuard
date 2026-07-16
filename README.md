@@ -64,7 +64,7 @@ ThreatGuard turns a description of a system — typed, drawn on a canvas, or **u
 
 ## Sample output
 
-A full generated report is checked in at **[`docs/sample-report.html`](docs/sample-report.html)** — 209 threats across STRIDE, LINDDUN and PASTA for a sample retail platform, each with a DREAD score, CVSS, CWE, MITRE ATT&CK and OWASP Top 10 references, plus compliance mapping and a data-flow diagram with automatically inferred trust boundaries.
+A full generated report is checked in at **[`docs/sample-report.html`](docs/sample-report.html)** — 227 threats across STRIDE, LINDDUN and PASTA for a sample retail platform (92 evidenced by a fact in the model, 135 baseline type-based checks), each with a DREAD score, CVSS, CWE, MITRE ATT&CK and OWASP Top 10 references, plus class-aware compliance mapping and a data-flow diagram with automatically inferred trust boundaries.
 
 | Dashboard | Threat canvas | Analysis & data-flow diagram |
 |---|---|---|

@@ -141,7 +141,7 @@ def main():
 
     analyze = sub.add_parser("analyze", help="Run threat analysis on a system definition file")
     analyze.add_argument("--system-file",  default="../examples/systems/simple-api.json", help="Path to a system definition JSON (see examples/systems/)")
-    analyze.add_argument("--frameworks",   default="stride",      help="Comma-separated: stride,dread,linddun,pasta")
+    analyze.add_argument("--frameworks",   default="stride",      help="Comma-separated methodologies: stride,linddun,pasta (DREAD scoring and OWASP references are applied automatically)")
     analyze.add_argument("--threshold",    default="high",        choices=["info","low","medium","high","critical"],
                          help="Fail if threats at or above this severity exist (default: high)")
     analyze.add_argument("--use-llm",      action="store_true",   help="Enable Claude LLM enhancement")
