@@ -11,6 +11,7 @@
   let allTemplates = [];
   let selectedTemplate = null;   // when set, create uses this structured system directly
   let jiraConfigured = false;    // gates the per-threat "Create Jira ticket" button
+  let llmConfigured = false;     // gates the per-threat "AI Fix" button
 
   // =========================================================================
   //  Load
@@ -272,6 +273,47 @@
   document.getElementById('btn-new-tm').addEventListener('click', openNewModal);
   const btnNewEmpty = document.getElementById('btn-new-tm-empty');
   if (btnNewEmpty) btnNewEmpty.addEventListener('click', openNewModal);
+
+  // ---- Compare (release diff) ----
+  function openCompareModal() {
+    const analyzed = allTMs.filter(t => t.analysis || t.methodologies);  // any saved model
+    if (allTMs.length < 2) { UI.toast('You need at least two threat models to compare.', 'info'); return; }
+    const opts = allTMs.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+    const a = document.getElementById('compare-a'), b = document.getElementById('compare-b');
+    a.innerHTML = opts; b.innerHTML = opts;
+    // The list is newest-first, so default baseline = older (last), after = newest (first).
+    if (a.options.length > 1) a.selectedIndex = a.options.length - 1;
+    b.selectedIndex = 0;
+    document.getElementById('compare-result').innerHTML = '';
+    UI.showModal('modal-compare');
+  }
+  document.getElementById('btn-compare').addEventListener('click', openCompareModal);
+
+  document.getElementById('btn-run-compare').addEventListener('click', async () => {
+    const a = document.getElementById('compare-a').value, b = document.getElementById('compare-b').value;
+    const out = document.getElementById('compare-result');
+    if (a === b) { out.innerHTML = '<p class="text-sm" style="color:var(--c-critical);">Pick two different threat models.</p>'; return; }
+    out.innerHTML = '<div class="dots-loader text-brand"><span></span><span></span><span></span></div>';
+    const r = await Auth.fetch(`/api/releases/${a}/diff/${b}`);
+    if (!r.ok) { out.innerHTML = `<p class="text-sm" style="color:var(--c-critical);">${esc((await r.json()).detail || 'Compare failed')}</p>`; return; }
+    const d = await r.json();
+    const sevTag = s => `<span class="threat-meta-tag" style="font-size:0.625rem;text-transform:uppercase;">${esc(s || '')}</span>`;
+    const section = (title, color, items, render) => `
+      <div class="card p-3 mb-3">
+        <div class="font-semibold text-sm mb-2" style="color:${color};">${title} <span class="text-light">(${items.length})</span></div>
+        ${items.length ? items.map(render).join('') : '<p class="text-xs text-light">None.</p>'}
+      </div>`;
+    out.innerHTML = `
+      <div class="flex items-center gap-2 mb-3 text-sm">
+        <strong>${esc(d.model_1.name)}</strong> <span class="text-light">→</span> <strong>${esc(d.model_2.name)}</strong>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        ${section('🆕 New threats', 'var(--c-critical)', d.new_threats || [], t => `<div class="text-sm" style="margin:2px 0;">${sevTag(t.severity)} ${esc(t.title)} <span class="text-light">· ${esc(t.component_name||'')}</span></div>`)}
+        ${section('✅ Resolved threats', 'var(--c-success)', d.resolved_threats || [], t => `<div class="text-sm" style="margin:2px 0;">${sevTag(t.severity)} ${esc(t.title)} <span class="text-light">· ${esc(t.component_name||'')}</span></div>`)}
+        ${section('↕ Re-rated severity', '#ca8a04', d.changed_severity || [], c => `<div class="text-sm" style="margin:2px 0;">${esc(c.threat.title)}: <strong>${esc(c.old)}</strong> → <strong>${esc(c.new)}</strong></div>`)}
+        ${section('🧩 Component changes', 'var(--c-brand)', [...(d.new_components||[]).map(n=>({t:'+ '+n})), ...(d.removed_components||[]).map(n=>({t:'− '+n}))], c => `<div class="text-sm" style="margin:2px 0;">${esc(c.t)}</div>`)}
+      </div>`;
+  });
 
   document.getElementById('form-new-tm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -792,8 +834,10 @@
 
               <div class="mt-3 flex items-center gap-2" style="padding-top: 0.75rem; border-top: 1px solid var(--c-border); flex-wrap: wrap;">
                 <button class="show-history btn btn-sm btn-ghost" data-threat-id="${esc(t.id)}">View status history →</button>
+                ${llmConfigured ? `<button class="ai-fix btn btn-sm btn-secondary" data-threat-id="${esc(t.id)}">✨ AI Fix</button>` : ''}
                 ${jiraConfigured ? `<button class="create-jira btn btn-sm btn-secondary" data-threat-id="${esc(t.id)}">Create Jira ticket</button>` : ''}
                 <div class="status-history mt-2 hidden" style="width:100%;"></div>
+                <div class="ai-fix-result mt-2 hidden" style="width:100%;"></div>
               </div>
             </div>
           </div>
@@ -877,6 +921,41 @@
         }
         container.classList.remove('hidden');
         btn.textContent = 'Hide status history ↑';
+      });
+    });
+
+    list.querySelectorAll('.ai-fix').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const threatId = btn.dataset.threatId;
+        const threat = (currentTM.analysis.threats || []).find(x => x.id === threatId);
+        if (!threat) return;
+        const panel = btn.parentElement.querySelector('.ai-fix-result');
+        const original = btn.textContent;
+        btn.disabled = true; btn.textContent = 'Generating…';
+        try {
+          const r = await Auth.fetch('/api/threat/fix', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ threat, system_name: (currentTM.system && currentTM.system.name) || currentTM.name || 'System' }),
+          });
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.detail || 'Fix generation failed');
+          const codeBox = (label, code) => `<div style="margin-top:6px;"><div class="text-xs font-semibold text-light" style="text-transform:uppercase;letter-spacing:.05em;">${label}</div><pre style="background:#0f172a;color:#e2e8f0;border-radius:8px;padding:10px 12px;overflow-x:auto;font-size:0.75rem;line-height:1.5;margin:4px 0;"><code>${esc(code || '')}</code></pre></div>`;
+          panel.innerHTML = `
+            <div class="card p-3" style="background:linear-gradient(135deg,#faf5ff,#eef2ff);border-color:rgba(99,102,241,.25);">
+              <div class="flex items-center gap-2 mb-1"><span class="font-semibold text-sm">✨ Suggested fix</span>${d.language ? `<span class="threat-meta-tag" style="font-size:0.625rem;">${esc(d.language)}</span>` : ''}</div>
+              ${d.explanation ? `<p class="text-sm text-dim" style="margin:4px 0;">${esc(d.explanation)}</p>` : ''}
+              ${d.before ? codeBox('Before', d.before) : ''}
+              ${d.after ? codeBox('After', d.after) : ''}
+              ${d.diff_summary ? `<p class="text-xs text-light" style="margin-top:6px;">${esc(d.diff_summary)}</p>` : ''}
+              <p class="text-xs text-light" style="margin-top:6px;font-style:italic;">AI-generated — review before applying.</p>
+            </div>`;
+          panel.classList.remove('hidden');
+        } catch (err) {
+          UI.toast(err.message || 'Could not generate a fix', 'error', 8000);
+        } finally {
+          btn.disabled = false; btn.textContent = original;
+        }
       });
     });
 
@@ -1054,7 +1133,10 @@
 
   // Learn whether Jira is configured so threats can offer a "Create Jira ticket"
   // action. Non-blocking — the dashboard renders regardless.
-  fetch('/api/health').then(r => r.json()).then(h => { jiraConfigured = !!h.jira_configured; }).catch(() => {});
+  fetch('/api/health').then(r => r.json()).then(h => {
+    jiraConfigured = !!h.jira_configured;
+    llmConfigured = !!h.llm_configured;
+  }).catch(() => {});
 
   loadAll();
 })();

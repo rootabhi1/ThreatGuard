@@ -4,6 +4,10 @@
 {% block page_subtitle %}Your threat models and security analysis{% endblock %}
 
 {% block header_actions %}
+<button id="btn-compare" class="btn btn-secondary">
+  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
+  Compare
+</button>
 <button id="btn-new-tm" class="btn btn-primary">
   <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
   New Threat Model
@@ -106,12 +110,12 @@
       </div>
 
       <div class="field">
-        <label class="field-label">Description <span class="field-label-optional">optional</span></label>
-        <textarea name="description" rows="2" class="textarea" placeholder="What does this system do?"></textarea>
+        <label class="field-label">Notes <span class="field-label-optional">optional</span></label>
+        <textarea name="description" rows="2" class="textarea" placeholder="A short label or note for this threat model (e.g. 'Q3 login redesign')."></textarea>
       </div>
 
       <div class="field">
-        <label class="field-label">System Description</label>
+        <label class="field-label">System description <span class="field-label-optional">we analyze this</span></label>
         <textarea name="system_text" required rows="6" class="textarea" style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.8125rem;"
                   placeholder="A user logs in via the web app, which authenticates against an OAuth provider. After login, the app reads user data from a Postgres database. Files are uploaded to S3."></textarea>
         <div class="field-help">We'll auto-extract components, flows, and trust boundaries.</div>
@@ -189,6 +193,35 @@
       </button>
     </div>
     <div class="modal-body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- =========== Modal: Compare threat models =========== -->
+<div id="modal-compare" class="modal hidden">
+  <div class="modal-card modal-card-lg">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Compare threat models</div>
+        <div class="modal-subtitle">See what changed between two analyses — new, resolved, and re-rated threats.</div>
+      </div>
+      <button data-close-modal class="modal-close">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+        <div class="field">
+          <label class="field-label">Baseline (before)</label>
+          <select id="compare-a" class="select"></select>
+        </div>
+        <div class="field">
+          <label class="field-label">Compare to (after)</label>
+          <select id="compare-b" class="select"></select>
+        </div>
+      </div>
+      <button id="btn-run-compare" class="btn btn-primary btn-sm">Compare</button>
+      <div id="compare-result" class="mt-4"></div>
+    </div>
   </div>
 </div>
 
