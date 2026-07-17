@@ -5,7 +5,7 @@ components into trust boundaries.
 
 Two modes:
   - heuristic: deterministic rules based on component type + name patterns
-  - llm: Claude reasons about each component's trust zone (needs ANTHROPIC_API_KEY)
+  - llm: the configured LLM reasons about each component's trust zone (needs ANTHROPIC_API_KEY)
 
 Returns a list of trust boundaries:
   [{id, name, contains: [component_id, ...]}, ...]
