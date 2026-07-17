@@ -609,8 +609,8 @@ async def threat_model_report(
     fmt: str,
     user: dict = Depends(get_current_user),
 ):
-    if fmt not in ("markdown", "html", "pdf", "csv"):
-        raise HTTPException(400, "Format must be markdown, html, pdf, or csv")
+    if fmt not in ("markdown", "html", "pdf", "csv", "executive"):
+        raise HTTPException(400, "Format must be markdown, html, pdf, csv, or executive")
     tm = domain.get_threat_model(tid)
     if not tm:
         raise HTTPException(404)
@@ -619,6 +619,10 @@ async def threat_model_report(
         raise HTTPException(400, "Run analysis before generating a report")
     analysis = tm["analysis"]
     fname = f"threat_model_{tid}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+    if fmt == "executive":
+        from threat_engine.executive_report import generate_executive_report
+        return Response(generate_executive_report(analysis), media_type="text/html",
+                        headers={"Content-Disposition": f'attachment; filename="executive_{fname}.html"'})
     if fmt == "markdown":
         return Response(to_markdown(analysis), media_type="text/markdown",
                         headers={"Content-Disposition": f'attachment; filename="{fname}.md"'})
@@ -684,9 +688,10 @@ async def adhoc_report(
     fmt: str,
     analysis: dict,
     user: dict = Depends(get_current_user),
+    pdf: bool = False,
 ):
-    if fmt not in ("markdown", "html", "pdf", "csv"):
-        raise HTTPException(400)
+    if fmt not in ("markdown", "html", "pdf", "csv", "executive"):
+        raise HTTPException(400, "Format must be markdown, html, pdf, csv, or executive")
     fname = f"threat_model_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
     if fmt == "markdown":
         return Response(to_markdown(analysis), media_type="text/markdown",
@@ -699,6 +704,20 @@ async def adhoc_report(
         system_name = (analysis.get("system", {}) or {}).get("name", "System")
         return Response(_risk_register_csv(threats, system_name), media_type="text/csv",
                         headers={"Content-Disposition": _content_disposition(f"risk_register_{system_name.replace(' ', '_')}.csv")})
+    if fmt == "executive":
+        # Business-level summary. Uses the configured LLM for narrative when a key
+        # is set, else a deterministic template — so it works offline too. Returns
+        # HTML by default; ?pdf=true renders a PDF when WeasyPrint is installed.
+        from threat_engine.executive_report import generate_executive_report, html_to_pdf
+        html = generate_executive_report(analysis)
+        if pdf:
+            pdf_bytes = html_to_pdf(html)
+            if pdf_bytes is None:
+                raise HTTPException(501, "PDF rendering requires the optional WeasyPrint package; request the HTML instead.")
+            return Response(pdf_bytes, media_type="application/pdf",
+                            headers={"Content-Disposition": f'attachment; filename="executive_{fname}.pdf"'})
+        return Response(html, media_type="text/html",
+                        headers={"Content-Disposition": f'attachment; filename="executive_{fname}.html"'})
     return Response(to_pdf(analysis), media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{fname}.pdf"'})
 
@@ -1010,6 +1029,27 @@ async def bulk_update_status(req: BulkStatusRequest, user: dict = Depends(get_cu
         try: results.append(domain.upsert_threat_status(req.threat_model_id, item.threat_id, item.status, updated_by=user["id"], owner=item.owner, due_date=item.due_date))
         except Exception as e: results.append({"threat_id": item.threat_id, "error": str(e)})
     return {"updated": len(results), "results": results}
+
+
+class SingleStatusRequest(BaseModel):
+    threat_model_id: int
+    threat_id: str
+    status: str
+    owner: str | None = None
+    due_date: str | None = None
+
+@app.post("/api/threat-status")
+async def update_single_status(req: SingleStatusRequest, user: dict = Depends(get_current_user)):
+    """Set one threat's remediation status. Non-bulk counterpart to
+    /api/threat-status/bulk (both write through domain.upsert_threat_status)."""
+    tm = domain.get_threat_model(req.threat_model_id)
+    if not tm: raise HTTPException(404, "Not found")
+    ensure_can_access_threat_model(user, tm, "update")
+    try:
+        return domain.upsert_threat_status(req.threat_model_id, req.threat_id, req.status,
+                                           updated_by=user["id"], owner=req.owner, due_date=req.due_date)
+    except Exception as e:
+        raise HTTPException(400, str(e))
 
 
 # ===========================================================================

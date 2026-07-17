@@ -1,14 +1,16 @@
 """
 threat_engine/executive_report.py
 Generate a PDF executive summary report using WeasyPrint (if installed)
-or an HTML fallback. Calls Claude to write the narrative sections.
+or an HTML fallback. Uses the configured LLM (via the provider-agnostic llm
+layer) to write the narrative sections, falling back to a template when no LLM
+is available.
 """
 from __future__ import annotations
 import json
 from datetime import datetime
 
 
-def _claude_narrative(threats: list[dict], system_name: str) -> dict:
+def _llm_narrative(threats: list[dict], system_name: str) -> dict:
     """Ask the configured LLM to write the exec summary, top risks, and actions."""
     from .llm import complete_text, strip_fences
     sev_counts = {}
@@ -56,7 +58,7 @@ def generate_executive_report(analysis: dict, api_key: str | None = None) -> str
     narrative = None
     if llm_available():
         try:
-            narrative = _claude_narrative(threats, system_name)
+            narrative = _llm_narrative(threats, system_name)
         except Exception as e:
             print(f"[exec_report] LLM narrative failed: {e}")
 

@@ -559,6 +559,7 @@
             <button data-download="html" data-tm-id="${tm.id}" class="btn btn-sm btn-secondary">↓ HTML</button>
             <button data-download="pdf" data-tm-id="${tm.id}" class="btn btn-sm btn-secondary">↓ PDF</button>
             <button data-download="csv" data-tm-id="${tm.id}" class="btn btn-sm btn-secondary">↓ CSV</button>
+            <button data-download="executive" data-tm-id="${tm.id}" class="btn btn-sm btn-secondary">↓ Exec summary</button>
           </div>
         </div>
         <div id="threat-list" class="flex-col gap-2"></div>
@@ -908,7 +909,7 @@
       btn.addEventListener('click', async () => {
         const fmt = btn.dataset.download;
         const tmId = btn.dataset.tmId;
-        const ext = { markdown: 'md', pdf: 'pdf', csv: 'csv', html: 'html' }[fmt] || 'html';
+        const ext = { markdown: 'md', pdf: 'pdf', csv: 'csv', html: 'html', executive: 'html' }[fmt] || 'html';
         const original = btn.innerHTML;
         btn.innerHTML = '<span class="dots-loader"><span></span><span></span><span></span></span>';
         try {
