@@ -55,21 +55,62 @@ _TYPE_KEYWORDS = {
                         "next.js", "nextjs", "angular", "vue", "svelte", "nuxt"],
     "mobile_app":      ["mobile app", "android", "ios", "react native", "flutter"],
     "api":             ["api", "backend", "rest service", "graphql", "grpc", "microservice", "service",
-                        "lambda", "cloud function", "serverless", "fastapi", "express", "flask",
-                        "django", "spring", "rails", "gateway"],
-    "auth_service":    ["auth", "oauth", "sso", "identity provider", "okta", "auth0", "cognito",
-                        "keycloak", "clerk", "ldap", "saml", "firebase auth"],
+                        "fastapi", "express", "flask", "django", "spring", "rails"],
+    # Cloud compute / edge
+    "serverless":      ["lambda", "cloud function", "cloud functions", "serverless", "faas",
+                        "azure function", "cloud run", "fargate"],
+    "container":       ["docker", "container", "containerized", "ecs task"],
+    "kubernetes":      ["kubernetes", "k8s", "eks", "gke", "aks", "openshift"],
+    "service_mesh":    ["service mesh", "istio", "linkerd", "consul connect", "envoy mesh"],
+    "api_gateway":     ["api gateway", "apigee", "kong gateway", "tyk"],
+    "load_balancer":   ["load balancer", "load-balancer", "alb", "elb", "nlb", "haproxy"],
+    "cdn":             ["cdn", "cloudfront", "fastly", "akamai", "content delivery"],
+    "waf":             ["waf", "web application firewall"],
+    "dns":             ["route 53", "route53", "dns", "cloudflare dns", "name server", "dns resolver"],
+    "bastion":         ["bastion", "jump host", "jump box", "jump server", "jumpbox"],
+    # Identity & auth
+    "auth_service":    ["auth service", "authentication service", "auth", "oauth", "ldap", "saml",
+                        "firebase auth"],
+    "identity_provider": ["identity provider", "idp", "sso", "okta", "auth0", "cognito", "keycloak",
+                        "clerk", "entra", "azure ad", "ping identity", "workos", "jumpcloud", "onelogin"],
+    "iam":             ["iam", "identity and access"],
+    "secrets_manager": ["secrets manager", "secret manager", "hashicorp vault", "vault", "kms",
+                        "key vault", "parameter store"],
     "admin_panel":     ["admin panel", "admin ui", "back-office", "back office"],
+    # AI
+    "llm":             ["llm", "large language model", "language model", "gpt", "openai", "chatgpt",
+                        "bedrock", "sagemaker", "hugging face", "inference endpoint", "model endpoint",
+                        "generative ai", "vertex ai"],
+    "vector_db":       ["vector database", "vector db", "pinecone", "weaviate", "qdrant", "milvus",
+                        "chroma", "embedding store"],
+    # Data
     "database":        ["database", "db", "postgres", "mysql", "mongodb", "dynamodb", "rds", "cassandra",
                         "cockroach", "mariadb", "sqlite", "mssql", "sql server", "oracle", "spanner",
                         "aurora", "neo4j", "influxdb", "timescale", "scylla"],
-    "datastore":       ["s3", "blob storage", "object store", "data lake", "warehouse", "bigquery",
-                        "snowflake", "elasticsearch", "opensearch", "clickhouse", "minio", "hdfs",
-                        "ceph", "solr", "redshift"],
+    "object_storage":  ["s3", "object storage", "object store", "blob storage", "minio", "gcs",
+                        "azure blob", "cloud storage", "storage bucket"],
+    "data_warehouse":  ["data warehouse", "warehouse", "bigquery", "snowflake", "redshift",
+                        "clickhouse", "databricks"],
+    "search_service":  ["elasticsearch", "opensearch", "solr", "algolia", "meilisearch", "typesense",
+                        "search engine", "search cluster"],
+    "data_pipeline":   ["data pipeline", "etl", "airflow", "dagster", "spark", "flink", "dbt",
+                        "stream processor", "kinesis firehose", "glue job", "streaming pipeline"],
+    "datastore":       ["datastore", "data lake", "hdfs", "ceph"],
     "cache":           ["redis", "memcached", "cache", "hazelcast", "varnish"],
     "queue":           ["queue", "kafka", "rabbitmq", "sqs", "pubsub", "event bus", "nats",
                         "activemq", "kinesis", "service bus", "celery"],
     "filesystem":      ["filesystem", "file storage", "nfs"],
+    # Ops
+    "scheduler":       ["scheduler", "cron", "scheduled job", "cron job", "task scheduler", "batch job"],
+    "monitoring":      ["prometheus", "grafana", "datadog", "monitoring", "observability", "cloudwatch"],
+    "notification_service": ["notification service", "push notification", "fcm", "apns",
+                        "notification", "notifications"],
+    # Messaging / external
+    "email_service":   ["sendgrid", "mailgun", "postmark", "amazon ses", "aws ses", "smtp",
+                        "email service", "mailchimp", "email provider"],
+    "sms_gateway":     ["twilio", "sms gateway", "vonage", "nexmo", "sns sms", "text message"],
+    "iot_device":      ["iot device", "iot", "sensor", "embedded device", "smart device",
+                        "edge device", "telemetry"],
     "payment_service": ["stripe", "payment", "paypal", "billing", "square", "adyen", "razorpay", "braintree"],
 }
 
@@ -77,20 +118,13 @@ _TYPE_KEYWORDS = {
 # described (structured input, the DFD editor, diagram extraction) even though the
 # free-text extractor above collapses most cloud tech into the generic types. They
 # let users model cloud architectures explicitly (e.g. a Lambda, an S3 bucket, a WAF).
-_EXTRA_TYPES = [
-    "config", "service", "worker",
-    "api_gateway", "load_balancer", "cdn", "waf",
-    "object_storage", "data_warehouse", "vector_db",
-    "serverless", "container", "kubernetes",
-    "secrets_manager", "iam", "vpc", "monitoring", "notification_service",
-    # Second wave — modern services & infra
-    "llm", "identity_provider", "email_service", "sms_gateway", "dns",
-    "bastion", "iot_device", "data_pipeline", "scheduler",
-    "search_service", "service_mesh",
-]
+# Types with no natural free-text keyword (set explicitly in structured input,
+# the DFD editor, or by AI-vision diagram extraction). Everything else now has a
+# keyword mapping in _TYPE_KEYWORDS above so free-text descriptions detect it too.
+_EXTRA_TYPES = ["config", "service", "worker", "vpc"]
 
-# Human-facing list of valid component types for the structured input mode.
-VALID_COMPONENT_TYPES = list(_TYPE_KEYWORDS.keys()) + _EXTRA_TYPES
+# Human-facing list of valid component types (deduped, keyword-mapped first).
+VALID_COMPONENT_TYPES = list(dict.fromkeys(list(_TYPE_KEYWORDS.keys()) + _EXTRA_TYPES))
 
 def extract_components_from_text(text: str) -> dict:
     """Best-effort extraction. Always good enough for a starting draft —
@@ -128,7 +162,9 @@ def extract_components_from_text(text: str) -> dict:
     user = next((c for c in components if c["type"] == "user"), None)
     front = next((c for c in components if c["type"] in ("webapp", "mobile_app")), None)
     api = next((c for c in components if c["type"] == "api"), None)
-    stores = [c for c in components if c["type"] in ("database", "datastore", "cache")]
+    stores = [c for c in components if c["type"] in (
+        "database", "datastore", "cache", "object_storage", "data_warehouse",
+        "search_service", "vector_db", "queue", "filesystem")]
 
     if user and (front or api):
         target = front or api
