@@ -73,7 +73,11 @@ def extract_components_from_text(text: str) -> dict:
 
     for ctype, keywords in _TYPE_KEYWORDS.items():
         for kw in keywords:
-            if re.search(r"\b" + re.escape(kw) + r"\b", t):
+            # Longer keywords match as a prefix so common suffixed forms are caught
+            # (e.g. "postgres" → "postgresql", "database" → "databases"); short ones
+            # (api, db, s3) stay strict to avoid false positives.
+            tail = r"\w*" if len(kw) >= 6 else r"\b"
+            if re.search(r"\b" + re.escape(kw) + tail, t):
                 if ctype not in seen_types:
                     components.append({
                         "id": f"c_{ctype}",

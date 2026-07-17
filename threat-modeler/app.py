@@ -812,9 +812,11 @@ async def extract_from_diagram_endpoint(
     user: dict = Depends(get_current_user),
 ):
     """Extract a system model (components, flows, trust boundaries) from an
-    uploaded architecture diagram. Uses Claude vision when ANTHROPIC_API_KEY is
-    set, otherwise returns an editable starter model."""
+    uploaded architecture diagram using a vision-capable AI provider. Requires
+    an AI provider to be configured (Admin → Settings)."""
     from threat_engine.diagram_extractor import extract_from_diagram
+    if not _llm_available():
+        raise HTTPException(400, "Diagram analysis needs a vision-capable AI provider. Configure one in Admin → Settings, or describe your system in text instead.")
 
     data, media_type = await _read_diagram(file)
     result = extract_from_diagram(data, media_type, description or "")
@@ -839,6 +841,8 @@ async def create_threat_model_from_diagram(
     back. Extracts the system model from the image, creates the threat model
     under the given feature, and (by default) runs the analysis immediately."""
     from threat_engine.diagram_extractor import extract_from_diagram
+    if not _llm_available():
+        raise HTTPException(400, "Diagram analysis needs a vision-capable AI provider. Configure one in Admin → Settings, or describe your system in text instead.")
 
     feature = domain.get_feature(feature_id)
     if not feature:
@@ -1198,9 +1202,12 @@ async def diff_releases(id1: int, id2: int, user: dict = Depends(get_current_use
     if not tm1 or not tm2: raise HTTPException(404, "One or both threat models not found")
     ensure_can_access_threat_model(user, tm1, "read"); ensure_can_access_threat_model(user, tm2, "read")
     def _key(t): return (t.get("title","").lower().strip(), t.get("component_name","").lower().strip())
-    def _threats(tm): ar = tm.get("analysis_result") or {}; return ar.get("threats", []) if isinstance(ar, dict) else []
+    def _threats(tm): ar = tm.get("analysis") or {}; return ar.get("threats", []) if isinstance(ar, dict) else []
+    def _components(tm):
+        sysd = tm.get("system") or (tm.get("analysis") or {}).get("system") or {}
+        return {c.get("name", "") for c in (sysd.get("components") or [])}
     t1_map = {_key(t): t for t in _threats(tm1)}; t2_map = {_key(t): t for t in _threats(tm2)}
-    c1 = {c.get("name","") for c in (tm1.get("components") or [])}; c2 = {c.get("name","") for c in (tm2.get("components") or [])}
+    c1 = _components(tm1); c2 = _components(tm2)
     return {"model_1": {"id": id1, "name": tm1.get("name")}, "model_2": {"id": id2, "name": tm2.get("name")},
             "new_threats": [t for k, t in t2_map.items() if k not in t1_map],
             "resolved_threats": [t for k, t in t1_map.items() if k not in t2_map],
@@ -1217,15 +1224,16 @@ class FixRequest(BaseModel):
 
 @app.post("/api/threat/fix")
 async def generate_fix(req: FixRequest, user: dict = Depends(get_current_user)):
-    from threat_engine.llm import complete_text, llm_available, strip_fences
+    from threat_engine.llm import complete_text, llm_available, strip_fences, last_error
     if not llm_available():
-        raise HTTPException(400, "Configure an LLM provider (set ANTHROPIC_API_KEY or OPENAI_API_KEY) to enable AI fix generation")
+        raise HTTPException(400, "AI fix generation needs an LLM. An admin can configure one in Admin → Settings → AI provider (or set ANTHROPIC_API_KEY / OPENAI_API_KEY).")
     try:
         t = req.threat
         prompt = f"You are a senior security engineer. Generate a concrete code fix for this threat.\nSystem: {req.system_name}\nTech stack: {req.tech_stack or 'not specified'}\nThreat: {t.get('title','')} ({t.get('severity','')})\nCWE: {(t.get('cwe') or {}).get('id','')}\nDescription: {t.get('description','')}\nMitigations: {', '.join(t.get('mitigations') or [])}\n\nReturn ONLY valid JSON with keys: language, explanation, before, after, diff_summary"
         text = complete_text(prompt, max_tokens=1200)
         if not text:
-            raise HTTPException(502, "LLM returned no response")
+            # Surface the real provider error (e.g. billing, rate limit) instead of a generic message.
+            raise HTTPException(502, f"AI fix failed: {last_error() or 'the model returned no response'}")
         return json.loads(strip_fences(text))
     except HTTPException:
         raise
