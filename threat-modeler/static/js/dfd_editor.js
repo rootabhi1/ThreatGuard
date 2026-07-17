@@ -51,6 +51,17 @@
     cdn:             { icon: '🌐', color: '#06b6d4' },
     object_storage:  { icon: '📦', color: '#0891b2' },
     vector_db:       { icon: '🧠', color: '#a855f7' },
+    // Cloud / infrastructure
+    serverless:          { icon: '☁', color: '#f59e0b' },
+    container:           { icon: '🐳', color: '#0ea5e9' },
+    kubernetes:          { icon: '☸', color: '#3b82f6' },
+    waf:                 { icon: '🧱', color: '#ef4444' },
+    secrets_manager:     { icon: '🔑', color: '#f59e0b' },
+    iam:                 { icon: '🪪', color: '#f59e0b' },
+    vpc:                 { icon: '🕸', color: '#64748b' },
+    data_warehouse:      { icon: '🏬', color: '#0891b2' },
+    monitoring:          { icon: '📈', color: '#16a34a' },
+    notification_service:{ icon: '🔔', color: '#9333ea' },
   };
 
   const ALL_TYPES = Object.keys(TYPE_VISUALS);
@@ -724,6 +735,20 @@
       return `${prefix}_${Math.random().toString(36).slice(2, 8)}`;
     }
 
+    function findFreeSpot() {
+      const taken = Object.values(system.layout || {});
+      const overlaps = (x, y) => taken.some(p =>
+        Math.abs(p.x - x) < COMP_W + 24 && Math.abs(p.y - y) < COMP_H + 24);
+      for (let gy = 40; gy < CANVAS_H - COMP_H; gy += COMP_H + 40) {
+        for (let gx = 40; gx < CANVAS_W - COMP_W; gx += COMP_W + 40) {
+          if (!overlaps(gx, gy)) return { x: snap(gx), y: snap(gy) };
+        }
+      }
+      // Fallback: cascade from top-left by count so it never stacks exactly.
+      const n = Object.keys(system.layout || {}).length;
+      return { x: snap(40 + (n % 8) * 20), y: snap(40 + (n % 8) * 20) };
+    }
+
     function addComponent() {
       const id = genId('c');
       const newComp = {
@@ -733,8 +758,9 @@
         description: '',
       };
       system.components.push(newComp);
-      // Place at center
-      system.layout[id] = { x: snap(CANVAS_W / 2 - COMP_W / 2), y: snap(CANVAS_H / 2 - COMP_H / 2) };
+      // Place in a visibly empty spot so the user actually sees it appear —
+      // scan a grid and pick the first cell that doesn't overlap an existing box.
+      system.layout[id] = findFreeSpot();
       // Add to "Application tier" by default
       const appTier = system.trust_boundaries.find(b => /application|app tier/i.test(b.name));
       if (appTier) appTier.contains.push(id);

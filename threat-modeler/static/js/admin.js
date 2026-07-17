@@ -240,18 +240,25 @@
     document.getElementById('releases-list').innerHTML = releases.map(r => `
       <div class="card card-hover cursor-pointer ${selectedReleaseId === r.id ? 'card-active' : ''}"
            data-release-id="${r.id}" style="padding: 0.875rem;">
-        <div class="flex justify-between items-start">
+        <div class="flex justify-between items-start gap-2">
           <div style="flex: 1; min-width: 0;">
             <div style="font-weight: 600;">${esc(r.name)}</div>
             <div class="text-xs text-light" style="margin-top: 2px;">${esc(r.description || '')}</div>
             ${r.target_date ? `<div class="text-xs text-light" style="margin-top: 4px;">📅 ${esc(r.target_date)}</div>` : ''}
           </div>
-          <span class="status status-${r.status === 'released' ? 'mitigated' : r.status === 'cancelled' ? 'false_positive' : 'in_progress'}">${esc(r.status)}</span>
+          <div class="flex items-center gap-2" style="flex:0 0 auto;">
+            <span class="status status-${r.status === 'released' ? 'mitigated' : r.status === 'cancelled' ? 'false_positive' : 'in_progress'}">${esc(r.status)}</span>
+            <button class="delete-release" data-release-id="${r.id}" data-release-name="${esc(r.name)}" title="Delete release (and its features & threat models)"
+                    style="border:none;background:none;cursor:pointer;color:var(--c-text-light);padding:2px;line-height:0;border-radius:6px;">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     `).join('');
 
     document.querySelectorAll('[data-release-id]').forEach(card => {
+      if (!card.classList.contains('card')) return;
       card.addEventListener('click', () => {
         selectedReleaseId = parseInt(card.dataset.releaseId);
         loadReleases();   // re-render to show active state
@@ -260,6 +267,21 @@
         const rel = releases.find(r => r.id === selectedReleaseId);
         document.getElementById('selected-release-label').textContent =
           rel ? `Features in "${rel.name}"` : '';
+      });
+    });
+
+    document.querySelectorAll('.delete-release').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = parseInt(btn.dataset.releaseId), name = btn.dataset.releaseName;
+        UI.confirmDialog(`Delete release "${name}"? This also deletes all its features and their threat models. This cannot be undone.`, async () => {
+          const r = await Auth.fetch(`/api/releases/${id}`, { method: 'DELETE' });
+          if (r.ok) {
+            UI.toast('Release deleted', 'success');
+            if (selectedReleaseId === id) { selectedReleaseId = null; document.getElementById('features-list').innerHTML = ''; document.getElementById('selected-release-label').textContent = ''; document.getElementById('btn-new-feature').disabled = true; }
+            loadReleases();
+          } else { UI.toast(UI.formatApiError(await r.json().catch(()=>({})), 'Delete failed'), 'error'); }
+        });
       });
     });
   }
@@ -275,16 +297,34 @@
     }
     list.innerHTML = features.map(f => `
       <div class="card" style="padding: 0.875rem;">
-        <div class="flex justify-between items-start">
+        <div class="flex justify-between items-start gap-2">
           <div style="flex: 1; min-width: 0;">
             <div style="font-weight: 600;">${esc(f.name)}</div>
             <div class="text-xs text-light" style="margin-top: 2px;">${esc(f.description || '')}</div>
             ${f.target_date ? `<div class="text-xs text-light" style="margin-top: 4px;">📅 Target: <strong>${esc(f.target_date)}</strong></div>` : ''}
           </div>
-          <span class="status status-${f.status === 'released' ? 'mitigated' : f.status === 'cancelled' ? 'false_positive' : 'in_progress'}" style="margin-left: 8px;">${esc(f.status)}</span>
+          <div class="flex items-center gap-2" style="flex:0 0 auto;">
+            <span class="status status-${f.status === 'released' ? 'mitigated' : f.status === 'cancelled' ? 'false_positive' : 'in_progress'}">${esc(f.status)}</span>
+            <button class="delete-feature" data-feature-id="${f.id}" data-feature-name="${esc(f.name)}" title="Delete feature (and its threat models)"
+                    style="border:none;background:none;cursor:pointer;color:var(--c-text-light);padding:2px;line-height:0;border-radius:6px;">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     `).join('');
+
+    list.querySelectorAll('.delete-feature').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = parseInt(btn.dataset.featureId), name = btn.dataset.featureName;
+        UI.confirmDialog(`Delete feature "${name}"? This also deletes its threat models. This cannot be undone.`, async () => {
+          const r = await Auth.fetch(`/api/features/${id}`, { method: 'DELETE' });
+          if (r.ok) { UI.toast('Feature deleted', 'success'); loadFeaturesForRelease(rid); }
+          else { UI.toast(UI.formatApiError(await r.json().catch(()=>({})), 'Delete failed'), 'error'); }
+        });
+      });
+    });
   }
 
   document.getElementById('btn-new-release').addEventListener('click', () => {

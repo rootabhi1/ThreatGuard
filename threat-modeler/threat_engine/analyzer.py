@@ -73,8 +73,20 @@ _TYPE_KEYWORDS = {
     "payment_service": ["stripe", "payment", "paypal", "billing", "square", "adyen", "razorpay", "braintree"],
 }
 
+# Cloud / infrastructure component types. These are valid everywhere a system is
+# described (structured input, the DFD editor, diagram extraction) even though the
+# free-text extractor above collapses most cloud tech into the generic types. They
+# let users model cloud architectures explicitly (e.g. a Lambda, an S3 bucket, a WAF).
+_EXTRA_TYPES = [
+    "config", "service", "worker",
+    "api_gateway", "load_balancer", "cdn", "waf",
+    "object_storage", "data_warehouse", "vector_db",
+    "serverless", "container", "kubernetes",
+    "secrets_manager", "iam", "vpc", "monitoring", "notification_service",
+]
+
 # Human-facing list of valid component types for the structured input mode.
-VALID_COMPONENT_TYPES = list(_TYPE_KEYWORDS.keys()) + ["config"]
+VALID_COMPONENT_TYPES = list(_TYPE_KEYWORDS.keys()) + _EXTRA_TYPES
 
 def extract_components_from_text(text: str) -> dict:
     """Best-effort extraction. Always good enough for a starting draft —
@@ -306,7 +318,8 @@ def _dread_context(system: dict) -> tuple[set, dict]:
 
 # Component types that store/process regulated or otherwise sensitive data —
 # raises the Damage axis independently of the threat's severity label.
-_SENSITIVE_TYPES = {"database", "datastore", "payment_service", "auth_service", "filesystem"}
+_SENSITIVE_TYPES = {"database", "datastore", "payment_service", "auth_service", "filesystem",
+                    "object_storage", "data_warehouse", "secrets_manager", "iam", "vector_db"}
 # Deterministic threat classes (work identically every attempt) — raises Reproducibility.
 _DETERMINISTIC_HINTS = ("injection", "sql", "idor", "access control", "misconfig",
                         "default credential", "hardcoded", "unencrypted", "unauthenticated",
@@ -398,7 +411,8 @@ def _score_dread(threat: dict, component: dict, flow: dict | None, cross_boundar
 # component-type templates ("baseline"). Baseline threats are still emitted —
 # reports de-emphasize them, never drop them — so recall is preserved.
 # ---------------------------------------------------------------------------
-_STORE_TYPES = {"database", "datastore", "filesystem", "cache", "queue"}
+_STORE_TYPES = {"database", "datastore", "filesystem", "cache", "queue",
+                "object_storage", "data_warehouse", "vector_db", "secrets_manager"}
 _USER_TYPES = {"user", "external_entity"}
 
 

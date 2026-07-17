@@ -283,6 +283,8 @@ async def admin_update_user_role(
 ):
     if uid == actor["id"]:
         raise HTTPException(400, "Cannot change your own role")
+    if not get_user_by_id(uid):
+        raise HTTPException(404, "User not found")
     try:
         update_user_role(uid, req.role, by_user_id=actor["id"])
     except ValueError as e:
@@ -297,6 +299,8 @@ async def admin_deactivate_user(
 ):
     if uid == actor["id"]:
         raise HTTPException(400, "Cannot deactivate yourself")
+    if not get_user_by_id(uid):
+        raise HTTPException(404, "User not found")
     deactivate_user(uid, by_user_id=actor["id"])
     return {"ok": True, "deactivated": uid}
 
@@ -311,6 +315,8 @@ async def admin_set_user_feature_access(
     req: GrantFeatureAccessRequest,
     actor: dict = Depends(require_permission("user.feature_access.grant")),
 ):
+    if not get_user_by_id(uid):
+        raise HTTPException(404, "User not found")
     current = {f["id"] for f in domain.list_user_feature_access(uid)}
     target = set(req.feature_ids)
     for fid in target - current:
@@ -1182,10 +1188,20 @@ async def create_share_link(threat_model_id: int, request: Request, user: dict =
     tm = domain.get_threat_model(threat_model_id)
     if not tm: raise HTTPException(404, "Not found")
     ensure_can_access_threat_model(user, tm, "read")
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
     token = _secrets.token_urlsafe(24)
     from datetime import datetime as _dtnow
-    expires_at = (_dtnow.utcnow() + _td(days=int(body.get("expires_days", 7)))).isoformat()
+    try:
+        expires_days = int(body.get("expires_days", 7))
+    except (TypeError, ValueError):
+        expires_days = 7
+    expires_days = max(1, min(expires_days, 365))
+    expires_at = (_dtnow.utcnow() + _td(days=expires_days)).isoformat()
     with domain.db_conn(write=True) as c:
         try: c.execute("CREATE TABLE IF NOT EXISTS share_tokens (token TEXT PRIMARY KEY, threat_model_id INTEGER NOT NULL, created_by INTEGER NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))")
         except Exception: pass
@@ -1223,11 +1239,26 @@ async def diff_releases(id1: int, id2: int, user: dict = Depends(get_current_use
         return {c.get("name", "") for c in (sysd.get("components") or [])}
     t1_map = {_key(t): t for t in _threats(tm1)}; t2_map = {_key(t): t for t in _threats(tm2)}
     c1 = _components(tm1); c2 = _components(tm2)
+    common_threats = [k for k in t1_map if k in t2_map]
+    common_components = c1 & c2
+    # Overlap tells the UI whether these two models even describe the same system.
+    # Compare is meant for one system across versions; two unrelated systems share
+    # nothing, so the "diff" would be every threat new + every threat resolved —
+    # meaningless. Surface that instead of pretending it's a real comparison.
+    overlap = {
+        "common_threats": len(common_threats),
+        "common_components": len(common_components),
+        "model_1_threats": len(t1_map), "model_2_threats": len(t2_map),
+        "model_1_components": len(c1), "model_2_components": len(c2),
+        "same_feature": (tm1.get("feature_id") is not None and tm1.get("feature_id") == tm2.get("feature_id")),
+        "unrelated": len(common_threats) == 0 and len(common_components) == 0,
+    }
     return {"model_1": {"id": id1, "name": tm1.get("name")}, "model_2": {"id": id2, "name": tm2.get("name")},
             "new_threats": [t for k, t in t2_map.items() if k not in t1_map],
             "resolved_threats": [t for k, t in t1_map.items() if k not in t2_map],
             "changed_severity": [{"threat": t2_map[k], "old": t1_map[k].get("severity"), "new": t2_map[k].get("severity")} for k in t1_map if k in t2_map and t1_map[k].get("severity") != t2_map[k].get("severity")],
             "new_components": list(c2-c1), "removed_components": list(c1-c2),
+            "overlap": overlap,
             "summary": {"new": sum(1 for k in t2_map if k not in t1_map), "resolved": sum(1 for k in t1_map if k not in t2_map)}}
 
 
