@@ -92,11 +92,16 @@
     <form id="form-new-tm" class="modal-body flex-col gap-4">
       <div class="field">
         <label class="field-label">Input method</label>
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
           <label class="toggle-card">
             <input type="radio" name="input_mode" value="text" checked>
             <div class="toggle-card-title">✍️ Describe in text</div>
-            <div class="toggle-card-sub">Type or use a template</div>
+            <div class="toggle-card-sub">Quick — or use AI</div>
+          </label>
+          <label class="toggle-card">
+            <input type="radio" name="input_mode" value="structured">
+            <div class="toggle-card-title">📋 Structured</div>
+            <div class="toggle-card-sub">Precise & offline</div>
           </label>
           <label class="toggle-card">
             <input type="radio" name="input_mode" value="diagram">
@@ -137,10 +142,27 @@
         <div class="field-help">We'll auto-extract components, flows, and trust boundaries.</div>
       </div>
 
+      <div class="field hidden" id="structured-field">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <label class="field-label" style="margin:0;">Structured system <span class="field-label-optional">exact — no guessing</span></label>
+          <div style="display:flex;gap:6px;">
+            <button type="button" id="btn-structured-example" class="btn btn-ghost btn-sm">Insert example</button>
+            <button type="button" id="btn-structured-template" class="btn btn-ghost btn-sm">⬇ Download template (.txt)</button>
+          </div>
+        </div>
+        <textarea name="structured_text" rows="9" class="textarea" style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.8125rem;"
+                  placeholder="Name : type          →  one component per line&#10;A -> B : protocol, auth, encrypted?   →  one flow per line&#10;&#10;Use “Insert example” to start from a working sample, or “Download template” for an annotated file to edit."></textarea>
+        <div class="field-help">
+          One component per line (<code>Name : type</code>) and one flow per line (<code>A -&gt; B : protocol, auth, encrypted?</code>). Exact and fully offline — best for custom or unusual stacks.
+          <span id="valid-types-legend" class="text-light"></span>
+        </div>
+        <div id="structured-error" class="hidden" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.8125rem;margin-top:6px;"></div>
+      </div>
+
       <div class="field hidden" id="diagram-field">
         <label class="field-label">Architecture diagram</label>
         <input type="file" name="diagram_file" id="diagram-file" accept="image/png,image/jpeg,image/webp" class="input" style="padding: 0.5rem;">
-        <div class="field-help">Upload a PNG, JPG, or WebP architecture diagram — AI vision extracts components, flows, and trust boundaries. Needs a vision-capable AI provider (configure in Admin → Settings); without one you'll get an editable starter model you can refine.</div>
+        <div class="field-help">Upload a PNG, JPG, or WebP architecture diagram — AI vision extracts components, flows, and trust boundaries. Needs a vision-capable AI provider (configure in Admin → Settings).</div>
       </div>
 
       <div class="field">
