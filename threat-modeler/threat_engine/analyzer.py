@@ -83,6 +83,10 @@ _EXTRA_TYPES = [
     "object_storage", "data_warehouse", "vector_db",
     "serverless", "container", "kubernetes",
     "secrets_manager", "iam", "vpc", "monitoring", "notification_service",
+    # Second wave — modern services & infra
+    "llm", "identity_provider", "email_service", "sms_gateway", "dns",
+    "bastion", "iot_device", "data_pipeline", "scheduler",
+    "search_service", "service_mesh",
 ]
 
 # Human-facing list of valid component types for the structured input mode.
@@ -319,7 +323,8 @@ def _dread_context(system: dict) -> tuple[set, dict]:
 # Component types that store/process regulated or otherwise sensitive data —
 # raises the Damage axis independently of the threat's severity label.
 _SENSITIVE_TYPES = {"database", "datastore", "payment_service", "auth_service", "filesystem",
-                    "object_storage", "data_warehouse", "secrets_manager", "iam", "vector_db"}
+                    "object_storage", "data_warehouse", "secrets_manager", "iam", "vector_db",
+                    "identity_provider", "llm", "search_service"}
 # Deterministic threat classes (work identically every attempt) — raises Reproducibility.
 _DETERMINISTIC_HINTS = ("injection", "sql", "idor", "access control", "misconfig",
                         "default credential", "hardcoded", "unencrypted", "unauthenticated",
@@ -412,7 +417,8 @@ def _score_dread(threat: dict, component: dict, flow: dict | None, cross_boundar
 # reports de-emphasize them, never drop them — so recall is preserved.
 # ---------------------------------------------------------------------------
 _STORE_TYPES = {"database", "datastore", "filesystem", "cache", "queue",
-                "object_storage", "data_warehouse", "vector_db", "secrets_manager"}
+                "object_storage", "data_warehouse", "vector_db", "secrets_manager",
+                "search_service"}
 _USER_TYPES = {"user", "external_entity"}
 
 
@@ -526,10 +532,23 @@ COMPONENT_ATTRIBUTES = {
     "logs_security_events": ("Logs security events", "yn", None),
     "multi_tenant":        ("Multi-tenant", "yn", None),
     "privilege_level":     ("Privilege level", "choice", ["", "low", "standard", "elevated"]),
+    # Second wave
+    "csrf_protection":     ("CSRF protection", "yn", None),
+    "rate_limited":        ("Rate limited", "yn", None),
+    "mfa":                 ("Multi-factor auth", "yn", None),
+    "handles_pii":         ("Handles PII", "yn", None),
+    "handles_phi":         ("Handles PHI (health)", "yn", None),
+    "handles_pci":         ("Handles cardholder data", "yn", None),
+    "verifies_code_integrity": ("Verifies code/artifact integrity", "yn", None),
+    "removable_media":     ("On removable media", "yn", None),
+    "secure_error_handling": ("Safe error handling", "yn", None),
 }
 FLOW_ATTRIBUTES = {
     "provides_integrity":  ("Provides integrity (signing/HMAC)", "yn", None),
     "validates_input":     ("Receiver validates input", "yn", None),
+    # Second wave
+    "replay_protection":   ("Replay protection (nonce/timestamp)", "yn", None),
+    "validates_certificates": ("Validates TLS certificates", "yn", None),
 }
 
 
@@ -609,6 +628,44 @@ def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> 
                  "A multi-tenant element without authorization/tenant scoping allows cross-tenant data access.",
                  "High", c, None, ["Scope every query by tenant", "Enforce tenant checks server-side", "Test for cross-tenant IDOR"])
 
+        # ---- Second wave ----
+        if _yn_no(c, "csrf_protection"):
+            emit("Tampering", f"No CSRF protection: {c['name']}",
+                 "State-changing requests are not protected against cross-site request forgery, letting an attacker act as a logged-in user.",
+                 "High", c, None, ["Use anti-CSRF tokens (synchronizer / double-submit)", "Set SameSite=strict/lax cookies", "Require re-auth for sensitive actions"])
+        if _yn_no(c, "rate_limited"):
+            emit("Denial of Service", f"No rate limiting: {c['name']}",
+                 "Without rate limiting, this element is exposed to brute-force, credential-stuffing, and resource-exhaustion (DoS) attacks.",
+                 "Medium", c, None, ["Rate-limit per client / IP / account", "Add exponential backoff and lockouts", "Front with a WAF / API gateway throttle"])
+        if _yn_no(c, "mfa") and c.get("type") in ("auth_service", "identity_provider", "admin_panel"):
+            emit("Spoofing", f"No multi-factor authentication: {c['name']}",
+                 "Single-factor authentication is vulnerable to phishing, credential stuffing, and password reuse — a leading cause of account takeover.",
+                 "High", c, None, ["Require MFA (TOTP / WebAuthn / passkeys)", "Enforce MFA for privileged accounts", "Detect and step-up on risky logins"])
+        if _yn_yes(c, "handles_phi"):
+            emit("Information Disclosure", f"Handles PHI — HIPAA obligations: {c['name']}",
+                 "This element processes protected health information, bringing HIPAA requirements (encryption, access control, audit, BAA).",
+                 "High", c, None, ["Encrypt PHI in transit and at rest", "Restrict access and keep audit trails", "Sign BAAs with processors; support breach notification"])
+        if _yn_yes(c, "handles_pci"):
+            emit("Information Disclosure", f"Handles cardholder data — PCI-DSS scope: {c['name']}",
+                 "This element processes payment card data, placing it in PCI-DSS scope (segmentation, tokenization, key management).",
+                 "High", c, None, ["Tokenize / avoid storing PAN", "Segment the cardholder-data environment", "Apply PCI-DSS controls and scope reduction"])
+        if _yn_yes(c, "handles_pii"):
+            emit("Information Disclosure", f"Handles PII — privacy obligations: {c['name']}",
+                 "This element processes personal data, bringing privacy obligations (GDPR/CCPA: minimization, consent, deletion, breach reporting).",
+                 "Medium", c, None, ["Minimize and classify PII", "Support data-subject rights (access/delete)", "Encrypt and restrict access"])
+        if _yn_no(c, "verifies_code_integrity") and c.get("type") in ("serverless", "container", "kubernetes", "service", "worker"):
+            emit("Tampering", f"Unverified code/artifact integrity: {c['name']}",
+                 "Deploying unsigned/unverified images or artifacts allows supply-chain tampering — a malicious dependency or image runs with this element's privileges.",
+                 "High", c, None, ["Sign and verify images/artifacts (cosign/Notary)", "Pin dependencies and verify checksums", "Scan images and enforce admission control"])
+        if _yn_yes(c, "removable_media"):
+            emit("Information Disclosure", f"Data on removable media: {c['name']}",
+                 "Data stored on removable media can be physically removed, lost, or copied, bypassing network controls.",
+                 "Medium", c, None, ["Encrypt removable media", "Restrict and log media use", "Prefer controlled, audited storage"])
+        if _yn_no(c, "secure_error_handling"):
+            emit("Information Disclosure", f"Verbose error handling may leak internals: {c['name']}",
+                 "Unsafe error handling can expose stack traces, queries, or secrets to callers, aiding attackers.",
+                 "Low", c, None, ["Return generic errors to clients", "Log details server-side only", "Disable debug modes in production"])
+
     for f in system.get("data_flows", []):
         dst = comp_by_id.get(f.get("to"))
         src = comp_by_id.get(f.get("from"))
@@ -622,6 +679,14 @@ def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> 
             emit("Tampering", f"Receiver does not validate flow input: {src['name']} → {dst['name']}",
                  "The receiving element does not validate data arriving on this flow, enabling injection and tampering.",
                  "Medium", dst, f, ["Validate input at the receiver", "Allow-list schema and values", "Reject malformed messages"])
+        if _yn_no(f, "replay_protection"):
+            emit("Spoofing", f"No replay protection: {src['name']} → {dst['name']}",
+                 "Without a nonce or timestamp, a captured request on this flow can be replayed to repeat a privileged action.",
+                 "Medium", dst, f, ["Add a nonce or timestamp + window", "Use idempotency keys", "Bind requests to a single-use token"])
+        if _yn_no(f, "validates_certificates"):
+            emit("Spoofing", f"TLS certificates not validated: {src['name']} → {dst['name']}",
+                 "Skipping certificate validation lets an attacker present a forged certificate and man-in-the-middle this flow.",
+                 "High", dst, f, ["Validate the full certificate chain", "Pin certificates/public keys where practical", "Never disable verification in production"])
 
     return out
 

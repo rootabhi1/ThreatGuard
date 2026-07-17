@@ -62,6 +62,18 @@
     data_warehouse:      { icon: '🏬', color: '#0891b2' },
     monitoring:          { icon: '📈', color: '#16a34a' },
     notification_service:{ icon: '🔔', color: '#9333ea' },
+    // Second wave — modern services & infra
+    llm:                 { icon: '🤖', color: '#a855f7' },
+    identity_provider:   { icon: '🆔', color: '#f59e0b' },
+    email_service:       { icon: '✉️', color: '#0ea5e9' },
+    sms_gateway:         { icon: '📲', color: '#0ea5e9' },
+    dns:                 { icon: '🧭', color: '#64748b' },
+    bastion:             { icon: '🛡', color: '#ef4444' },
+    iot_device:          { icon: '📟', color: '#06b6d4' },
+    data_pipeline:       { icon: '🔀', color: '#9333ea' },
+    scheduler:           { icon: '⏰', color: '#10b981' },
+    search_service:      { icon: '🔎', color: '#0891b2' },
+    service_mesh:        { icon: '🧬', color: '#3b82f6' },
   };
 
   const ALL_TYPES = Object.keys(TYPE_VISUALS);
@@ -88,16 +100,37 @@
     multi_tenant:         { label: 'Multi-tenant', opts: YN },
     privilege_level:      { label: 'Privilege level', opts: ['', 'low', 'standard', 'elevated'] },
     provides_integrity:   { label: 'Provides integrity (signing/HMAC)', opts: YN },
+    // Second wave
+    csrf_protection:      { label: 'CSRF protection', opts: YN },
+    rate_limited:         { label: 'Rate limited', opts: YN },
+    mfa:                  { label: 'Multi-factor auth', opts: YN },
+    handles_pii:          { label: 'Handles PII', opts: YN },
+    handles_phi:          { label: 'Handles PHI (health)', opts: YN },
+    handles_pci:          { label: 'Handles cardholder data', opts: YN },
+    verifies_code_integrity: { label: 'Verifies code/artifact integrity', opts: YN },
+    removable_media:      { label: 'On removable media', opts: YN },
+    secure_error_handling: { label: 'Safe error handling', opts: YN },
+    replay_protection:    { label: 'Replay protection (nonce/timestamp)', opts: YN },
+    validates_certificates: { label: 'Validates TLS certificates', opts: YN },
   };
-  const STORE_TYPES = ['database', 'datastore', 'cache', 'queue', 'filesystem', 'object_storage', 'data_warehouse', 'vector_db', 'secrets_manager'];
-  const PROCESS_TYPES = ['api', 'webapp', 'mobile_app', 'service', 'worker', 'serverless', 'auth_service', 'admin_panel', 'api_gateway', 'container', 'kubernetes'];
+  const STORE_TYPES = ['database', 'datastore', 'cache', 'queue', 'filesystem', 'object_storage', 'data_warehouse', 'vector_db', 'secrets_manager', 'search_service'];
+  const PROCESS_TYPES = ['api', 'webapp', 'mobile_app', 'service', 'worker', 'serverless', 'auth_service', 'admin_panel', 'api_gateway', 'container', 'kubernetes', 'llm', 'identity_provider', 'data_pipeline', 'scheduler', 'service_mesh', 'bastion'];
+  const DEPLOYABLE_TYPES = ['serverless', 'container', 'kubernetes', 'service', 'worker'];
 
   function componentAttrFields(type) {
-    const common = ['sensitivity', 'internet_facing', 'logs_security_events'];
-    if (STORE_TYPES.includes(type)) return [...common, 'stores_credentials', 'encrypted_at_rest', 'has_backup'];
+    // PII/PHI/PCI data-handling questions apply to almost everything that touches data.
+    const compliance = ['handles_pii', 'handles_phi', 'handles_pci'];
+    const common = ['sensitivity', 'internet_facing', 'logs_security_events', ...compliance];
+    if (STORE_TYPES.includes(type)) {
+      return [...common, 'stores_credentials', 'encrypted_at_rest', 'has_backup', 'removable_media'];
+    }
     if (PROCESS_TYPES.includes(type)) {
-      const f = [...common, 'authenticates_users', 'enforces_authorization', 'validates_input', 'privilege_level', 'multi_tenant'];
-      if (type === 'webapp') f.push('encodes_output');
+      const f = [...common, 'authenticates_users', 'enforces_authorization', 'validates_input',
+                 'rate_limited', 'secure_error_handling', 'privilege_level', 'multi_tenant'];
+      if (type === 'webapp') f.push('encodes_output', 'csrf_protection');
+      if (type === 'api' || type === 'api_gateway') f.push('csrf_protection');
+      if (type === 'auth_service' || type === 'identity_provider' || type === 'admin_panel') f.push('mfa');
+      if (DEPLOYABLE_TYPES.includes(type)) f.push('verifies_code_integrity');
       return f;
     }
     return common;
@@ -687,7 +720,7 @@
           <details class="dfd-attrs" open>
             <summary style="cursor:pointer;font-size:0.8125rem;font-weight:600;margin:4px 0;">🛡 Security attributes</summary>
             <div class="text-xs text-light" style="margin-bottom:6px;">A risky answer adds a specific threat when you re-analyze.</div>
-            ${attrSelectsHtml(f, ['provides_integrity', 'validates_input'])}
+            ${attrSelectsHtml(f, ['provides_integrity', 'validates_input', 'replay_protection', 'validates_certificates'])}
           </details>
           ${opts.readOnly ? '' : `
             <button data-act="delete" class="btn btn-danger btn-sm" style="width: 100%; margin-top: 8px;">Delete flow</button>
