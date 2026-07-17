@@ -21,7 +21,16 @@ Two provider families:
   runtimes like Ollama and vLLM.
 
 The provider is auto-detected from whichever key is set, or forced with
-`LLM_PROVIDER=anthropic|openai`. See [`.env.example`](.env.example).
+`LLM_PROVIDER=anthropic|openai`. See [`.env.example`](.env.example). You can also
+configure the provider, model, and key from the app itself — **Admin → Settings →
+AI provider** — where the key is stored encrypted at rest instead of in an env var.
+
+## How do I get an admin account?
+
+Set `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` to seed one on first run, or
+just leave them unset and register — on a fresh instance with no admin yet, the
+**first person to register becomes the admin**. After that, admins create further
+accounts and grant feature access from **Admin → Users & Access**.
 
 ## Can I use local models?
 

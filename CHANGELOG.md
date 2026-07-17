@@ -11,6 +11,53 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 > `0.1.0`. The internal number will be reconciled with the public scheme in a
 > future release.
 
+## [Unreleased]
+
+### Added
+- **Element security attributes (Microsoft Threat Modeling Tool style).** Each
+  component and data flow can declare security properties (answered yes / no /
+  unknown, contextual to the type) — data sensitivity, encrypted at rest, stores
+  credentials, backed up, enforces authorization, validates input, encodes
+  output, MFA, rate limiting, PII/PHI/PCI handling, code-integrity verification,
+  removable media, safe error handling; flows add integrity, replay protection,
+  and TLS-certificate validation. A risky answer generates a specific, DREAD-
+  scored threat on re-analysis.
+- **Expanded component vocabulary (13 → ~40 types).** Cloud-native and modern
+  services: serverless, container, kubernetes, service_mesh, api_gateway,
+  load_balancer, cdn, waf, dns, bastion, object_storage, data_warehouse,
+  vector_db, search_service, data_pipeline, scheduler, monitoring,
+  notification_service, secrets_manager, iam, llm, identity_provider,
+  email_service, sms_gateway, iot_device. Available in the DFD editor,
+  structured input, and diagram extraction, and auto-detected from free text.
+- **First-run admin.** On a brand-new deployment with no admin, the first person
+  to register becomes the admin, so an instance is never a dead end even without
+  `INITIAL_ADMIN_*` set.
+- **Edit / rename** for threat models (name + description) and for releases and
+  features in the admin console; **delete** affordances on model cards and on
+  release/feature rows.
+- **Meaningful compare** — comparing two unrelated systems now warns that they
+  don't share components or threats instead of showing a misleading diff.
+- **LLM & Jira configured in the admin UI** (Settings tab), with secrets stored
+  encrypted at rest, in addition to environment variables. Optional Jira
+  integration files a ticket from a threat.
+
+### Changed
+- Free-text component names now use conventional acronym/brand casing (LLM, API,
+  S3, IdP, MySQL, OpenAI, SendGrid…) instead of blunt Title Case.
+- Creating a model from a text description auto-fills its description from that
+  text when the Notes field is left blank.
+- DFD drag now uses pointer events, so it works on touch/tablet as well as mouse.
+
+### Fixed
+- **Data-flow diagram in reports** was broken — overlapping trust-boundary boxes,
+  clipped labels, a fixed viewBox that clipped larger layouts, and it ignored the
+  arrangement saved in the editor. The report layout is now boundary-aware, sized
+  to fit its content, and reuses the editor-saved layout across HTML, Markdown,
+  and PDF.
+- Hardened several endpoints to return clean `4xx` instead of `500` on bad input:
+  the share-link endpoint (empty/invalid body) and admin user endpoints
+  (role / deactivate / feature-access with an unknown user id).
+
 ## [0.1.2] — 2026-07-06
 
 ### Changed
