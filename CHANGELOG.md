@@ -82,7 +82,7 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — targeting v0.1.0 (Community Preview)
 
 ### Added
-- Multi-LLM provider support: **Anthropic (Claude)** and any **OpenAI-compatible**
+- Multi-LLM provider support: **Anthropic** and any **OpenAI-compatible**
   endpoint (OpenAI, Azure OpenAI, Ollama, vLLM, …), selected via `LLM_PROVIDER`
   and auto-detected from the configured key. Fully offline **rules-only** mode
   when no key is set.

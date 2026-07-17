@@ -15,9 +15,9 @@ services:
       # --- Optional ---
       # Restrict browser origins in production (comma-separated). Default: *
       CORS_ORIGINS: "${CORS_ORIGINS:-*}"
-      # Enable Claude LLM enhancement by setting your key
+      # Enable Anthropic LLM enhancement by setting your key
       ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
-      # Override the Claude model used for enhancement
+      # Override the Anthropic model used for enhancement
       ANTHROPIC_MODEL: "${ANTHROPIC_MODEL:-claude-opus-4-8}"
       # --- Alternate LLM provider (optional) ---
       # "anthropic" (default) or "openai". Auto-detected from the key if unset.

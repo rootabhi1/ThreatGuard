@@ -15,7 +15,7 @@ turn it off entirely.
 
 Two provider families:
 
-- **Anthropic (Claude)** — set `ANTHROPIC_API_KEY`.
+- **Anthropic** — set `ANTHROPIC_API_KEY`.
 - **Any OpenAI-compatible endpoint** — set `OPENAI_API_KEY` (and `OPENAI_BASE_URL`
   for non-OpenAI hosts). This covers OpenAI, Azure OpenAI, and self-hosted
   runtimes like Ollama and vLLM.
