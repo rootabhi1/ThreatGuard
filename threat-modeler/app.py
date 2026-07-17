@@ -812,9 +812,11 @@ async def extract_from_diagram_endpoint(
     user: dict = Depends(get_current_user),
 ):
     """Extract a system model (components, flows, trust boundaries) from an
-    uploaded architecture diagram. Uses a vision LLM when one is configured,
-    else offline OCR of the diagram's text labels, else an editable starter model."""
+    uploaded architecture diagram using a vision-capable AI provider. Requires
+    an AI provider to be configured (Admin → Settings)."""
     from threat_engine.diagram_extractor import extract_from_diagram
+    if not _llm_available():
+        raise HTTPException(400, "Diagram analysis needs a vision-capable AI provider. Configure one in Admin → Settings, or describe your system in text instead.")
 
     data, media_type = await _read_diagram(file)
     result = extract_from_diagram(data, media_type, description or "")
@@ -839,6 +841,8 @@ async def create_threat_model_from_diagram(
     back. Extracts the system model from the image, creates the threat model
     under the given feature, and (by default) runs the analysis immediately."""
     from threat_engine.diagram_extractor import extract_from_diagram
+    if not _llm_available():
+        raise HTTPException(400, "Diagram analysis needs a vision-capable AI provider. Configure one in Admin → Settings, or describe your system in text instead.")
 
     feature = domain.get_feature(feature_id)
     if not feature:

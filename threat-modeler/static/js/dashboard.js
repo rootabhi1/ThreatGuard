@@ -268,6 +268,23 @@
     const textRadio = document.querySelector('input[name="input_mode"][value="text"]');
     if (textRadio) textRadio.checked = true;
     setInputMode('text');
+    // Diagram upload is AI-vision only — gate it on a configured provider.
+    const diagRadio = document.querySelector('input[name="input_mode"][value="diagram"]');
+    const diagCard = diagRadio ? diagRadio.closest('.toggle-card') : null;
+    if (diagRadio && diagCard) {
+      diagRadio.disabled = !llmConfigured;
+      diagCard.style.opacity = llmConfigured ? '' : '0.55';
+      diagCard.style.cursor = llmConfigured ? '' : 'not-allowed';
+      diagCard.title = llmConfigured ? '' : 'Needs a vision AI provider — configure in Admin → Settings';
+      let hint = diagCard.querySelector('.diag-ai-hint');
+      if (!llmConfigured && !hint) {
+        hint = document.createElement('div');
+        hint.className = 'diag-ai-hint toggle-card-sub';
+        hint.style.color = 'var(--c-critical)';
+        hint.textContent = 'Needs AI provider';
+        diagCard.appendChild(hint);
+      } else if (llmConfigured && hint) { hint.remove(); }
+    }
     loadTemplates();
     populateFeatureSelect();
     updateLlmStatusBadge();
@@ -382,11 +399,10 @@
         const tm = d.threat_model;
         const total = d.analysis ? d.analysis.summary.total : 0;
         UI.hideModal('modal-new-tm');
-        const method = { llm_vision: 'AI vision', ocr: 'offline OCR of the diagram labels' }[d.extraction_method]
-          || 'a generic starter model (no vision AI or OCR available)';
-        UI.toast(`Created "${tm.name}" from ${method} — ${total} threats identified`, 'success');
-        if (d.extraction_method !== 'llm_vision')
-          UI.toast('Review the extracted components and add any missing connections in the Data Flow Diagram tab.', 'info', 7000);
+        const viaVision = d.extraction_method === 'llm_vision';
+        UI.toast(`Created "${tm.name}" from ${viaVision ? 'AI vision' : 'the diagram'} — ${total} threats identified`, 'success');
+        if (!viaVision)
+          UI.toast("AI vision couldn't read the diagram clearly — created an editable starter model; refine it in the Data Flow Diagram tab.", 'info', 8000);
         await loadAll();
         openDetail(tm.id);
         return;

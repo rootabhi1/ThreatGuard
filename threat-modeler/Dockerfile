@@ -2,10 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# System deps: ReportLab (libfreetype6/libjpeg) + Tesseract for offline OCR of
-# uploaded architecture diagrams.
+# System deps for ReportLab
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libfreetype6 libjpeg62-turbo tesseract-ocr \
+    libfreetype6 libjpeg62-turbo \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
