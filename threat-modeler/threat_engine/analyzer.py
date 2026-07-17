@@ -51,18 +51,30 @@ def _dedup_threats(threats):
 _TYPE_KEYWORDS = {
     "user":            ["user", "customer", "end user", "client app user"],
     "external_entity": ["third party", "external", "partner", "saas"],
-    "webapp":          ["web app", "website", "front-end", "frontend", "portal", "spa", "react app", "next.js"],
-    "mobile_app":      ["mobile app", "android", "ios", "react native"],
-    "api":             ["api", "backend", "rest service", "graphql", "microservice", "service"],
-    "auth_service":    ["auth", "oauth", "sso", "identity provider", "okta", "auth0", "cognito", "keycloak"],
+    "webapp":          ["web app", "website", "front-end", "frontend", "portal", "spa", "react app",
+                        "next.js", "nextjs", "angular", "vue", "svelte", "nuxt"],
+    "mobile_app":      ["mobile app", "android", "ios", "react native", "flutter"],
+    "api":             ["api", "backend", "rest service", "graphql", "grpc", "microservice", "service",
+                        "lambda", "cloud function", "serverless", "fastapi", "express", "flask",
+                        "django", "spring", "rails", "gateway"],
+    "auth_service":    ["auth", "oauth", "sso", "identity provider", "okta", "auth0", "cognito",
+                        "keycloak", "clerk", "ldap", "saml", "firebase auth"],
     "admin_panel":     ["admin panel", "admin ui", "back-office", "back office"],
-    "database":        ["database", "db", "postgres", "mysql", "mongodb", "dynamodb", "rds"],
-    "datastore":       ["s3", "blob storage", "object store", "data lake", "warehouse", "bigquery", "snowflake"],
-    "cache":           ["redis", "memcached", "cache"],
-    "queue":           ["queue", "kafka", "rabbitmq", "sqs", "pubsub", "event bus"],
+    "database":        ["database", "db", "postgres", "mysql", "mongodb", "dynamodb", "rds", "cassandra",
+                        "cockroach", "mariadb", "sqlite", "mssql", "sql server", "oracle", "spanner",
+                        "aurora", "neo4j", "influxdb", "timescale", "scylla"],
+    "datastore":       ["s3", "blob storage", "object store", "data lake", "warehouse", "bigquery",
+                        "snowflake", "elasticsearch", "opensearch", "clickhouse", "minio", "hdfs",
+                        "ceph", "solr", "redshift"],
+    "cache":           ["redis", "memcached", "cache", "hazelcast", "varnish"],
+    "queue":           ["queue", "kafka", "rabbitmq", "sqs", "pubsub", "event bus", "nats",
+                        "activemq", "kinesis", "service bus", "celery"],
     "filesystem":      ["filesystem", "file storage", "nfs"],
-    "payment_service": ["stripe", "payment", "paypal", "billing"],
+    "payment_service": ["stripe", "payment", "paypal", "billing", "square", "adyen", "razorpay", "braintree"],
 }
+
+# Human-facing list of valid component types for the structured input mode.
+VALID_COMPONENT_TYPES = list(_TYPE_KEYWORDS.keys()) + ["config"]
 
 def extract_components_from_text(text: str) -> dict:
     """Best-effort extraction. Always good enough for a starting draft —
@@ -125,6 +137,96 @@ def extract_components_from_text(text: str) -> dict:
                 "label": "Read/write", "protocol": "TCP",
                 "auth": "credentials", "encrypted": False,
             })
+
+    return {
+        "components": components,
+        "data_flows": data_flows,
+        "trust_boundaries": _infer_boundaries_for_extracted(components, text),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Structured input — a precise, deterministic alternative to free-text.
+# The user lists components ("Name : type") and flows ("A -> B : attrs"), so
+# extraction is exact: no keyword guessing, no same-type collapse, real topology.
+# ---------------------------------------------------------------------------
+_PROTOCOLS = {"https", "http", "tcp", "udp", "grpc", "wss", "ws", "amqp", "mqtt", "sql", "tls", "ssh"}
+_AUTHS = {"none", "session", "bearer", "jwt", "mtls", "api_key", "apikey", "credentials",
+          "password", "oauth", "basic", "iam", "sso"}
+
+
+def _slug(name: str) -> str:
+    s = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    return s or "c"
+
+
+def parse_structured_system(text: str) -> dict:
+    """Parse a structured system description into a system model.
+
+    Format (lines; '#' and blank lines ignored):
+        Name : type                       -> a component
+        From -> To : proto, auth, enc?    -> a data flow (attrs optional)
+
+    Raises ValueError with a clear, line-referenced message on any problem so the
+    UI can show the user exactly what to fix."""
+    components: list[dict] = []
+    by_name: dict[str, dict] = {}       # lowercased name -> component
+    flow_lines: list[tuple[int, str]] = []
+    valid_types = set(VALID_COMPONENT_TYPES)
+
+    for lineno, raw in enumerate(text.splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "->" in line:
+            flow_lines.append((lineno, line))
+            continue
+        if ":" not in line:
+            raise ValueError(f"Line {lineno}: \"{line}\" — expected 'Name : type' (a component) "
+                             f"or 'A -> B' (a flow).")
+        name, _, ctype = line.partition(":")
+        name, ctype = name.strip(), ctype.strip().lower().replace(" ", "_")
+        if not name:
+            raise ValueError(f"Line {lineno}: missing a component name before ':'.")
+        if ctype not in valid_types:
+            raise ValueError(f"Line {lineno}: unknown type '{ctype}' for '{name}'. "
+                             f"Valid types: {', '.join(sorted(valid_types))}.")
+        if name.lower() in by_name:
+            raise ValueError(f"Line {lineno}: duplicate component name '{name}'.")
+        comp = {"id": f"c_{_slug(name)}_{len(components)}", "name": name, "type": ctype,
+                "description": f"Declared component ({ctype})"}
+        components.append(comp)
+        by_name[name.lower()] = comp
+
+    if not components:
+        raise ValueError("No components found. Add at least one line like 'API : api'.")
+
+    data_flows: list[dict] = []
+    for lineno, line in flow_lines:
+        endpoints, _, attrs = line.partition(":")
+        src_name, _, dst_name = endpoints.partition("->")
+        src_name, dst_name = src_name.strip(), dst_name.strip()
+        src = by_name.get(src_name.lower())
+        dst = by_name.get(dst_name.lower())
+        if not src:
+            raise ValueError(f"Line {lineno}: flow source '{src_name}' is not a declared component.")
+        if not dst:
+            raise ValueError(f"Line {lineno}: flow target '{dst_name}' is not a declared component.")
+        protocol, auth, encrypted = "HTTPS", "none", True
+        for tok in (t.strip().lower() for t in attrs.split(",") if t.strip()):
+            if tok in _PROTOCOLS:
+                protocol = "HTTPS" if tok == "https" else tok.upper()
+            elif tok in _AUTHS:
+                auth = tok
+            elif tok in ("encrypted", "tls", "encrypt", "secure"):
+                encrypted = True
+            elif tok in ("plaintext", "unencrypted", "cleartext", "insecure", "no", "none_enc"):
+                encrypted = False
+        data_flows.append({
+            "id": f"f_{len(data_flows)}", "from": src["id"], "to": dst["id"],
+            "label": f"{src['name']} → {dst['name']}", "protocol": protocol,
+            "auth": auth, "encrypted": encrypted,
+        })
 
     return {
         "components": components,

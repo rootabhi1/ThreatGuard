@@ -251,11 +251,12 @@
   }
 
   function setInputMode(mode) {
-    const isDiagram = mode === 'diagram';
-    document.getElementById('template-field').classList.toggle('hidden', isDiagram);
-    document.getElementById('system-text-field').classList.toggle('hidden', isDiagram);
+    const isText = mode === 'text', isStructured = mode === 'structured', isDiagram = mode === 'diagram';
+    document.getElementById('template-field').classList.toggle('hidden', !isText);
+    document.getElementById('system-text-field').classList.toggle('hidden', !isText);
+    document.getElementById('structured-field').classList.toggle('hidden', !isStructured);
     document.getElementById('diagram-field').classList.toggle('hidden', !isDiagram);
-    if (isDiagram) clearTemplate();
+    if (!isText) clearTemplate();
   }
 
   function openNewModal() {
@@ -268,6 +269,8 @@
     const textRadio = document.querySelector('input[name="input_mode"][value="text"]');
     if (textRadio) textRadio.checked = true;
     setInputMode('text');
+    const legend = document.getElementById('valid-types-legend');
+    if (legend) legend.innerHTML = ' <strong>Types:</strong> user, external_entity, webapp, mobile_app, api, auth_service, admin_panel, database, datastore, cache, queue, filesystem, config, payment_service.';
     // Diagram upload is AI-vision only — gate it on a configured provider.
     const diagRadio = document.querySelector('input[name="input_mode"][value="diagram"]');
     const diagCard = diagRadio ? diagRadio.closest('.toggle-card') : null;
@@ -409,7 +412,25 @@
       }
 
       let system;
-      if (selectedTemplate) {
+      if (inputMode === 'structured') {
+        // Exact, deterministic parse of the user's component/flow lines.
+        const structError = document.getElementById('structured-error');
+        structError.classList.add('hidden');
+        setProgress('Parsing structured system...');
+        const sResp = await Auth.fetch('/api/extract-structured', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: fd.get('structured_text') }),
+        });
+        if (!sResp.ok) {
+          const msg = (await sResp.json()).detail || 'Could not parse the structured input';
+          structError.textContent = msg;
+          structError.classList.remove('hidden');
+          throw new Error(msg);
+        }
+        system = await sResp.json();
+        if (!system.name) system.name = fd.get('name');
+        system._source_text = fd.get('structured_text');
+      } else if (selectedTemplate) {
         // A ready-made template already has structured components/flows/boundaries —
         // use them directly instead of re-deriving from text.
         setProgress('Loading template...');
