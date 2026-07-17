@@ -1220,7 +1220,7 @@ class FixRequest(BaseModel):
 
 @app.post("/api/threat/fix")
 async def generate_fix(req: FixRequest, user: dict = Depends(get_current_user)):
-    from threat_engine.llm import complete_text, llm_available, strip_fences
+    from threat_engine.llm import complete_text, llm_available, strip_fences, last_error
     if not llm_available():
         raise HTTPException(400, "AI fix generation needs an LLM. An admin can configure one in Admin → Settings → AI provider (or set ANTHROPIC_API_KEY / OPENAI_API_KEY).")
     try:
@@ -1228,7 +1228,8 @@ async def generate_fix(req: FixRequest, user: dict = Depends(get_current_user)):
         prompt = f"You are a senior security engineer. Generate a concrete code fix for this threat.\nSystem: {req.system_name}\nTech stack: {req.tech_stack or 'not specified'}\nThreat: {t.get('title','')} ({t.get('severity','')})\nCWE: {(t.get('cwe') or {}).get('id','')}\nDescription: {t.get('description','')}\nMitigations: {', '.join(t.get('mitigations') or [])}\n\nReturn ONLY valid JSON with keys: language, explanation, before, after, diff_summary"
         text = complete_text(prompt, max_tokens=1200)
         if not text:
-            raise HTTPException(502, "LLM returned no response")
+            # Surface the real provider error (e.g. billing, rate limit) instead of a generic message.
+            raise HTTPException(502, f"AI fix failed: {last_error() or 'the model returned no response'}")
         return json.loads(strip_fences(text))
     except HTTPException:
         raise
