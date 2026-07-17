@@ -1182,10 +1182,20 @@ async def create_share_link(threat_model_id: int, request: Request, user: dict =
     tm = domain.get_threat_model(threat_model_id)
     if not tm: raise HTTPException(404, "Not found")
     ensure_can_access_threat_model(user, tm, "read")
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
     token = _secrets.token_urlsafe(24)
     from datetime import datetime as _dtnow
-    expires_at = (_dtnow.utcnow() + _td(days=int(body.get("expires_days", 7)))).isoformat()
+    try:
+        expires_days = int(body.get("expires_days", 7))
+    except (TypeError, ValueError):
+        expires_days = 7
+    expires_days = max(1, min(expires_days, 365))
+    expires_at = (_dtnow.utcnow() + _td(days=expires_days)).isoformat()
     with domain.db_conn(write=True) as c:
         try: c.execute("CREATE TABLE IF NOT EXISTS share_tokens (token TEXT PRIMARY KEY, threat_model_id INTEGER NOT NULL, created_by INTEGER NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))")
         except Exception: pass
