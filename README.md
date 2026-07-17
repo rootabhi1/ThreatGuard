@@ -54,10 +54,12 @@ ThreatGuard turns a description of a system — typed, drawn on a canvas, or **u
 
 - **Three threat-modeling methodologies** — STRIDE, PASTA and LINDDUN — applied by a deterministic rule engine (no API key required), plus **DREAD** risk scoring on every threat and **OWASP Top 10** reference mapping on findings. (DREAD is a scoring model and OWASP Top 10 is an awareness reference — neither is a threat-modeling methodology, so neither is selectable as one.)
 - **Rich scoring** — CVSS 3.1 & 4.0, CWE, MITRE ATT&CK technique/tactic, and SOC 2 / ISO 27001 / PCI-DSS control mapping.
-- **Trust boundaries & DFD** — boundaries are auto-inferred when none are defined, cross-boundary flows are flagged, and a labelled data-flow diagram is rendered.
+- **Trust boundaries & DFD** — boundaries are auto-inferred when none are defined, cross-boundary flows are flagged, and a labelled data-flow diagram is rendered (in the interactive editor and in every report).
+- **Rich component vocabulary** — ~40 component types spanning the classic set plus cloud-native and modern services (serverless, containers, Kubernetes, object storage, data warehouse, search, LLM, identity provider, WAF, CDN, secrets manager, and more). Plain-English descriptions are auto-mapped to the right type.
+- **Element security attributes** — answer Microsoft Threat Modeling Tool–style security properties on each component and flow (encrypted at rest, stores credentials, enforces authorization, validates input, MFA, handles PII/PHI/PCI, TLS-certificate validation, replay protection, …). A risky answer generates a specific, scored threat on re-analysis.
 - **Diagram upload** — drop in a PNG/JPEG/WebP architecture diagram; with a vision-capable LLM it is turned into a system model, otherwise you get an editable starting point.
-- **Optional LLM enrichment** — AI fix generation, diagram extraction and richer narratives via **Anthropic** or any **OpenAI-compatible** endpoint (OpenAI, Azure, Ollama, vLLM, …). Absent a key, everything still works in rules-only mode.
-- **Team workflow** — Release → Feature → Threat Model hierarchy, role-based access (user / management / admin), per-threat status tracking, release-to-release diffs, read-only share links, custom rules, and an audit log.
+- **Optional LLM enrichment** — AI fix generation, diagram extraction and richer narratives via **Anthropic** or any **OpenAI-compatible** endpoint (OpenAI, Azure, Ollama, vLLM, …). Configure it with environment variables **or** in the admin UI (Settings → AI provider; keys stored encrypted at rest). Absent a key, everything still works in rules-only mode.
+- **Team workflow** — Release → Feature → Threat Model hierarchy (all editable and deletable), role-based access (user / management / admin), per-threat status tracking, release-to-release diffs, read-only share links, custom rules, an optional Jira integration to file a ticket from a threat, and an audit log.
 - **Reports** — HTML, PDF, Markdown, a CSV risk register, and an executive summary.
 
 ---
@@ -134,7 +136,7 @@ All settings are environment variables; see [`.env.example`](.env.example). The 
 | Variable | Required | Purpose |
 |---|---|---|
 | `JWT_SECRET` | ✅ | Signs access/refresh tokens. Use a long random string. |
-| `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` | ✅ | Admin account seeded on first run. |
+| `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` | — | Seeds an admin on first run. Optional: if unset, the **first person to register becomes the admin** (everyone after is a normal user). The Docker Compose file still requires them so a container never boots without an owner. |
 | `LLM_PROVIDER` | — | `anthropic` or `openai`; auto-detected from whichever key is set. |
 | `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | — | Enable Anthropic enrichment. |
 | `OPENAI_API_KEY` / `OPENAI_MODEL` / `OPENAI_BASE_URL` | — | Enable any OpenAI-compatible model (incl. self-hosted). |

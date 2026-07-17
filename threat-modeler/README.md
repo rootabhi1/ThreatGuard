@@ -35,9 +35,12 @@ The Data Flow Diagram tab in the threat-detail modal is a full editor:
 - **Smart trust-boundary inference** — components partition into Internet / DMZ / Application tier / Data tier / Third-party zones. Heuristic mode is the default (deterministic, no API key). LLM mode (Claude or an OpenAI-compatible model) can reason about zones when a key is configured. Re-infer any time from the toolbar; if none are defined, boundaries are inferred automatically at analysis time.
 - **Drag** components to reposition (snap-to-grid); drag across a zone and membership reassigns.
 - **Click** any component / flow / boundary to edit inline — rename, change type, toggle encryption, edit description, add/remove from boundaries.
-- **Add** components, draw flows (→ then click two components), create boundaries.
+- **Security attributes** — each element has a 🛡 panel of Microsoft Threat Modeling Tool–style properties (answered yes / no / unknown, contextual to the type): data sensitivity, encrypted at rest, stores credentials, backed up, enforces authorization, validates input, encodes output, MFA, rate limiting, handles PII/PHI/PCI, code-integrity verification, and — on flows — integrity, replay protection, and TLS-certificate validation. A risky answer generates a specific, scored threat the next time you analyze.
+- **~40 component types** including cloud-native/modern services (serverless, container, kubernetes, object_storage, data_warehouse, search_service, vector_db, llm, identity_provider, waf, cdn, api_gateway, load_balancer, secrets_manager, dns, bastion, iot_device, data_pipeline, scheduler, service_mesh, …), each with its own icon.
+- **Add** components (dropped into the first free grid cell), draw flows (→ then click two components), create boundaries.
+- **Touch-friendly** — drag works with mouse and touch/pointer input.
 - **Toggle** layers: boundaries, encryption icons, labels.
-- **Save** layout + edits back to the model in one click.
+- **Save** layout + edits back to the model in one click, then re-run analysis to fold in your changes. The saved layout is reused verbatim in the exported reports.
 
 Management sees the same editor in **read-only** mode (pan/zoom/inspect, no edits).
 
