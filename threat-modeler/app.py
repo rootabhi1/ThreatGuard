@@ -161,10 +161,14 @@ class LoginRequest(BaseModel):
 
 @app.post("/api/auth/register")
 async def auth_register(req: RegisterRequest, request: Request):
-    """Self-registration creates a User-role account.
-    To create Management or Admin accounts, an Admin uses POST /api/users."""
+    """Self-registration creates a User-role account — except on a brand-new
+    deployment with no admin yet, where the very first registrant becomes the
+    admin so the instance is never a dead end (no INITIAL_ADMIN env required).
+    After that, only an admin can create Management/Admin accounts."""
+    first_admin = not any(usr.get("role") == "admin" for usr in list_users())
     try:
-        u = register_user(req.email, req.password, req.full_name, role="user")
+        u = register_user(req.email, req.password, req.full_name,
+                          role="admin" if first_admin else "user")
     except ValueError as e:
         raise HTTPException(400, str(e))
     access, refresh, _ = auth_login(

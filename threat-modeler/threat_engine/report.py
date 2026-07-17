@@ -35,7 +35,7 @@ def to_markdown(analysis: dict) -> str:
     lines.append("## Data Flow Diagram")
     lines.append("")
     svg = render_dfd_svg(system, animated=False,
-                        positions=analysis.get("layout"))
+                        positions=system.get("layout") or analysis.get("layout"))
     # Embed as INLINE SVG. Renders correctly in GitHub, GitLab, VS Code,
     # Typora, Obsidian — far more compatible than base64 data URIs.
     # We strip the XML declaration line because some Markdown parsers reject it.
@@ -273,7 +273,7 @@ def to_pdf(analysis: dict) -> bytes:
         from svglib.svglib import svg2rlg
         from reportlab.graphics import renderPDF  # noqa: F401  -- presence-check
         svg_str = render_dfd_svg(analysis["system"], animated=False,
-                                 positions=analysis.get("layout"))
+                                 positions=analysis["system"].get("layout") or analysis.get("layout"))
         # svglib requires a file-like object
         dfd_drawing = svg2rlg(io.StringIO(svg_str))
     except Exception as e:

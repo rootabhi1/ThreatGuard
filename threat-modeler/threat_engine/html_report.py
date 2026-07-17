@@ -39,7 +39,12 @@ def to_html(analysis: dict) -> str:
     comp_by_id = {c["id"]: c for c in components}
     untrusted_crossings = analysis.get("untrusted_crossings", []) or []
 
-    dfd_svg = render_dfd_svg(system, animated=True, positions=analysis.get("layout"))
+    # Prefer the arrangement the user saved in the DFD editor (stored on the
+    # system), falling back to any analysis-level layout, else auto-layout.
+    dfd_svg = render_dfd_svg(
+        system, animated=True,
+        positions=system.get("layout") or analysis.get("layout"),
+    )
 
     # Build comp_to_boundary map for the boundary section
     comp_to_b: dict[str, dict] = {}
