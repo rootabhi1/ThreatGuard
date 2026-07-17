@@ -250,6 +250,14 @@
     if (note) { note.classList.add('hidden'); note.innerHTML = ''; }
   }
 
+  function setInputMode(mode) {
+    const isDiagram = mode === 'diagram';
+    document.getElementById('template-field').classList.toggle('hidden', isDiagram);
+    document.getElementById('system-text-field').classList.toggle('hidden', isDiagram);
+    document.getElementById('diagram-field').classList.toggle('hidden', !isDiagram);
+    if (isDiagram) clearTemplate();
+  }
+
   function openNewModal() {
     const form = document.getElementById('form-new-tm');
     if (form) form.reset();
@@ -257,6 +265,9 @@
     if (stride) stride.checked = true;
     document.getElementById('new-tm-error').classList.add('hidden');
     clearTemplate();
+    const textRadio = document.querySelector('input[name="input_mode"][value="text"]');
+    if (textRadio) textRadio.checked = true;
+    setInputMode('text');
     loadTemplates();
     populateFeatureSelect();
     updateLlmStatusBadge();
@@ -273,6 +284,8 @@
   document.getElementById('btn-new-tm').addEventListener('click', openNewModal);
   const btnNewEmpty = document.getElementById('btn-new-tm-empty');
   if (btnNewEmpty) btnNewEmpty.addEventListener('click', openNewModal);
+  document.querySelectorAll('input[name="input_mode"]').forEach(r =>
+    r.addEventListener('change', () => setInputMode(r.value)));
 
   // ---- Compare (release diff) ----
   function openCompareModal() {
@@ -297,22 +310,37 @@
     const r = await Auth.fetch(`/api/releases/${a}/diff/${b}`);
     if (!r.ok) { out.innerHTML = `<p class="text-sm" style="color:var(--c-critical);">${esc((await r.json()).detail || 'Compare failed')}</p>`; return; }
     const d = await r.json();
-    const sevTag = s => `<span class="threat-meta-tag" style="font-size:0.625rem;text-transform:uppercase;">${esc(s || '')}</span>`;
-    const section = (title, color, items, render) => `
-      <div class="card p-3 mb-3">
-        <div class="font-semibold text-sm mb-2" style="color:${color};">${title} <span class="text-light">(${items.length})</span></div>
-        ${items.length ? items.map(render).join('') : '<p class="text-xs text-light">None.</p>'}
+    const nNew = (d.new_threats || []).length, nRes = (d.resolved_threats || []).length;
+    const nChg = (d.changed_severity || []).length, nComp = (d.new_components || []).length + (d.removed_components || []).length;
+    const sevDot = s => `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${sevHex(s)};margin-right:6px;"></span>`;
+    const stat = (n, label, color) => `
+      <div class="card p-3 text-center">
+        <div style="font-size:1.5rem;font-weight:800;line-height:1;color:${color};">${n > 0 ? (label==='Resolved'?'▼':'▲') : ''}${n}</div>
+        <div class="text-xs text-light mt-1">${label}</div>
       </div>`;
+    const rows = (items, render, empty) => items.length
+      ? `<div class="flex-col gap-1" style="max-height:240px;overflow-y:auto;">${items.map(render).join('')}</div>`
+      : `<p class="text-xs text-light">${empty}</p>`;
+    const threatRow = t => `<div class="card p-2 text-sm flex items-center gap-1">${sevDot(t.severity)}<span style="flex:1;">${esc(t.title)}</span><span class="text-light text-xs">${esc(t.component_name||'')}</span></div>`;
     out.innerHTML = `
       <div class="flex items-center gap-2 mb-3 text-sm">
-        <strong>${esc(d.model_1.name)}</strong> <span class="text-light">→</span> <strong>${esc(d.model_2.name)}</strong>
+        <span class="threat-meta-tag">${esc(d.model_1.name)}</span>
+        <span class="text-light">baseline → after</span>
+        <span class="threat-meta-tag">${esc(d.model_2.name)}</span>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        ${section('🆕 New threats', 'var(--c-critical)', d.new_threats || [], t => `<div class="text-sm" style="margin:2px 0;">${sevTag(t.severity)} ${esc(t.title)} <span class="text-light">· ${esc(t.component_name||'')}</span></div>`)}
-        ${section('✅ Resolved threats', 'var(--c-success)', d.resolved_threats || [], t => `<div class="text-sm" style="margin:2px 0;">${sevTag(t.severity)} ${esc(t.title)} <span class="text-light">· ${esc(t.component_name||'')}</span></div>`)}
-        ${section('↕ Re-rated severity', '#ca8a04', d.changed_severity || [], c => `<div class="text-sm" style="margin:2px 0;">${esc(c.threat.title)}: <strong>${esc(c.old)}</strong> → <strong>${esc(c.new)}</strong></div>`)}
-        ${section('🧩 Component changes', 'var(--c-brand)', [...(d.new_components||[]).map(n=>({t:'+ '+n})), ...(d.removed_components||[]).map(n=>({t:'− '+n}))], c => `<div class="text-sm" style="margin:2px 0;">${esc(c.t)}</div>`)}
-      </div>`;
+      <div class="grid grid-cols-4 gap-2 mb-4">
+        ${stat(nNew, 'New', 'var(--c-critical)')}
+        ${stat(nRes, 'Resolved', 'var(--c-success)')}
+        ${stat(nChg, 'Re-rated', '#ca8a04')}
+        ${stat(nComp, 'Components', 'var(--c-brand)')}
+      </div>
+      ${nNew+nRes+nChg+nComp === 0 ? '<div class="card p-4 text-center text-sm text-light">No differences — these two analyses are identical.</div>' : `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><div class="font-semibold text-sm mb-2" style="color:var(--c-critical);">🆕 New threats</div>${rows(d.new_threats||[], threatRow, 'None added.')}</div>
+        <div><div class="font-semibold text-sm mb-2" style="color:var(--c-success);">✅ Resolved threats</div>${rows(d.resolved_threats||[], threatRow, 'None resolved.')}</div>
+        <div><div class="font-semibold text-sm mb-2" style="color:#ca8a04;">↕ Re-rated severity</div>${rows(d.changed_severity||[], c => `<div class="card p-2 text-sm">${esc(c.threat.title)}: <strong>${esc(c.old)}</strong> → <strong>${esc(c.new)}</strong></div>`, 'No severity changes.')}</div>
+        <div><div class="font-semibold text-sm mb-2" style="color:var(--c-brand);">🧩 Component changes</div>${rows([...(d.new_components||[]).map(n=>({t:'+ '+n,c:'var(--c-success)'})), ...(d.removed_components||[]).map(n=>({t:'− '+n,c:'var(--c-critical)'}))], c => `<div class="card p-2 text-sm" style="color:${c.c};">${esc(c.t)}</div>`, 'No component changes.')}</div>
+      </div>`}`;
   });
 
   document.getElementById('form-new-tm').addEventListener('submit', async (e) => {
@@ -333,6 +361,33 @@
       const methodologies = Array.from(document.querySelectorAll('input[name="methodology"]:checked')).map(cb => cb.value);
       if (methodologies.length === 0) throw new Error('Pick at least one methodology');
       const useLlm = document.getElementById('use-llm').checked;
+      const inputMode = (document.querySelector('input[name="input_mode"]:checked') || {}).value || 'text';
+
+      // ---- Diagram mode: one-shot upload → extract → create → analyze ----
+      if (inputMode === 'diagram') {
+        const fileInput = document.getElementById('diagram-file');
+        if (!fileInput.files || !fileInput.files[0]) throw new Error('Choose an architecture diagram image to upload.');
+        if (!featureId) throw new Error('Pick a feature.');
+        setProgress('Reading diagram with AI vision…');
+        const mfd = new FormData();
+        mfd.append('file', fileInput.files[0]);
+        mfd.append('feature_id', String(featureId));
+        mfd.append('name', fd.get('name') || '');
+        mfd.append('description', fd.get('description') || '');
+        mfd.append('methodologies', methodologies.join(','));
+        mfd.append('analyze', 'true');
+        const dResp = await Auth.fetch('/api/threat-models/from-diagram', { method: 'POST', body: mfd });
+        if (!dResp.ok) throw new Error((await dResp.json()).detail || 'Diagram analysis failed');
+        const d = await dResp.json();
+        const tm = d.threat_model;
+        const total = d.analysis ? d.analysis.summary.total : 0;
+        UI.hideModal('modal-new-tm');
+        const method = d.extraction_method === 'llm_vision' ? 'AI vision' : 'a starter model (no vision AI configured)';
+        UI.toast(`Created "${tm.name}" from ${method} — ${total} threats identified`, 'success');
+        await loadAll();
+        openDetail(tm.id);
+        return;
+      }
 
       let system;
       if (selectedTemplate) {
