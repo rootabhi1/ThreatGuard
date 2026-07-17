@@ -144,7 +144,7 @@ def main():
     analyze.add_argument("--frameworks",   default="stride",      help="Comma-separated methodologies: stride,linddun,pasta (DREAD scoring and OWASP references are applied automatically)")
     analyze.add_argument("--threshold",    default="high",        choices=["info","low","medium","high","critical"],
                          help="Fail if threats at or above this severity exist (default: high)")
-    analyze.add_argument("--use-llm",      action="store_true",   help="Enable Claude LLM enhancement")
+    analyze.add_argument("--use-llm",      action="store_true",   help="Enable LLM enhancement")
     analyze.add_argument("--output-json",  default="",            help="Write full JSON results to file")
     analyze.add_argument("--output-md",    default="",            help="Write Markdown summary to file")
 

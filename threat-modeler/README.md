@@ -5,7 +5,7 @@ The FastAPI application that powers ThreatGuard.
 > **For the project overview, feature list, screenshots, and quick start, see the [root README](../README.md).**
 > This document is the app-level developer reference: setup from this folder, the interactive DFD editor, the roles/permissions model, code layout, the test suites, and troubleshooting. It intentionally does **not** repeat the feature overview, so the two READMEs can't drift.
 
-**Providers:** runs fully offline on the rule engine. Optional AI enrichment via **Claude** (`ANTHROPIC_API_KEY`) or any **OpenAI-compatible** endpoint (`OPENAI_API_KEY`, plus `OPENAI_BASE_URL` for Azure/Ollama/vLLM/…). All variables are documented in [`../.env.example`](../.env.example).
+**Providers:** runs fully offline on the rule engine. Optional AI enrichment via **Anthropic** (`ANTHROPIC_API_KEY`) or any **OpenAI-compatible** endpoint (`OPENAI_API_KEY`, plus `OPENAI_BASE_URL` for Azure/Ollama/vLLM/…). All variables are documented in [`../.env.example`](../.env.example).
 
 ---
 
@@ -32,7 +32,7 @@ Sign in with the `INITIAL_ADMIN_*` credentials. If `bcrypt` fails to build on Wi
 
 The Data Flow Diagram tab in the threat-detail modal is a full editor:
 
-- **Smart trust-boundary inference** — components partition into Internet / DMZ / Application tier / Data tier / Third-party zones. Heuristic mode is the default (deterministic, no API key). LLM mode (Claude or an OpenAI-compatible model) can reason about zones when a key is configured. Re-infer any time from the toolbar; if none are defined, boundaries are inferred automatically at analysis time.
+- **Smart trust-boundary inference** — components partition into Internet / DMZ / Application tier / Data tier / Third-party zones. Heuristic mode is the default (deterministic, no API key). LLM mode (Anthropic or an OpenAI-compatible model) can reason about zones when a key is configured. Re-infer any time from the toolbar; if none are defined, boundaries are inferred automatically at analysis time.
 - **Drag** components to reposition (snap-to-grid); drag across a zone and membership reassigns.
 - **Click** any component / flow / boundary to edit inline — rename, change type, toggle encryption, edit description, add/remove from boundaries.
 - **Security attributes** — each element has a 🛡 panel of Microsoft Threat Modeling Tool–style properties (answered yes / no / unknown, contextual to the type): data sensitivity, encrypted at rest, stores credentials, backed up, enforces authorization, validates input, encodes output, MFA, rate limiting, handles PII/PHI/PCI, code-integrity verification, and — on flows — integrity, replay protection, and TLS-certificate validation. A risky answer generates a specific, scored threat the next time you analyze.

@@ -7,7 +7,7 @@ Each threat gets:
   - references: links to CWE, OWASP, methodology docs
 
 Rule-based by default. If ANTHROPIC_API_KEY is set AND `use_llm=True` in the
-analyze call, we also enrich the attack_scenario with Claude.
+analyze call, we also enrich the attack_scenario with the configured LLM.
 """
 from __future__ import annotations
 import json

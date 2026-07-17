@@ -41,7 +41,7 @@ body:
       label: LLM mode
       options:
         - Rules-only (no LLM key)
-        - Anthropic (Claude)
+        - Anthropic
         - OpenAI-compatible (OpenAI / Azure / Ollama / vLLM / …)
     validations:
       required: true

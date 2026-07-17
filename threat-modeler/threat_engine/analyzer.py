@@ -14,7 +14,7 @@ Takes a normalized system model:
 "handles_sensitive_data" evidence signal used by the privacy (LINDDUN) rules.
 
 Applies the requested methodology's rules to produce threats, then
-optionally enhances with Claude API if an API key is configured.
+optionally enhances with the configured LLM if an API key is configured.
 """
 from __future__ import annotations
 
@@ -951,7 +951,7 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Optional LLM enhancement via Claude API
+# Optional LLM enhancement via the configured provider
 # ---------------------------------------------------------------------------
 def _llm_enhance(system: dict, methodology_key: str, base_threats: list[dict]) -> tuple[list[dict], str | None]:
     """If an LLM provider is configured, ask it to suggest additional

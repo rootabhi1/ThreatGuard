@@ -31,7 +31,7 @@ echo "  Login (DEV defaults):"
 echo "    email:    $INITIAL_ADMIN_EMAIL"
 echo "    password: $INITIAL_ADMIN_PASSWORD"
 if [ -n "$ANTHROPIC_API_KEY" ]; then
-  echo "  LLM: Claude (ANTHROPIC_API_KEY set)"
+  echo "  LLM: Anthropic (ANTHROPIC_API_KEY set)"
 elif [ -n "$OPENAI_API_KEY" ]; then
   echo "  LLM: OpenAI-compatible (OPENAI_API_KEY set)"
 else
