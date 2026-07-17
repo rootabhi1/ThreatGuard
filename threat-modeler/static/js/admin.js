@@ -221,6 +221,8 @@
   //  RELEASES & FEATURES
   // =========================================================================
   let selectedReleaseId = null;
+  let editingReleaseId = null;   // set when the release modal is in edit mode
+  let editingFeatureId = null;   // set when the feature modal is in edit mode
 
   async function loadReleases() {
     const r = await Auth.fetch('/api/releases');
@@ -248,6 +250,10 @@
           </div>
           <div class="flex items-center gap-2" style="flex:0 0 auto;">
             <span class="status status-${r.status === 'released' ? 'mitigated' : r.status === 'cancelled' ? 'false_positive' : 'in_progress'}">${esc(r.status)}</span>
+            <button class="edit-release" data-release-id="${r.id}" title="Edit release"
+                    style="border:none;background:none;cursor:pointer;color:var(--c-text-light);padding:2px;line-height:0;border-radius:6px;">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
             <button class="delete-release" data-release-id="${r.id}" data-release-name="${esc(r.name)}" title="Delete release (and its features & threat models)"
                     style="border:none;background:none;cursor:pointer;color:var(--c-text-light);padding:2px;line-height:0;border-radius:6px;">
               <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -284,6 +290,24 @@
         });
       });
     });
+
+    document.querySelectorAll('.edit-release').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const rel = releases.find(x => x.id === parseInt(btn.dataset.releaseId));
+        if (!rel) return;
+        editingReleaseId = rel.id;
+        const form = document.getElementById('form-new-release');
+        form.reset();
+        form.name.value = rel.name || '';
+        form.description.value = rel.description || '';
+        if (form.status) form.status.value = rel.status || 'planned';
+        if (form.target_date) form.target_date.value = rel.target_date || '';
+        document.getElementById('modal-new-release-title').textContent = 'Edit release';
+        document.getElementById('submit-release').textContent = 'Save changes';
+        showModal('modal-new-release');
+      });
+    });
   }
 
   async function loadFeaturesForRelease(rid) {
@@ -305,6 +329,10 @@
           </div>
           <div class="flex items-center gap-2" style="flex:0 0 auto;">
             <span class="status status-${f.status === 'released' ? 'mitigated' : f.status === 'cancelled' ? 'false_positive' : 'in_progress'}">${esc(f.status)}</span>
+            <button class="edit-feature" data-feature-id="${f.id}" title="Edit feature"
+                    style="border:none;background:none;cursor:pointer;color:var(--c-text-light);padding:2px;line-height:0;border-radius:6px;">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
             <button class="delete-feature" data-feature-id="${f.id}" data-feature-name="${esc(f.name)}" title="Delete feature (and its threat models)"
                     style="border:none;background:none;cursor:pointer;color:var(--c-text-light);padding:2px;line-height:0;border-radius:6px;">
               <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -325,18 +353,47 @@
         });
       });
     });
+
+    list.querySelectorAll('.edit-feature').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const feat = features.find(x => x.id === parseInt(btn.dataset.featureId));
+        if (!feat) return;
+        editingFeatureId = feat.id;
+        const form = document.getElementById('form-new-feature');
+        form.reset();
+        // Populate the release dropdown, then select the feature's release.
+        const rr = await Auth.fetch('/api/releases');
+        const rels = rr.ok ? await rr.json() : [];
+        const sel = document.getElementById('feat-release-select');
+        sel.innerHTML = '<option value="">Select a release...</option>' +
+          rels.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
+        sel.value = feat.release_id;
+        form.name.value = feat.name || '';
+        form.description.value = feat.description || '';
+        if (form.status) form.status.value = feat.status || 'draft';
+        if (form.target_date) form.target_date.value = feat.target_date || '';
+        document.getElementById('modal-new-feature-title').textContent = 'Edit feature';
+        document.getElementById('submit-feature').textContent = 'Save changes';
+        showModal('modal-new-feature');
+      });
+    });
   }
 
   document.getElementById('btn-new-release').addEventListener('click', () => {
+    editingReleaseId = null;
     document.getElementById('form-new-release').reset();
+    document.getElementById('modal-new-release-title').textContent = 'New release';
+    document.getElementById('submit-release').textContent = 'Create release';
     showModal('modal-new-release');
   });
 
   document.getElementById('form-new-release').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    const r = await Auth.fetch('/api/releases', {
-      method: 'POST',
+    const editing = editingReleaseId;
+    const r = await Auth.fetch(editing ? `/api/releases/${editing}` : '/api/releases', {
+      method: editing ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: fd.get('name'),
@@ -347,16 +404,21 @@
     });
     if (!r.ok) {
       const data = await r.json().catch(() => ({}));
-      UI.toast(UI.formatApiError(data, 'Failed to create release'), 'error');
+      UI.toast(UI.formatApiError(data, editing ? 'Failed to update release' : 'Failed to create release'), 'error');
       return;
     }
     hideModal('modal-new-release');
-    UI.toast('Release created', 'success');
+    editingReleaseId = null;
+    UI.toast(editing ? 'Release updated' : 'Release created', 'success');
     loadReleases();
+    if (editing && selectedReleaseId === editing) loadFeaturesForRelease(editing);
   });
 
   document.getElementById('btn-new-feature').addEventListener('click', async () => {
+    editingFeatureId = null;
     document.getElementById('form-new-feature').reset();
+    document.getElementById('modal-new-feature-title').textContent = 'New feature';
+    document.getElementById('submit-feature').textContent = 'Create feature';
     const r = await Auth.fetch('/api/releases');
     const releases = r.ok ? await r.json() : [];
     const sel = document.getElementById('feat-release-select');
@@ -369,8 +431,9 @@
   document.getElementById('form-new-feature').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    const r = await Auth.fetch('/api/features', {
-      method: 'POST',
+    const editing = editingFeatureId;
+    const r = await Auth.fetch(editing ? `/api/features/${editing}` : '/api/features', {
+      method: editing ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         release_id: parseInt(fd.get('release_id')),
@@ -382,11 +445,12 @@
     });
     if (!r.ok) {
       const data = await r.json().catch(() => ({}));
-      UI.toast(UI.formatApiError(data, 'Failed to create feature'), 'error');
+      UI.toast(UI.formatApiError(data, editing ? 'Failed to update feature' : 'Failed to create feature'), 'error');
       return;
     }
     hideModal('modal-new-feature');
-    UI.toast('Feature created', 'success');
+    editingFeatureId = null;
+    UI.toast(editing ? 'Feature updated' : 'Feature created', 'success');
     if (selectedReleaseId) loadFeaturesForRelease(selectedReleaseId);
   });
 

@@ -31,7 +31,7 @@ Return ONLY valid JSON — no prose, no markdown fences. Use this exact schema:
     {{
       "id": "c_<slug>",
       "name": "<name visible in diagram>",
-      "type": "<one of: user|external_entity|webapp|mobile_app|api|auth_service|admin_panel|database|datastore|cache|queue|filesystem|config|payment_service|api_gateway|load_balancer|cdn|waf|object_storage|data_warehouse|vector_db|serverless|container|kubernetes|secrets_manager|iam|vpc|monitoring|notification_service>",
+      "type": "<one of: user|external_entity|webapp|mobile_app|api|auth_service|admin_panel|database|datastore|cache|queue|filesystem|config|payment_service|api_gateway|load_balancer|cdn|waf|object_storage|data_warehouse|vector_db|serverless|container|kubernetes|secrets_manager|iam|vpc|monitoring|notification_service|llm|identity_provider|email_service|sms_gateway|dns|bastion|iot_device|data_pipeline|scheduler|search_service|service_mesh>",
       "description": "<brief description>"
     }}
   ],

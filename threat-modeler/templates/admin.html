@@ -272,7 +272,7 @@
 <div id="modal-new-release" class="modal hidden">
   <div class="modal-card">
     <div class="modal-header">
-      <div class="modal-title">New release</div>
+      <div class="modal-title" id="modal-new-release-title">New release</div>
       <button data-close-modal class="modal-close">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
@@ -303,7 +303,7 @@
       </div>
       <div class="flex justify-end gap-2" style="border-top: 1px solid var(--c-border); padding-top: 1rem; margin-top: 0.5rem;">
         <button type="button" data-close-modal class="btn btn-ghost">Cancel</button>
-        <button type="submit" class="btn btn-primary">Create release</button>
+        <button type="submit" id="submit-release" class="btn btn-primary">Create release</button>
       </div>
     </form>
   </div>
@@ -313,7 +313,7 @@
 <div id="modal-new-feature" class="modal hidden">
   <div class="modal-card">
     <div class="modal-header">
-      <div class="modal-title">New feature</div>
+      <div class="modal-title" id="modal-new-feature-title">New feature</div>
       <button data-close-modal class="modal-close">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
@@ -351,7 +351,7 @@
       </div>
       <div class="flex justify-end gap-2" style="border-top: 1px solid var(--c-border); padding-top: 1rem; margin-top: 0.5rem;">
         <button type="button" data-close-modal class="btn btn-ghost">Cancel</button>
-        <button type="submit" class="btn btn-primary">Create feature</button>
+        <button type="submit" id="submit-feature" class="btn btn-primary">Create feature</button>
       </div>
     </form>
   </div>
