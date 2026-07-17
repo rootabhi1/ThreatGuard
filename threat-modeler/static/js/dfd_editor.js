@@ -70,6 +70,48 @@
     return TYPE_VISUALS[type] || { icon: '📦', color: '#64748b' };
   }
 
+  // Microsoft Threat Modeling Tool–style security properties. Each is answered
+  // yes/no/unknown (or a level); a risky answer generates a tailored threat on
+  // re-analysis. Fields shown are contextual to the component type.
+  const YN = ['', 'yes', 'no'];
+  const ATTR = {
+    sensitivity:          { label: 'Data sensitivity', opts: ['', 'low', 'medium', 'high'] },
+    internet_facing:      { label: 'Internet-facing', opts: YN },
+    authenticates_users:  { label: 'Authenticates callers', opts: YN },
+    enforces_authorization: { label: 'Enforces authorization', opts: YN },
+    validates_input:      { label: 'Validates input', opts: YN },
+    encodes_output:       { label: 'Encodes output', opts: YN },
+    stores_credentials:   { label: 'Stores credentials/secrets', opts: YN },
+    encrypted_at_rest:    { label: 'Encrypted at rest', opts: YN },
+    has_backup:           { label: 'Backed up', opts: YN },
+    logs_security_events: { label: 'Logs security events', opts: YN },
+    multi_tenant:         { label: 'Multi-tenant', opts: YN },
+    privilege_level:      { label: 'Privilege level', opts: ['', 'low', 'standard', 'elevated'] },
+    provides_integrity:   { label: 'Provides integrity (signing/HMAC)', opts: YN },
+  };
+  const STORE_TYPES = ['database', 'datastore', 'cache', 'queue', 'filesystem', 'object_storage', 'data_warehouse', 'vector_db', 'secrets_manager'];
+  const PROCESS_TYPES = ['api', 'webapp', 'mobile_app', 'service', 'worker', 'serverless', 'auth_service', 'admin_panel', 'api_gateway', 'container', 'kubernetes'];
+
+  function componentAttrFields(type) {
+    const common = ['sensitivity', 'internet_facing', 'logs_security_events'];
+    if (STORE_TYPES.includes(type)) return [...common, 'stores_credentials', 'encrypted_at_rest', 'has_backup'];
+    if (PROCESS_TYPES.includes(type)) {
+      const f = [...common, 'authenticates_users', 'enforces_authorization', 'validates_input', 'privilege_level', 'multi_tenant'];
+      if (type === 'webapp') f.push('encodes_output');
+      return f;
+    }
+    return common;
+  }
+
+  function attrSelectsHtml(obj, fields) {
+    return fields.map(k => {
+      const a = ATTR[k]; if (!a) return '';
+      const cur = obj[k] || '';
+      const opts = a.opts.map(o => `<option value="${o}" ${cur === o ? 'selected' : ''}>${o === '' ? '— unknown —' : o}</option>`).join('');
+      return `<label class="dfd-field"><span>${a.label}</span><select data-field="${k}" class="select">${opts}</select></label>`;
+    }).join('');
+  }
+
   // Default layout: simple grid arrangement when components have no positions
   function autoLayout(system, layers) {
     const components = system.components || [];
@@ -410,7 +452,8 @@
         componentsLayer.appendChild(g);
 
         if (!opts.readOnly) {
-          g.addEventListener('mousedown', (e) => beginDrag(e, c.id));
+          g.style.touchAction = 'none';
+          g.addEventListener('pointerdown', (e) => beginDrag(e, c.id));
           g.addEventListener('click', (e) => {
             e.stopPropagation();
             // Click without drag selects
@@ -470,8 +513,8 @@
         offsetY: cp.y - pos.y,
         moved: false,
       };
-      window.addEventListener('mousemove', onDrag);
-      window.addEventListener('mouseup', endDrag);
+      window.addEventListener('pointermove', onDrag);
+      window.addEventListener('pointerup', endDrag);
     }
 
     function onDrag(e) {
@@ -488,8 +531,8 @@
     }
 
     function endDrag(e) {
-      window.removeEventListener('mousemove', onDrag);
-      window.removeEventListener('mouseup', endDrag);
+      window.removeEventListener('pointermove', onDrag);
+      window.removeEventListener('pointerup', endDrag);
       if (dragging && dragging.moved) {
         // Re-compute boundary membership: which boundary is the dropped
         // component visually inside? Reassign if it changed.
@@ -590,6 +633,11 @@
             <span>Description</span>
             <textarea data-field="description" rows="3" class="input">${escapeAttr(c.description || '')}</textarea>
           </label>
+          <details class="dfd-attrs" open>
+            <summary style="cursor:pointer;font-size:0.8125rem;font-weight:600;margin:4px 0;">🛡 Security attributes</summary>
+            <div class="text-xs text-light" style="margin-bottom:6px;">Answer what you know — a risky answer adds a specific threat when you re-analyze.</div>
+            ${attrSelectsHtml(c, componentAttrFields(c.type))}
+          </details>
           ${opts.readOnly ? '' : `
             <button data-act="delete" class="btn btn-danger btn-sm" style="width: 100%; margin-top: 8px;">Delete component</button>
           `}
@@ -636,6 +684,11 @@
             <input type="checkbox" data-field="encrypted" ${f.encrypted !== false ? 'checked' : ''}>
             <span>Encrypted in transit</span>
           </label>
+          <details class="dfd-attrs" open>
+            <summary style="cursor:pointer;font-size:0.8125rem;font-weight:600;margin:4px 0;">🛡 Security attributes</summary>
+            <div class="text-xs text-light" style="margin-bottom:6px;">A risky answer adds a specific threat when you re-analyze.</div>
+            ${attrSelectsHtml(f, ['provides_integrity', 'validates_input'])}
+          </details>
           ${opts.readOnly ? '' : `
             <button data-act="delete" class="btn btn-danger btn-sm" style="width: 100%; margin-top: 8px;">Delete flow</button>
           `}
@@ -696,6 +749,9 @@
             target[field] = val;
             render();
             opts.onChange(getSystem());
+            // Changing a component's type changes which security attributes apply —
+            // refresh the panel so the contextual fields update.
+            if (kind === 'component' && field === 'type') showComponentPanel(id);
           }
         });
       });
@@ -952,8 +1008,8 @@
       }
     }
 
-    // SVG-level mousemove for flow drawing
-    svg.addEventListener('mousemove', (e) => {
+    // SVG-level pointermove for flow drawing (works for mouse + touch)
+    svg.addEventListener('pointermove', (e) => {
       if (!flowDrawing) return;
       const cp = clientToCanvas(e);
       flowDrawing.mouseX = cp.x;

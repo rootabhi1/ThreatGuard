@@ -506,6 +506,127 @@ def _component_evidence(rule: dict, component: dict, ctx: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Attribute-driven threats — Microsoft Threat Modeling Tool style. Each element
+# can declare security properties (answered yes/no/unknown, or a level) in the
+# DFD editor; a "no" on a protective property (or a risky level) generates a
+# specific, tailored threat. Rules fire ONLY on explicitly-answered properties,
+# so models without attributes are unchanged until the user answers them.
+# ---------------------------------------------------------------------------
+# Property name -> (label, kind, options). kind: "yn" (yes/no) or "choice".
+COMPONENT_ATTRIBUTES = {
+    "sensitivity":         ("Data sensitivity", "choice", ["", "low", "medium", "high"]),
+    "internet_facing":     ("Internet-facing", "yn", None),
+    "authenticates_users": ("Authenticates callers", "yn", None),
+    "enforces_authorization": ("Enforces authorization", "yn", None),
+    "validates_input":     ("Validates input", "yn", None),
+    "encodes_output":      ("Encodes output", "yn", None),
+    "stores_credentials":  ("Stores credentials/secrets", "yn", None),
+    "encrypted_at_rest":   ("Encrypted at rest", "yn", None),
+    "has_backup":          ("Backed up", "yn", None),
+    "logs_security_events": ("Logs security events", "yn", None),
+    "multi_tenant":        ("Multi-tenant", "yn", None),
+    "privilege_level":     ("Privilege level", "choice", ["", "low", "standard", "elevated"]),
+}
+FLOW_ATTRIBUTES = {
+    "provides_integrity":  ("Provides integrity (signing/HMAC)", "yn", None),
+    "validates_input":     ("Receiver validates input", "yn", None),
+}
+
+
+def _yn_no(d: dict, k: str) -> bool:
+    return str(d.get(k, "")).strip().lower() == "no"
+
+
+def _yn_yes(d: dict, k: str) -> bool:
+    return str(d.get(k, "")).strip().lower() == "yes"
+
+
+def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> list[dict]:
+    name = METHODOLOGIES[methodology_key]["name"]
+    out: list[dict] = []
+
+    def emit(category, title, description, severity, comp, flow, mitigations):
+        out.append({
+            "id": f"t_{uuid.uuid4().hex[:8]}",
+            "methodology": name,
+            "category": category,
+            "title": title,
+            "description": description,
+            "severity": severity,
+            "component_id": comp["id"],
+            "component_name": comp["name"],
+            "component_type": comp.get("type", ""),
+            "flow_id": (flow or {}).get("id"),
+            "mitigations": mitigations,
+            "source": "rule-based",
+            "tier": "evidenced",
+            "dread": _score_dread({"severity": severity}, comp, flow),
+        })
+
+    for c in system.get("components", []):
+        is_store = c.get("type") in _STORE_TYPES
+        sens = str(c.get("sensitivity", "")).strip().lower()
+        priv = str(c.get("privilege_level", "")).strip().lower()
+
+        if _yn_yes(c, "stores_credentials") and _yn_no(c, "encrypted_at_rest"):
+            emit("Information Disclosure", f"Credentials stored without encryption at rest: {c['name']}",
+                 "This element stores credentials/secrets but is not encrypted at rest. A disk, snapshot, or backup compromise exposes them directly.",
+                 "Critical", c, None, ["Encrypt secrets at rest (KMS / envelope encryption)", "Use a dedicated secrets manager instead of a datastore", "Rotate any potentially exposed credentials"])
+        if sens == "high" and _yn_no(c, "encrypted_at_rest"):
+            emit("Information Disclosure", f"Sensitive data at rest is not encrypted: {c['name']}",
+                 "High-sensitivity data is stored without encryption at rest, exposing it to storage-layer compromise.",
+                 "High", c, None, ["Enable encryption at rest", "Restrict and audit data access", "Consider field-level encryption for the most sensitive fields"])
+        if is_store and _yn_no(c, "has_backup"):
+            emit("Denial of Service", f"No backup for data store: {c['name']}",
+                 "This data store has no backup, so hardware failure, accidental deletion, or ransomware causes permanent data loss.",
+                 "Medium", c, None, ["Configure automated backups", "Regularly test restores", "Keep backups in a separate trust boundary/account"])
+        if _yn_yes(c, "internet_facing") and _yn_no(c, "validates_input"):
+            emit("Tampering", f"Internet-facing element without input validation: {c['name']}",
+                 "An internet-facing element that does not validate input is directly exposed to injection, SSRF, and deserialization attacks.",
+                 "High", c, None, ["Validate and canonicalize all input", "Allow-list schema / length / charset", "Front with a WAF"])
+        if _yn_no(c, "authenticates_users") and c.get("type") in ("api", "webapp", "auth_service", "admin_panel", "api_gateway"):
+            emit("Spoofing", f"No authentication on a user-facing element: {c['name']}",
+                 "This element accepts requests without authenticating the caller, allowing identity spoofing and anonymous abuse.",
+                 "High", c, None, ["Require authentication (token / session / mTLS)", "Reject unauthenticated requests", "Rate-limit anonymous endpoints"])
+        if _yn_no(c, "enforces_authorization"):
+            emit("Elevation of Privilege", f"No authorization enforcement: {c['name']}",
+                 "Without authorization checks, callers can reach resources they should not — broken access control (OWASP A01), including IDOR.",
+                 "High", c, None, ["Enforce per-request authorization", "Deny by default", "Add object-level ownership checks"])
+        if c.get("type") == "webapp" and _yn_no(c, "encodes_output"):
+            emit("Tampering", f"Output not encoded (XSS risk): {c['name']}",
+                 "A web element that does not encode output is vulnerable to cross-site scripting.",
+                 "High", c, None, ["Context-aware output encoding", "Content-Security-Policy", "Rely on framework auto-escaping"])
+        if _yn_no(c, "logs_security_events"):
+            emit("Repudiation", f"No security-event logging: {c['name']}",
+                 "Security-relevant actions are not logged, so abuse cannot be detected, investigated, or attributed.",
+                 "Medium", c, None, ["Log authentication and privileged actions", "Ship logs to tamper-evident storage", "Alert on anomalies"])
+        if priv == "elevated":
+            emit("Elevation of Privilege", f"Runs at elevated privilege: {c['name']}",
+                 "Running with elevated privilege maximizes blast radius if this element is compromised.",
+                 "High", c, None, ["Apply least privilege", "Run as a non-root user / drop capabilities", "Sandbox or isolate the workload"])
+        if _yn_yes(c, "multi_tenant") and _yn_no(c, "enforces_authorization"):
+            emit("Elevation of Privilege", f"Multi-tenant without tenant isolation: {c['name']}",
+                 "A multi-tenant element without authorization/tenant scoping allows cross-tenant data access.",
+                 "High", c, None, ["Scope every query by tenant", "Enforce tenant checks server-side", "Test for cross-tenant IDOR"])
+
+    for f in system.get("data_flows", []):
+        dst = comp_by_id.get(f.get("to"))
+        src = comp_by_id.get(f.get("from"))
+        if not dst or not src:
+            continue
+        if _yn_no(f, "provides_integrity"):
+            emit("Tampering", f"Flow without integrity protection: {src['name']} → {dst['name']}",
+                 "This flow provides no integrity protection (no signing / HMAC), so a man-in-the-middle can alter messages undetected.",
+                 "Medium", dst, f, ["Sign messages (HMAC / JWS)", "Use TLS with integrity guarantees", "Verify signatures at the receiver"])
+        if _yn_no(f, "validates_input"):
+            emit("Tampering", f"Receiver does not validate flow input: {src['name']} → {dst['name']}",
+                 "The receiving element does not validate data arriving on this flow, enabling injection and tampering.",
+                 "Medium", dst, f, ["Validate input at the receiver", "Allow-list schema and values", "Reject malformed messages"])
+
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Core rule-based analysis
 # ---------------------------------------------------------------------------
 def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
@@ -686,6 +807,12 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "dst_zone": dst_zone,
                 "dread": _score_dread({"severity": tmpl["severity"]}, dst, flow, cross_boundary=True),
             })
+
+    # Attribute-driven threats (Microsoft Threat Modeling Tool style): security
+    # properties the user set on elements in the DFD editor generate tailored
+    # threats. Only fires on explicitly-answered properties, so attribute-less
+    # models are unaffected until the user answers them and re-analyzes.
+    threats.extend(_attribute_threats(system, methodology_key, comp_by_id))
 
     # De-duplicate (same title + component)
     seen = set()
