@@ -55,21 +55,62 @@ _TYPE_KEYWORDS = {
                         "next.js", "nextjs", "angular", "vue", "svelte", "nuxt"],
     "mobile_app":      ["mobile app", "android", "ios", "react native", "flutter"],
     "api":             ["api", "backend", "rest service", "graphql", "grpc", "microservice", "service",
-                        "lambda", "cloud function", "serverless", "fastapi", "express", "flask",
-                        "django", "spring", "rails", "gateway"],
-    "auth_service":    ["auth", "oauth", "sso", "identity provider", "okta", "auth0", "cognito",
-                        "keycloak", "clerk", "ldap", "saml", "firebase auth"],
+                        "fastapi", "express", "flask", "django", "spring", "rails"],
+    # Cloud compute / edge
+    "serverless":      ["lambda", "cloud function", "cloud functions", "serverless", "faas",
+                        "azure function", "cloud run", "fargate"],
+    "container":       ["docker", "container", "containerized", "ecs task"],
+    "kubernetes":      ["kubernetes", "k8s", "eks", "gke", "aks", "openshift"],
+    "service_mesh":    ["service mesh", "istio", "linkerd", "consul connect", "envoy mesh"],
+    "api_gateway":     ["api gateway", "apigee", "kong gateway", "tyk"],
+    "load_balancer":   ["load balancer", "load-balancer", "alb", "elb", "nlb", "haproxy"],
+    "cdn":             ["cdn", "cloudfront", "fastly", "akamai", "content delivery"],
+    "waf":             ["waf", "web application firewall"],
+    "dns":             ["route 53", "route53", "dns", "cloudflare dns", "name server", "dns resolver"],
+    "bastion":         ["bastion", "jump host", "jump box", "jump server", "jumpbox"],
+    # Identity & auth
+    "auth_service":    ["auth service", "authentication service", "auth", "oauth", "ldap", "saml",
+                        "firebase auth"],
+    "identity_provider": ["identity provider", "idp", "sso", "okta", "auth0", "cognito", "keycloak",
+                        "clerk", "entra", "azure ad", "ping identity", "workos", "jumpcloud", "onelogin"],
+    "iam":             ["iam", "identity and access"],
+    "secrets_manager": ["secrets manager", "secret manager", "hashicorp vault", "vault", "kms",
+                        "key vault", "parameter store"],
     "admin_panel":     ["admin panel", "admin ui", "back-office", "back office"],
+    # AI
+    "llm":             ["llm", "large language model", "language model", "gpt", "openai", "chatgpt",
+                        "bedrock", "sagemaker", "hugging face", "inference endpoint", "model endpoint",
+                        "generative ai", "vertex ai"],
+    "vector_db":       ["vector database", "vector db", "pinecone", "weaviate", "qdrant", "milvus",
+                        "chroma", "embedding store"],
+    # Data
     "database":        ["database", "db", "postgres", "mysql", "mongodb", "dynamodb", "rds", "cassandra",
                         "cockroach", "mariadb", "sqlite", "mssql", "sql server", "oracle", "spanner",
                         "aurora", "neo4j", "influxdb", "timescale", "scylla"],
-    "datastore":       ["s3", "blob storage", "object store", "data lake", "warehouse", "bigquery",
-                        "snowflake", "elasticsearch", "opensearch", "clickhouse", "minio", "hdfs",
-                        "ceph", "solr", "redshift"],
+    "object_storage":  ["s3", "object storage", "object store", "blob storage", "minio", "gcs",
+                        "azure blob", "cloud storage", "storage bucket"],
+    "data_warehouse":  ["data warehouse", "warehouse", "bigquery", "snowflake", "redshift",
+                        "clickhouse", "databricks"],
+    "search_service":  ["elasticsearch", "opensearch", "solr", "algolia", "meilisearch", "typesense",
+                        "search engine", "search cluster"],
+    "data_pipeline":   ["data pipeline", "etl", "airflow", "dagster", "spark", "flink", "dbt",
+                        "stream processor", "kinesis firehose", "glue job", "streaming pipeline"],
+    "datastore":       ["datastore", "data lake", "hdfs", "ceph"],
     "cache":           ["redis", "memcached", "cache", "hazelcast", "varnish"],
     "queue":           ["queue", "kafka", "rabbitmq", "sqs", "pubsub", "event bus", "nats",
                         "activemq", "kinesis", "service bus", "celery"],
     "filesystem":      ["filesystem", "file storage", "nfs"],
+    # Ops
+    "scheduler":       ["scheduler", "cron", "scheduled job", "cron job", "task scheduler", "batch job"],
+    "monitoring":      ["prometheus", "grafana", "datadog", "monitoring", "observability", "cloudwatch"],
+    "notification_service": ["notification service", "push notification", "fcm", "apns",
+                        "notification", "notifications"],
+    # Messaging / external
+    "email_service":   ["sendgrid", "mailgun", "postmark", "amazon ses", "aws ses", "smtp",
+                        "email service", "mailchimp", "email provider"],
+    "sms_gateway":     ["twilio", "sms gateway", "vonage", "nexmo", "sns sms", "text message"],
+    "iot_device":      ["iot device", "iot", "sensor", "embedded device", "smart device",
+                        "edge device", "telemetry"],
     "payment_service": ["stripe", "payment", "paypal", "billing", "square", "adyen", "razorpay", "braintree"],
 }
 
@@ -77,16 +118,13 @@ _TYPE_KEYWORDS = {
 # described (structured input, the DFD editor, diagram extraction) even though the
 # free-text extractor above collapses most cloud tech into the generic types. They
 # let users model cloud architectures explicitly (e.g. a Lambda, an S3 bucket, a WAF).
-_EXTRA_TYPES = [
-    "config", "service", "worker",
-    "api_gateway", "load_balancer", "cdn", "waf",
-    "object_storage", "data_warehouse", "vector_db",
-    "serverless", "container", "kubernetes",
-    "secrets_manager", "iam", "vpc", "monitoring", "notification_service",
-]
+# Types with no natural free-text keyword (set explicitly in structured input,
+# the DFD editor, or by AI-vision diagram extraction). Everything else now has a
+# keyword mapping in _TYPE_KEYWORDS above so free-text descriptions detect it too.
+_EXTRA_TYPES = ["config", "service", "worker", "vpc"]
 
-# Human-facing list of valid component types for the structured input mode.
-VALID_COMPONENT_TYPES = list(_TYPE_KEYWORDS.keys()) + _EXTRA_TYPES
+# Human-facing list of valid component types (deduped, keyword-mapped first).
+VALID_COMPONENT_TYPES = list(dict.fromkeys(list(_TYPE_KEYWORDS.keys()) + _EXTRA_TYPES))
 
 def extract_components_from_text(text: str) -> dict:
     """Best-effort extraction. Always good enough for a starting draft —
@@ -124,7 +162,9 @@ def extract_components_from_text(text: str) -> dict:
     user = next((c for c in components if c["type"] == "user"), None)
     front = next((c for c in components if c["type"] in ("webapp", "mobile_app")), None)
     api = next((c for c in components if c["type"] == "api"), None)
-    stores = [c for c in components if c["type"] in ("database", "datastore", "cache")]
+    stores = [c for c in components if c["type"] in (
+        "database", "datastore", "cache", "object_storage", "data_warehouse",
+        "search_service", "vector_db", "queue", "filesystem")]
 
     if user and (front or api):
         target = front or api
@@ -319,7 +359,8 @@ def _dread_context(system: dict) -> tuple[set, dict]:
 # Component types that store/process regulated or otherwise sensitive data —
 # raises the Damage axis independently of the threat's severity label.
 _SENSITIVE_TYPES = {"database", "datastore", "payment_service", "auth_service", "filesystem",
-                    "object_storage", "data_warehouse", "secrets_manager", "iam", "vector_db"}
+                    "object_storage", "data_warehouse", "secrets_manager", "iam", "vector_db",
+                    "identity_provider", "llm", "search_service"}
 # Deterministic threat classes (work identically every attempt) — raises Reproducibility.
 _DETERMINISTIC_HINTS = ("injection", "sql", "idor", "access control", "misconfig",
                         "default credential", "hardcoded", "unencrypted", "unauthenticated",
@@ -412,7 +453,8 @@ def _score_dread(threat: dict, component: dict, flow: dict | None, cross_boundar
 # reports de-emphasize them, never drop them — so recall is preserved.
 # ---------------------------------------------------------------------------
 _STORE_TYPES = {"database", "datastore", "filesystem", "cache", "queue",
-                "object_storage", "data_warehouse", "vector_db", "secrets_manager"}
+                "object_storage", "data_warehouse", "vector_db", "secrets_manager",
+                "search_service"}
 _USER_TYPES = {"user", "external_entity"}
 
 
@@ -503,6 +545,186 @@ def _component_evidence(rule: dict, component: dict, ctx: dict) -> str:
     if check is None:
         return "baseline"
     return "evidenced" if check(component.get("id"), component.get("type", ""), ctx) else "baseline"
+
+
+# ---------------------------------------------------------------------------
+# Attribute-driven threats — Microsoft Threat Modeling Tool style. Each element
+# can declare security properties (answered yes/no/unknown, or a level) in the
+# DFD editor; a "no" on a protective property (or a risky level) generates a
+# specific, tailored threat. Rules fire ONLY on explicitly-answered properties,
+# so models without attributes are unchanged until the user answers them.
+# ---------------------------------------------------------------------------
+# Property name -> (label, kind, options). kind: "yn" (yes/no) or "choice".
+COMPONENT_ATTRIBUTES = {
+    "sensitivity":         ("Data sensitivity", "choice", ["", "low", "medium", "high"]),
+    "internet_facing":     ("Internet-facing", "yn", None),
+    "authenticates_users": ("Authenticates callers", "yn", None),
+    "enforces_authorization": ("Enforces authorization", "yn", None),
+    "validates_input":     ("Validates input", "yn", None),
+    "encodes_output":      ("Encodes output", "yn", None),
+    "stores_credentials":  ("Stores credentials/secrets", "yn", None),
+    "encrypted_at_rest":   ("Encrypted at rest", "yn", None),
+    "has_backup":          ("Backed up", "yn", None),
+    "logs_security_events": ("Logs security events", "yn", None),
+    "multi_tenant":        ("Multi-tenant", "yn", None),
+    "privilege_level":     ("Privilege level", "choice", ["", "low", "standard", "elevated"]),
+    # Second wave
+    "csrf_protection":     ("CSRF protection", "yn", None),
+    "rate_limited":        ("Rate limited", "yn", None),
+    "mfa":                 ("Multi-factor auth", "yn", None),
+    "handles_pii":         ("Handles PII", "yn", None),
+    "handles_phi":         ("Handles PHI (health)", "yn", None),
+    "handles_pci":         ("Handles cardholder data", "yn", None),
+    "verifies_code_integrity": ("Verifies code/artifact integrity", "yn", None),
+    "removable_media":     ("On removable media", "yn", None),
+    "secure_error_handling": ("Safe error handling", "yn", None),
+}
+FLOW_ATTRIBUTES = {
+    "provides_integrity":  ("Provides integrity (signing/HMAC)", "yn", None),
+    "validates_input":     ("Receiver validates input", "yn", None),
+    # Second wave
+    "replay_protection":   ("Replay protection (nonce/timestamp)", "yn", None),
+    "validates_certificates": ("Validates TLS certificates", "yn", None),
+}
+
+
+def _yn_no(d: dict, k: str) -> bool:
+    return str(d.get(k, "")).strip().lower() == "no"
+
+
+def _yn_yes(d: dict, k: str) -> bool:
+    return str(d.get(k, "")).strip().lower() == "yes"
+
+
+def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> list[dict]:
+    name = METHODOLOGIES[methodology_key]["name"]
+    out: list[dict] = []
+
+    def emit(category, title, description, severity, comp, flow, mitigations):
+        out.append({
+            "id": f"t_{uuid.uuid4().hex[:8]}",
+            "methodology": name,
+            "category": category,
+            "title": title,
+            "description": description,
+            "severity": severity,
+            "component_id": comp["id"],
+            "component_name": comp["name"],
+            "component_type": comp.get("type", ""),
+            "flow_id": (flow or {}).get("id"),
+            "mitigations": mitigations,
+            "source": "rule-based",
+            "tier": "evidenced",
+            "dread": _score_dread({"severity": severity}, comp, flow),
+        })
+
+    for c in system.get("components", []):
+        is_store = c.get("type") in _STORE_TYPES
+        sens = str(c.get("sensitivity", "")).strip().lower()
+        priv = str(c.get("privilege_level", "")).strip().lower()
+
+        if _yn_yes(c, "stores_credentials") and _yn_no(c, "encrypted_at_rest"):
+            emit("Information Disclosure", f"Credentials stored without encryption at rest: {c['name']}",
+                 "This element stores credentials/secrets but is not encrypted at rest. A disk, snapshot, or backup compromise exposes them directly.",
+                 "Critical", c, None, ["Encrypt secrets at rest (KMS / envelope encryption)", "Use a dedicated secrets manager instead of a datastore", "Rotate any potentially exposed credentials"])
+        if sens == "high" and _yn_no(c, "encrypted_at_rest"):
+            emit("Information Disclosure", f"Sensitive data at rest is not encrypted: {c['name']}",
+                 "High-sensitivity data is stored without encryption at rest, exposing it to storage-layer compromise.",
+                 "High", c, None, ["Enable encryption at rest", "Restrict and audit data access", "Consider field-level encryption for the most sensitive fields"])
+        if is_store and _yn_no(c, "has_backup"):
+            emit("Denial of Service", f"No backup for data store: {c['name']}",
+                 "This data store has no backup, so hardware failure, accidental deletion, or ransomware causes permanent data loss.",
+                 "Medium", c, None, ["Configure automated backups", "Regularly test restores", "Keep backups in a separate trust boundary/account"])
+        if _yn_yes(c, "internet_facing") and _yn_no(c, "validates_input"):
+            emit("Tampering", f"Internet-facing element without input validation: {c['name']}",
+                 "An internet-facing element that does not validate input is directly exposed to injection, SSRF, and deserialization attacks.",
+                 "High", c, None, ["Validate and canonicalize all input", "Allow-list schema / length / charset", "Front with a WAF"])
+        if _yn_no(c, "authenticates_users") and c.get("type") in ("api", "webapp", "auth_service", "admin_panel", "api_gateway"):
+            emit("Spoofing", f"No authentication on a user-facing element: {c['name']}",
+                 "This element accepts requests without authenticating the caller, allowing identity spoofing and anonymous abuse.",
+                 "High", c, None, ["Require authentication (token / session / mTLS)", "Reject unauthenticated requests", "Rate-limit anonymous endpoints"])
+        if _yn_no(c, "enforces_authorization"):
+            emit("Elevation of Privilege", f"No authorization enforcement: {c['name']}",
+                 "Without authorization checks, callers can reach resources they should not — broken access control (OWASP A01), including IDOR.",
+                 "High", c, None, ["Enforce per-request authorization", "Deny by default", "Add object-level ownership checks"])
+        if c.get("type") == "webapp" and _yn_no(c, "encodes_output"):
+            emit("Tampering", f"Output not encoded (XSS risk): {c['name']}",
+                 "A web element that does not encode output is vulnerable to cross-site scripting.",
+                 "High", c, None, ["Context-aware output encoding", "Content-Security-Policy", "Rely on framework auto-escaping"])
+        if _yn_no(c, "logs_security_events"):
+            emit("Repudiation", f"No security-event logging: {c['name']}",
+                 "Security-relevant actions are not logged, so abuse cannot be detected, investigated, or attributed.",
+                 "Medium", c, None, ["Log authentication and privileged actions", "Ship logs to tamper-evident storage", "Alert on anomalies"])
+        if priv == "elevated":
+            emit("Elevation of Privilege", f"Runs at elevated privilege: {c['name']}",
+                 "Running with elevated privilege maximizes blast radius if this element is compromised.",
+                 "High", c, None, ["Apply least privilege", "Run as a non-root user / drop capabilities", "Sandbox or isolate the workload"])
+        if _yn_yes(c, "multi_tenant") and _yn_no(c, "enforces_authorization"):
+            emit("Elevation of Privilege", f"Multi-tenant without tenant isolation: {c['name']}",
+                 "A multi-tenant element without authorization/tenant scoping allows cross-tenant data access.",
+                 "High", c, None, ["Scope every query by tenant", "Enforce tenant checks server-side", "Test for cross-tenant IDOR"])
+
+        # ---- Second wave ----
+        if _yn_no(c, "csrf_protection"):
+            emit("Tampering", f"No CSRF protection: {c['name']}",
+                 "State-changing requests are not protected against cross-site request forgery, letting an attacker act as a logged-in user.",
+                 "High", c, None, ["Use anti-CSRF tokens (synchronizer / double-submit)", "Set SameSite=strict/lax cookies", "Require re-auth for sensitive actions"])
+        if _yn_no(c, "rate_limited"):
+            emit("Denial of Service", f"No rate limiting: {c['name']}",
+                 "Without rate limiting, this element is exposed to brute-force, credential-stuffing, and resource-exhaustion (DoS) attacks.",
+                 "Medium", c, None, ["Rate-limit per client / IP / account", "Add exponential backoff and lockouts", "Front with a WAF / API gateway throttle"])
+        if _yn_no(c, "mfa") and c.get("type") in ("auth_service", "identity_provider", "admin_panel"):
+            emit("Spoofing", f"No multi-factor authentication: {c['name']}",
+                 "Single-factor authentication is vulnerable to phishing, credential stuffing, and password reuse — a leading cause of account takeover.",
+                 "High", c, None, ["Require MFA (TOTP / WebAuthn / passkeys)", "Enforce MFA for privileged accounts", "Detect and step-up on risky logins"])
+        if _yn_yes(c, "handles_phi"):
+            emit("Information Disclosure", f"Handles PHI — HIPAA obligations: {c['name']}",
+                 "This element processes protected health information, bringing HIPAA requirements (encryption, access control, audit, BAA).",
+                 "High", c, None, ["Encrypt PHI in transit and at rest", "Restrict access and keep audit trails", "Sign BAAs with processors; support breach notification"])
+        if _yn_yes(c, "handles_pci"):
+            emit("Information Disclosure", f"Handles cardholder data — PCI-DSS scope: {c['name']}",
+                 "This element processes payment card data, placing it in PCI-DSS scope (segmentation, tokenization, key management).",
+                 "High", c, None, ["Tokenize / avoid storing PAN", "Segment the cardholder-data environment", "Apply PCI-DSS controls and scope reduction"])
+        if _yn_yes(c, "handles_pii"):
+            emit("Information Disclosure", f"Handles PII — privacy obligations: {c['name']}",
+                 "This element processes personal data, bringing privacy obligations (GDPR/CCPA: minimization, consent, deletion, breach reporting).",
+                 "Medium", c, None, ["Minimize and classify PII", "Support data-subject rights (access/delete)", "Encrypt and restrict access"])
+        if _yn_no(c, "verifies_code_integrity") and c.get("type") in ("serverless", "container", "kubernetes", "service", "worker"):
+            emit("Tampering", f"Unverified code/artifact integrity: {c['name']}",
+                 "Deploying unsigned/unverified images or artifacts allows supply-chain tampering — a malicious dependency or image runs with this element's privileges.",
+                 "High", c, None, ["Sign and verify images/artifacts (cosign/Notary)", "Pin dependencies and verify checksums", "Scan images and enforce admission control"])
+        if _yn_yes(c, "removable_media"):
+            emit("Information Disclosure", f"Data on removable media: {c['name']}",
+                 "Data stored on removable media can be physically removed, lost, or copied, bypassing network controls.",
+                 "Medium", c, None, ["Encrypt removable media", "Restrict and log media use", "Prefer controlled, audited storage"])
+        if _yn_no(c, "secure_error_handling"):
+            emit("Information Disclosure", f"Verbose error handling may leak internals: {c['name']}",
+                 "Unsafe error handling can expose stack traces, queries, or secrets to callers, aiding attackers.",
+                 "Low", c, None, ["Return generic errors to clients", "Log details server-side only", "Disable debug modes in production"])
+
+    for f in system.get("data_flows", []):
+        dst = comp_by_id.get(f.get("to"))
+        src = comp_by_id.get(f.get("from"))
+        if not dst or not src:
+            continue
+        if _yn_no(f, "provides_integrity"):
+            emit("Tampering", f"Flow without integrity protection: {src['name']} → {dst['name']}",
+                 "This flow provides no integrity protection (no signing / HMAC), so a man-in-the-middle can alter messages undetected.",
+                 "Medium", dst, f, ["Sign messages (HMAC / JWS)", "Use TLS with integrity guarantees", "Verify signatures at the receiver"])
+        if _yn_no(f, "validates_input"):
+            emit("Tampering", f"Receiver does not validate flow input: {src['name']} → {dst['name']}",
+                 "The receiving element does not validate data arriving on this flow, enabling injection and tampering.",
+                 "Medium", dst, f, ["Validate input at the receiver", "Allow-list schema and values", "Reject malformed messages"])
+        if _yn_no(f, "replay_protection"):
+            emit("Spoofing", f"No replay protection: {src['name']} → {dst['name']}",
+                 "Without a nonce or timestamp, a captured request on this flow can be replayed to repeat a privileged action.",
+                 "Medium", dst, f, ["Add a nonce or timestamp + window", "Use idempotency keys", "Bind requests to a single-use token"])
+        if _yn_no(f, "validates_certificates"):
+            emit("Spoofing", f"TLS certificates not validated: {src['name']} → {dst['name']}",
+                 "Skipping certificate validation lets an attacker present a forged certificate and man-in-the-middle this flow.",
+                 "High", dst, f, ["Validate the full certificate chain", "Pin certificates/public keys where practical", "Never disable verification in production"])
+
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -686,6 +908,12 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "dst_zone": dst_zone,
                 "dread": _score_dread({"severity": tmpl["severity"]}, dst, flow, cross_boundary=True),
             })
+
+    # Attribute-driven threats (Microsoft Threat Modeling Tool style): security
+    # properties the user set on elements in the DFD editor generate tailored
+    # threats. Only fires on explicitly-answered properties, so attribute-less
+    # models are unaffected until the user answers them and re-analyzes.
+    threats.extend(_attribute_threats(system, methodology_key, comp_by_id))
 
     # De-duplicate (same title + component)
     seen = set()
