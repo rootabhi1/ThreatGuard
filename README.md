@@ -1,6 +1,6 @@
 # 🛡 ThreatGuard — Automated Threat Modeling
 
-> Threat modeling for engineering teams — the STRIDE, PASTA and LINDDUN methodologies, with DREAD risk scoring and OWASP Top 10 reference mapping, plus CVSS/CWE/MITRE ATT&CK scoring and compliance mapping. Works fully offline; optionally enriched by an LLM (Claude **or** any OpenAI-compatible model).
+> Threat modeling for engineering teams — the STRIDE, PASTA and LINDDUN methodologies, with DREAD risk scoring and OWASP Top 10 reference mapping, plus CVSS/CWE/MITRE ATT&CK scoring and compliance mapping. Works fully offline; optionally enriched by an LLM (Anthropic **or** any OpenAI-compatible model).
 
 [![CI](https://github.com/rootabhi1/ThreatGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/rootabhi1/ThreatGuard/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/rootabhi1/ThreatGuard/actions/workflows/codeql.yml/badge.svg)](https://github.com/rootabhi1/ThreatGuard/actions/workflows/codeql.yml)
@@ -41,7 +41,7 @@ a replacement for their judgment.
   review, never a sign-off.
 - **Secure by default.** Auth on every data endpoint, safe defaults (CORS,
   headers), and a test that verifies it.
-- **Framework agnostic.** Works offline on rules, or with Claude or any
+- **Framework agnostic.** Works offline on rules, or with Anthropic or any
   OpenAI-compatible model — including local ones.
 - **Explainable outputs.** Every threat maps to a methodology, a CWE, CVSS
   scores, ATT&CK/compliance references, and concrete mitigations — no black box.
@@ -56,7 +56,7 @@ ThreatGuard turns a description of a system — typed, drawn on a canvas, or **u
 - **Rich scoring** — CVSS 3.1 & 4.0, CWE, MITRE ATT&CK technique/tactic, and SOC 2 / ISO 27001 / PCI-DSS control mapping.
 - **Trust boundaries & DFD** — boundaries are auto-inferred when none are defined, cross-boundary flows are flagged, and a labelled data-flow diagram is rendered.
 - **Diagram upload** — drop in a PNG/JPEG/WebP architecture diagram; with a vision-capable LLM it is turned into a system model, otherwise you get an editable starting point.
-- **Optional LLM enrichment** — AI fix generation, diagram extraction and richer narratives via **Claude** or any **OpenAI-compatible** endpoint (OpenAI, Azure, Ollama, vLLM, …). Absent a key, everything still works in rules-only mode.
+- **Optional LLM enrichment** — AI fix generation, diagram extraction and richer narratives via **Anthropic** or any **OpenAI-compatible** endpoint (OpenAI, Azure, Ollama, vLLM, …). Absent a key, everything still works in rules-only mode.
 - **Team workflow** — Release → Feature → Threat Model hierarchy, role-based access (user / management / admin), per-threat status tracking, release-to-release diffs, read-only share links, custom rules, and an audit log.
 - **Reports** — HTML, PDF, Markdown, a CSV risk register, and an executive summary.
 
@@ -105,7 +105,7 @@ export INITIAL_ADMIN_PASSWORD='ChangeMe123!'
 export JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(48))")
 
 # 4. (Optional) enable an LLM — pick ONE, or skip for rules-only mode
-export ANTHROPIC_API_KEY=sk-ant-...            # Claude
+export ANTHROPIC_API_KEY=sk-ant-...            # Anthropic
 # — or any OpenAI-compatible endpoint —
 # export OPENAI_API_KEY=...  OPENAI_MODEL=gpt-4o  OPENAI_BASE_URL=https://api.openai.com/v1
 
@@ -136,7 +136,7 @@ All settings are environment variables; see [`.env.example`](.env.example). The 
 | `JWT_SECRET` | ✅ | Signs access/refresh tokens. Use a long random string. |
 | `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` | ✅ | Admin account seeded on first run. |
 | `LLM_PROVIDER` | — | `anthropic` or `openai`; auto-detected from whichever key is set. |
-| `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | — | Enable Claude enrichment. |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | — | Enable Anthropic enrichment. |
 | `OPENAI_API_KEY` / `OPENAI_MODEL` / `OPENAI_BASE_URL` | — | Enable any OpenAI-compatible model (incl. self-hosted). |
 | `CORS_ORIGINS` | — | Restrict origins in production (default `*`). |
 | `RATE_LIMIT_ENABLED` | — | Per-IP login/refresh rate limiting (default on). |
