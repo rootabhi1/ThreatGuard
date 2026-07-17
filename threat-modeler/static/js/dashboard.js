@@ -382,8 +382,11 @@
         const tm = d.threat_model;
         const total = d.analysis ? d.analysis.summary.total : 0;
         UI.hideModal('modal-new-tm');
-        const method = d.extraction_method === 'llm_vision' ? 'AI vision' : 'a starter model (no vision AI configured)';
+        const method = { llm_vision: 'AI vision', ocr: 'offline OCR of the diagram labels' }[d.extraction_method]
+          || 'a generic starter model (no vision AI or OCR available)';
         UI.toast(`Created "${tm.name}" from ${method} — ${total} threats identified`, 'success');
+        if (d.extraction_method !== 'llm_vision')
+          UI.toast('Review the extracted components and add any missing connections in the Data Flow Diagram tab.', 'info', 7000);
         await loadAll();
         openDetail(tm.id);
         return;

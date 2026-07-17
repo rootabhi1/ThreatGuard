@@ -812,8 +812,8 @@ async def extract_from_diagram_endpoint(
     user: dict = Depends(get_current_user),
 ):
     """Extract a system model (components, flows, trust boundaries) from an
-    uploaded architecture diagram. Uses Claude vision when ANTHROPIC_API_KEY is
-    set, otherwise returns an editable starter model."""
+    uploaded architecture diagram. Uses a vision LLM when one is configured,
+    else offline OCR of the diagram's text labels, else an editable starter model."""
     from threat_engine.diagram_extractor import extract_from_diagram
 
     data, media_type = await _read_diagram(file)
