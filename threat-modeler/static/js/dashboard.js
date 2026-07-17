@@ -84,8 +84,13 @@
 
       return `
         <div class="card card-interactive card-accent p-4" data-tm-id="${tm.id}">
-          <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center justify-between mb-2 gap-2">
             <h3 class="font-bold truncate" style="font-size: 1rem;">${esc(tm.name)}</h3>
+            ${(tm.owner_id === me.user.id || me.user.role === 'admin') ? `
+              <button class="card-delete-tm" data-tm-id="${tm.id}" data-tm-name="${esc(tm.name)}" title="Delete this threat model"
+                      style="flex:0 0 auto;border:none;background:none;cursor:pointer;color:var(--c-text-light);padding:2px;line-height:0;border-radius:6px;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>` : ''}
           </div>
           <div class="text-xs text-light flex items-center gap-2 mb-3">
             <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 12h14M5 16h14"/></svg>
@@ -104,8 +109,21 @@
       `;
     }).join('');
 
-    container.querySelectorAll('[data-tm-id]').forEach(el => {
+    container.querySelectorAll('.card[data-tm-id]').forEach(el => {
       el.addEventListener('click', () => openDetail(parseInt(el.dataset.tmId)));
+    });
+    // Per-card delete — stop the click from opening the detail, confirm first.
+    container.querySelectorAll('.card-delete-tm').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = parseInt(btn.dataset.tmId);
+        const name = btn.dataset.tmName || 'this threat model';
+        UI.confirmDialog(`Permanently delete "${name}"? This cannot be undone.`, async () => {
+          const r = await Auth.fetch(`/api/threat-models/${id}`, { method: 'DELETE' });
+          if (r.ok) { UI.toast('Threat model deleted', 'success'); await loadAll(); }
+          else { UI.toast(UI.formatApiError(await r.json().catch(()=>({})), 'Delete failed'), 'error'); }
+        });
+      });
     });
   }
 
@@ -400,12 +418,25 @@
       ? `<div class="flex-col gap-1" style="max-height:240px;overflow-y:auto;">${items.map(render).join('')}</div>`
       : `<p class="text-xs text-light">${empty}</p>`;
     const threatRow = t => `<div class="card p-2 text-sm flex items-center gap-1">${sevDot(t.severity)}<span style="flex:1;">${esc(t.title)}</span><span class="text-light text-xs">${esc(t.component_name||'')}</span></div>`;
+    // Compare is meant for the same system across versions. If the two models share
+    // no components and no threats, the diff is not a meaningful evolution — warn.
+    const ov = d.overlap || {};
+    let overlapBanner = '';
+    if (ov.unrelated) {
+      overlapBanner = `<div class="card p-3 mb-3" style="border-left:4px solid var(--c-critical);background:#fef2f2;color:#991b1b;">
+        <strong>⚠ These don't look like the same system.</strong> They share no components and no threats,
+        so every threat shows as both “new” and “resolved” — this isn't a meaningful diff.
+        Compare works best on two versions of the <em>same</em> system (e.g. the same feature across releases).</div>`;
+    } else if (ov.common_components !== undefined && (ov.common_components > 0 || ov.common_threats > 0)) {
+      overlapBanner = `<div class="text-xs text-light mb-3">Shared basis: ${ov.common_components} common component${ov.common_components===1?'':'s'}, ${ov.common_threats} common threat${ov.common_threats===1?'':'s'}.${ov.same_feature?' Same feature.':''}</div>`;
+    }
     out.innerHTML = `
       <div class="flex items-center gap-2 mb-3 text-sm">
         <span class="threat-meta-tag">${esc(d.model_1.name)}</span>
         <span class="text-light">baseline → after</span>
         <span class="threat-meta-tag">${esc(d.model_2.name)}</span>
       </div>
+      ${overlapBanner}
       <div class="grid grid-cols-4 gap-2 mb-4">
         ${stat(nNew, 'New', 'var(--c-critical)')}
         ${stat(nRes, 'Resolved', 'var(--c-success)')}
