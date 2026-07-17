@@ -31,7 +31,7 @@ Return ONLY valid JSON — no prose, no markdown fences. Use this exact schema:
     {{
       "id": "c_<slug>",
       "name": "<name visible in diagram>",
-      "type": "<one of: user|external_entity|webapp|mobile_app|api|auth_service|admin_panel|database|datastore|cache|queue|filesystem|config|payment_service>",
+      "type": "<one of: user|external_entity|webapp|mobile_app|api|auth_service|admin_panel|database|datastore|cache|queue|filesystem|config|payment_service|api_gateway|load_balancer|cdn|waf|object_storage|data_warehouse|vector_db|serverless|container|kubernetes|secrets_manager|iam|vpc|monitoring|notification_service>",
       "description": "<brief description>"
     }}
   ],
@@ -71,11 +71,8 @@ Rules:
         
         # Validate and clean up
         comp_ids = {c["id"] for c in result.get("components", [])}
-        valid_types = {
-            "user", "external_entity", "webapp", "mobile_app", "api", "auth_service",
-            "admin_panel", "database", "datastore", "cache", "queue", "filesystem",
-            "config", "payment_service"
-        }
+        from .analyzer import VALID_COMPONENT_TYPES
+        valid_types = set(VALID_COMPONENT_TYPES)
         # Fix invalid types
         for c in result.get("components", []):
             if c.get("type") not in valid_types:

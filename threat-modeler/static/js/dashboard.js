@@ -452,6 +452,37 @@
       </div>`}`;
   });
 
+  // Edit threat-model details (rename + description). Registered once.
+  document.getElementById('form-edit-tm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentTM) return;
+    const form = e.target;
+    const errBox = document.getElementById('edit-tm-error');
+    const btn = document.getElementById('submit-edit-tm');
+    errBox.classList.add('hidden');
+    const name = form.name.value.trim();
+    if (!name) { errBox.textContent = 'Name is required.'; errBox.classList.remove('hidden'); return; }
+    const original = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<span class="dots-loader"><span></span><span></span><span></span></span>';
+    try {
+      const r = await Auth.fetch(`/api/threat-models/${currentTM.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description: form.description.value }),
+      });
+      if (!r.ok) throw new Error(UI.formatApiError(await r.json().catch(() => ({})), 'Save failed'));
+      currentTM = await r.json();
+      document.getElementById('detail-title').textContent = currentTM.name;
+      UI.hideModal('modal-edit-tm');
+      UI.toast('Details updated', 'success');
+      await loadAll();
+    } catch (err) {
+      errBox.textContent = err.message; errBox.classList.remove('hidden');
+    } finally {
+      btn.disabled = false; btn.innerHTML = original;
+    }
+  });
+
   document.getElementById('form-new-tm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const errBox = document.getElementById('new-tm-error');
@@ -850,6 +881,8 @@
       <div class="mt-6 pt-4 flex justify-between items-center" style="border-top: 1px solid var(--c-border);">
         <div class="text-xs text-light">Created ${(tm.created_at || '').slice(0, 10)}</div>
         <div class="flex gap-2">
+          ${(tm.owner_id === me.user.id || me.user.role === 'admin') ? `
+            <button id="btn-edit-tm" class="btn btn-sm btn-secondary" data-tm-id="${tm.id}">✎ Edit details</button>` : ''}
           <button id="btn-rerun" class="btn btn-sm btn-secondary" data-tm-id="${tm.id}">↻ Re-run analysis</button>
           ${(tm.owner_id === me.user.id || me.user.role === 'admin') ? `
             <button id="btn-delete-tm" class="btn btn-sm btn-danger" data-tm-id="${tm.id}">Delete</button>
@@ -1227,6 +1260,15 @@
           UI.toast('Delete failed', 'error');
         }
       });
+    });
+
+    const editBtn = document.getElementById('btn-edit-tm');
+    if (editBtn) editBtn.addEventListener('click', () => {
+      const form = document.getElementById('form-edit-tm');
+      form.name.value = currentTM.name || '';
+      form.description.value = currentTM.description || '';
+      document.getElementById('edit-tm-error').classList.add('hidden');
+      UI.showModal('modal-edit-tm');
     });
   }
 

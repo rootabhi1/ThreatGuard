@@ -240,6 +240,38 @@
   </div>
 </div>
 
+<!-- =========== Modal: Edit threat model details =========== -->
+<div id="modal-edit-tm" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Edit threat model</div>
+        <div class="modal-subtitle">Rename or update the description. Components live in the Data Flow Diagram tab.</div>
+      </div>
+      <button data-close-modal class="modal-close">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form id="form-edit-tm" class="flex-col gap-4">
+        <div class="field">
+          <label class="field-label">Name</label>
+          <input type="text" name="name" required maxlength="120" class="input" placeholder="Threat model name">
+        </div>
+        <div class="field">
+          <label class="field-label">Description <span class="field-label-optional">optional</span></label>
+          <textarea name="description" rows="3" class="textarea" placeholder="A short note about this threat model"></textarea>
+        </div>
+        <div id="edit-tm-error" class="hidden" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.8125rem;"></div>
+      </form>
+    </div>
+    <div class="modal-footer flex justify-end gap-2">
+      <button type="button" data-close-modal class="btn btn-ghost">Cancel</button>
+      <button type="submit" form="form-edit-tm" id="submit-edit-tm" class="btn btn-primary">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- =========== Modal: Compare threat models =========== -->
 <div id="modal-compare" class="modal hidden">
   <div class="modal-card modal-card-lg">
