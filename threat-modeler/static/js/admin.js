@@ -18,6 +18,7 @@
       document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
       if (btn.dataset.tab === 'releases') loadReleases();
       if (btn.dataset.tab === 'audit') loadAudit();
+      if (btn.dataset.tab === 'settings') loadSettings();
     });
   });
 
@@ -379,6 +380,111 @@
   }
 
   document.getElementById('btn-refresh-audit').addEventListener('click', loadAudit);
+
+  // =========================================================================
+  //  SETTINGS / INTEGRATIONS
+  // =========================================================================
+  function setMsg(id, ok, text) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('hidden');
+    el.style.background = ok ? '#f0fdf4' : '#fef2f2';
+    el.style.color = ok ? '#166534' : '#991b1b';
+    el.style.border = '1px solid ' + (ok ? '#bbf7d0' : '#fecaca');
+    el.textContent = text;
+  }
+  function badge(id, on) {
+    const b = document.getElementById(id);
+    if (!b) return;
+    b.textContent = on ? 'Configured' : 'Not configured';
+    b.className = 'role-badge' + (on ? '' : ' role-inactive');
+    b.style.cssText = on
+      ? 'background: linear-gradient(135deg,#d1fae5,#a7f3d0); color:#065f46; font-size:0.625rem;'
+      : 'font-size:0.625rem;';
+  }
+
+  let _settingsLoaded = false;
+  async function loadSettings() {
+    if (_settingsLoaded) return;
+    _settingsLoaded = true;
+    // LLM
+    try {
+      const r = await Auth.fetch('/api/admin/settings/llm');
+      const s = r.ok ? await r.json() : {};
+      if (s.provider) document.getElementById('llm-provider').value = s.provider;
+      if (s.model) document.getElementById('llm-model').value = s.model;
+      document.getElementById('llm-key-hint').textContent = s.api_key_set
+        ? `A key is saved (${s.api_key}). Leave blank to keep it, or type a new one to replace.`
+        : 'No key saved yet.';
+      badge('llm-configured-badge', !!s.api_key_set);
+    } catch {}
+    // Jira
+    try {
+      const r = await Auth.fetch('/api/admin/settings/jira');
+      const s = r.ok ? await r.json() : {};
+      if (s.base_url) document.getElementById('jira-base-url').value = s.base_url;
+      if (s.email) document.getElementById('jira-email').value = s.email;
+      if (s.project_key) document.getElementById('jira-project').value = s.project_key;
+      if (s.default_issue_type) document.getElementById('jira-issue-type').value = s.default_issue_type;
+      document.getElementById('jira-token-hint').textContent = s.api_token_set
+        ? `A token is saved (${s.api_token}). Leave blank to keep it.`
+        : 'No token saved yet.';
+      badge('jira-configured-badge', !!(s.api_token_set && s.base_url && s.project_key));
+    } catch {}
+  }
+
+  document.getElementById('form-llm-settings').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = { provider: fd.get('provider'), model: fd.get('model') };
+    if (fd.get('api_key')) body.api_key = fd.get('api_key');   // blank = keep existing
+    const r = await Auth.fetch('/api/admin/settings/llm', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const s = await r.json();
+    if (!r.ok) { setMsg('llm-settings-msg', false, s.detail || 'Save failed'); return; }
+    document.getElementById('llm-api-key').value = '';
+    document.getElementById('llm-key-hint').textContent = s.api_key_set
+      ? `A key is saved (${s.api_key}). Leave blank to keep it, or type a new one to replace.` : 'No key saved yet.';
+    badge('llm-configured-badge', !!s.api_key_set);
+    setMsg('llm-settings-msg', true, 'Saved.');
+  });
+
+  document.getElementById('btn-test-llm').addEventListener('click', async () => {
+    setMsg('llm-settings-msg', true, 'Testing…');
+    const r = await Auth.fetch('/api/admin/settings/llm/test', { method: 'POST' });
+    const s = await r.json();
+    if (s.ok) setMsg('llm-settings-msg', true, `✓ Connected — ${s.provider} · ${s.model} (replied "${s.sample}")`);
+    else setMsg('llm-settings-msg', false, `✗ ${s.error || 'Test failed'}`);
+  });
+
+  document.getElementById('form-jira-settings').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = {
+      base_url: fd.get('base_url'), email: fd.get('email'),
+      project_key: fd.get('project_key'), default_issue_type: fd.get('default_issue_type') || 'Task',
+    };
+    if (fd.get('api_token')) body.api_token = fd.get('api_token');
+    const r = await Auth.fetch('/api/admin/settings/jira', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const s = await r.json();
+    if (!r.ok) { setMsg('jira-settings-msg', false, s.detail || 'Save failed'); return; }
+    document.getElementById('jira-token').value = '';
+    document.getElementById('jira-token-hint').textContent = s.api_token_set
+      ? `A token is saved (${s.api_token}). Leave blank to keep it.` : 'No token saved yet.';
+    badge('jira-configured-badge', !!(s.api_token_set && s.base_url && s.project_key));
+    setMsg('jira-settings-msg', true, 'Saved.');
+  });
+
+  document.getElementById('btn-test-jira').addEventListener('click', async () => {
+    setMsg('jira-settings-msg', true, 'Testing…');
+    const r = await Auth.fetch('/api/admin/settings/jira/test', { method: 'POST' });
+    const s = await r.json();
+    if (s.ok) setMsg('jira-settings-msg', true, `✓ Connected as ${s.account}${s.project_key ? ' · project ' + s.project_key : ''}`);
+    else setMsg('jira-settings-msg', false, `✗ ${s.error || 'Test failed'}`);
+  });
 
   // =========================================================================
   //  Boot

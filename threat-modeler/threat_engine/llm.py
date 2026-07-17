@@ -51,12 +51,24 @@ def last_error() -> str | None:
 # ---------------------------------------------------------------------------
 # Provider / model resolution
 # ---------------------------------------------------------------------------
+def _setting(field: str, *, secret: bool = False):
+    """Read an admin-configured LLM setting from the app-settings store, if the
+    DB layer is available. Returns None when unset or when settings can't be
+    read (e.g. isolated unit tests) so callers fall back to env vars."""
+    try:
+        from db import settings as _S
+        return _S.get_secret("llm", field) if secret else _S.get_value("llm", field)
+    except Exception:
+        return None
+
+
 def provider() -> str:
-    """Resolved provider name: explicit LLM_PROVIDER, else auto-detected."""
-    p = (os.getenv("LLM_PROVIDER") or "").strip().lower()
+    """Resolved provider: admin settings → LLM_PROVIDER env → auto-detect from
+    whichever API key is configured."""
+    p = (_setting("provider") or os.getenv("LLM_PROVIDER") or "").strip().lower()
     if p:
         return p
-    if os.getenv("ANTHROPIC_API_KEY"):
+    if _setting("api_key", secret=True) or os.getenv("ANTHROPIC_API_KEY"):
         return "anthropic"
     if os.getenv("OPENAI_API_KEY"):
         return "openai"
@@ -64,6 +76,11 @@ def provider() -> str:
 
 
 def _api_key() -> str | None:
+    # An admin-configured key (paired with the settings provider) wins; else the
+    # per-provider environment variable.
+    sk = _setting("api_key", secret=True)
+    if sk:
+        return sk
     return os.getenv("OPENAI_API_KEY") if provider() == "openai" else os.getenv("ANTHROPIC_API_KEY")
 
 
@@ -73,6 +90,9 @@ def llm_available() -> bool:
 
 
 def _text_model() -> str:
+    m = _setting("model")
+    if m:
+        return m
     if provider() == "openai":
         return os.getenv("OPENAI_MODEL", "gpt-4o")
     return os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8")

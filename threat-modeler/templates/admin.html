@@ -9,6 +9,7 @@
 <div class="tabs" style="margin-bottom: 1.5rem;">
   <button data-tab="users" class="tab active">Users</button>
   <button data-tab="releases" class="tab">Releases &amp; Features</button>
+  <button data-tab="settings" class="tab">Settings</button>
   <button data-tab="audit" class="tab">Audit Log</button>
 </div>
 
@@ -98,6 +99,86 @@
         <tr><td colspan="6" class="text-center text-light" style="padding: 1.5rem;">Loading...</td></tr>
       </tbody>
     </table>
+  </div>
+</section>
+
+<!-- ========== Settings / Integrations ========== -->
+<section id="tab-settings" class="tab-panel hidden">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- LLM provider -->
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-1">
+        <h2 style="font-size: 1.125rem; font-weight: 700; margin: 0;">AI provider</h2>
+        <span id="llm-configured-badge" class="role-badge role-inactive" style="font-size: 0.625rem;">Not configured</span>
+      </div>
+      <p class="text-sm text-light mb-4">Enable AI-enhanced analysis, diagram extraction, and executive-report narration. The app works without this — rules-based analysis always runs.</p>
+      <form id="form-llm-settings" class="flex-col gap-3">
+        <div class="field">
+          <label class="field-label">Provider</label>
+          <select name="provider" id="llm-provider" class="select">
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI (or compatible)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Model</label>
+          <input type="text" name="model" id="llm-model" class="input" placeholder="claude-opus-4-8">
+        </div>
+        <div class="field">
+          <label class="field-label">API key</label>
+          <input type="password" name="api_key" id="llm-api-key" class="input" autocomplete="off" placeholder="sk-…">
+          <div id="llm-key-hint" class="field-help"></div>
+        </div>
+        <div id="llm-settings-msg" class="hidden" style="font-size: 0.8125rem; padding: 0.5rem 0.75rem; border-radius: 8px;"></div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm">Save</button>
+          <button type="button" id="btn-test-llm" class="btn btn-secondary btn-sm">Test connection</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Jira integration -->
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-1">
+        <h2 style="font-size: 1.125rem; font-weight: 700; margin: 0;">Jira integration</h2>
+        <span id="jira-configured-badge" class="role-badge role-inactive" style="font-size: 0.625rem;">Not configured</span>
+      </div>
+      <p class="text-sm text-light mb-4">Let users create a Jira issue from any threat. Uses a Jira Cloud API token (encrypted at rest, never shown again).</p>
+      <form id="form-jira-settings" class="flex-col gap-3">
+        <div class="field">
+          <label class="field-label">Jira site URL</label>
+          <input type="url" name="base_url" id="jira-base-url" class="input" placeholder="https://your-site.atlassian.net">
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="field">
+            <label class="field-label">Account email</label>
+            <input type="email" name="email" id="jira-email" class="input" placeholder="you@company.com">
+          </div>
+          <div class="field">
+            <label class="field-label">Project key</label>
+            <input type="text" name="project_key" id="jira-project" class="input" placeholder="SEC">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="field">
+            <label class="field-label">API token</label>
+            <input type="password" name="api_token" id="jira-token" class="input" autocomplete="off" placeholder="Atlassian API token">
+            <div id="jira-token-hint" class="field-help"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Default issue type</label>
+            <input type="text" name="default_issue_type" id="jira-issue-type" class="input" placeholder="Task">
+          </div>
+        </div>
+        <div id="jira-settings-msg" class="hidden" style="font-size: 0.8125rem; padding: 0.5rem 0.75rem; border-radius: 8px;"></div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm">Save</button>
+          <button type="button" id="btn-test-jira" class="btn btn-secondary btn-sm">Test connection</button>
+        </div>
+      </form>
+    </div>
+
   </div>
 </section>
 
