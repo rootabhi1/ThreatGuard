@@ -283,6 +283,8 @@ async def admin_update_user_role(
 ):
     if uid == actor["id"]:
         raise HTTPException(400, "Cannot change your own role")
+    if not get_user_by_id(uid):
+        raise HTTPException(404, "User not found")
     try:
         update_user_role(uid, req.role, by_user_id=actor["id"])
     except ValueError as e:
@@ -297,6 +299,8 @@ async def admin_deactivate_user(
 ):
     if uid == actor["id"]:
         raise HTTPException(400, "Cannot deactivate yourself")
+    if not get_user_by_id(uid):
+        raise HTTPException(404, "User not found")
     deactivate_user(uid, by_user_id=actor["id"])
     return {"ok": True, "deactivated": uid}
 
@@ -311,6 +315,8 @@ async def admin_set_user_feature_access(
     req: GrantFeatureAccessRequest,
     actor: dict = Depends(require_permission("user.feature_access.grant")),
 ):
+    if not get_user_by_id(uid):
+        raise HTTPException(404, "User not found")
     current = {f["id"] for f in domain.list_user_feature_access(uid)}
     target = set(req.feature_ids)
     for fid in target - current:
