@@ -44,9 +44,10 @@ from auth import (
     register_user, login as auth_login, get_user_by_id, list_users,
     update_user_role, deactivate_user,
     consume_refresh_token, create_access_token, revoke_all_refresh_tokens,
-    get_current_user, require_permission,
+    get_current_user, require_permission, require_role,
     ensure_can_access_threat_model, can_access_feature, get_role_permissions,
 )
+from db import settings as app_settings
 from threat_engine import analyze_system, METHODOLOGIES, render_dfd_svg, auto_layout_for_frontend
 from threat_engine.llm import llm_available as _llm_available, provider as _llm_provider
 from threat_engine.report import to_markdown, to_pdf
@@ -920,6 +921,7 @@ async def health():
         "version": app.version,
         "llm_configured": _llm_available(),
         "llm_provider": _llm_provider(),
+        "jira_configured": __import__("jira_client").is_configured(),
         "methodologies": list(METHODOLOGIES.keys()),
     }
 
@@ -1050,6 +1052,107 @@ async def update_single_status(req: SingleStatusRequest, user: dict = Depends(ge
                                            updated_by=user["id"], owner=req.owner, due_date=req.due_date)
     except Exception as e:
         raise HTTPException(400, str(e))
+
+
+# ===========================================================================
+# ADMIN — Integration settings (LLM provider, Jira). Encrypted at rest,
+# admin-only. Secrets are never returned to the client in the clear.
+# ===========================================================================
+class LlmSettingsUpdate(BaseModel):
+    provider: str | None = None
+    model: str | None = None
+    api_key: str | None = None
+
+class JiraSettingsUpdate(BaseModel):
+    base_url: str | None = None
+    email: str | None = None
+    api_token: str | None = None
+    project_key: str | None = None
+    default_issue_type: str | None = None
+
+
+@app.get("/api/admin/settings/{namespace}")
+async def get_admin_settings(namespace: str, actor: dict = Depends(require_role("admin"))):
+    if namespace not in ("llm", "jira"):
+        raise HTTPException(404, "Unknown settings namespace")
+    return app_settings.get_settings_masked(namespace)
+
+
+@app.put("/api/admin/settings/llm")
+async def set_llm_settings(req: LlmSettingsUpdate, actor: dict = Depends(require_role("admin"))):
+    updates = {k: v for k, v in req.model_dump().items() if v is not None}
+    if updates.get("provider") and updates["provider"] not in ("anthropic", "openai"):
+        raise HTTPException(400, "provider must be 'anthropic' or 'openai'")
+    result = app_settings.set_settings("llm", updates, updated_by=actor["id"])
+    audit(actor["id"], actor["email"], "settings.llm.update", "grant", "settings", None,
+          ip_address=actor.get("_ip"), detail=f"fields={sorted(updates.keys())}")
+    return result
+
+
+@app.put("/api/admin/settings/jira")
+async def set_jira_settings(req: JiraSettingsUpdate, actor: dict = Depends(require_role("admin"))):
+    updates = {k: v for k, v in req.model_dump().items() if v is not None}
+    if updates.get("base_url"):
+        import jira_client
+        err = jira_client.validate_base_url(updates["base_url"].rstrip("/"))
+        if err:
+            raise HTTPException(400, err)
+        updates["base_url"] = updates["base_url"].rstrip("/")
+    result = app_settings.set_settings("jira", updates, updated_by=actor["id"])
+    audit(actor["id"], actor["email"], "settings.jira.update", "grant", "settings", None,
+          ip_address=actor.get("_ip"), detail=f"fields={sorted(updates.keys())}")
+    return result
+
+
+@app.post("/api/admin/settings/llm/test")
+async def test_llm_settings(actor: dict = Depends(require_role("admin"))):
+    """Live 1-token probe so the admin sees the real result — success, or the
+    actual provider error — instead of guessing."""
+    from threat_engine.llm import complete_text, llm_available, provider as _p, text_model as _m, last_error
+    if not llm_available():
+        return {"ok": False, "error": "No API key configured."}
+    out = complete_text("Reply with the single word: OK", max_tokens=5)
+    if out:
+        return {"ok": True, "provider": _p(), "model": _m(), "sample": out.strip()[:40]}
+    return {"ok": False, "error": last_error() or "No response from the provider."}
+
+
+@app.post("/api/admin/settings/jira/test")
+async def test_jira_settings(actor: dict = Depends(require_role("admin"))):
+    import jira_client
+    return jira_client.test_connection()
+
+
+# ===========================================================================
+# Create a Jira ticket from a threat
+# ===========================================================================
+class CreateTicketRequest(BaseModel):
+    threat_model_id: int
+    threat_id: str
+
+
+@app.post("/api/create-ticket")
+async def create_ticket(req: CreateTicketRequest, user: dict = Depends(get_current_user)):
+    """Create a Jira issue from a single threat. Requires write access to the
+    threat model and a configured Jira integration."""
+    import jira_client
+    tm = domain.get_threat_model(req.threat_model_id)
+    if not tm:
+        raise HTTPException(404, "Threat model not found")
+    ensure_can_access_threat_model(user, tm, "update")
+    if not jira_client.is_configured():
+        raise HTTPException(400, "Jira is not configured. Ask an admin to set it up in Admin → Settings.")
+    analysis = tm.get("analysis") or {}
+    threat = next((t for t in analysis.get("threats", []) if t.get("id") == req.threat_id), None)
+    if not threat:
+        raise HTTPException(404, "Threat not found in this model")
+    system_name = (analysis.get("system", {}) or {}).get("name", tm.get("name", ""))
+    result = jira_client.create_issue_from_threat(threat, system_name=system_name)
+    if not result.get("ok"):
+        raise HTTPException(502, result.get("error", "Jira ticket creation failed"))
+    audit(user["id"], user["email"], "jira.ticket.create", "grant", "threat_model", req.threat_model_id,
+          ip_address=user.get("_ip"), detail=f"threat={req.threat_id} issue={result.get('key')}")
+    return result
 
 
 # ===========================================================================

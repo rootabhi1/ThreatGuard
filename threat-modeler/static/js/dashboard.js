@@ -10,6 +10,7 @@
   let allFeatures = [];
   let allTemplates = [];
   let selectedTemplate = null;   // when set, create uses this structured system directly
+  let jiraConfigured = false;    // gates the per-threat "Create Jira ticket" button
 
   // =========================================================================
   //  Load
@@ -789,9 +790,10 @@
                 </div>
               ` : ''}
 
-              <div class="mt-3" style="padding-top: 0.75rem; border-top: 1px solid var(--c-border);">
+              <div class="mt-3 flex items-center gap-2" style="padding-top: 0.75rem; border-top: 1px solid var(--c-border); flex-wrap: wrap;">
                 <button class="show-history btn btn-sm btn-ghost" data-threat-id="${esc(t.id)}">View status history →</button>
-                <div class="status-history mt-2 hidden"></div>
+                ${jiraConfigured ? `<button class="create-jira btn btn-sm btn-secondary" data-threat-id="${esc(t.id)}">Create Jira ticket</button>` : ''}
+                <div class="status-history mt-2 hidden" style="width:100%;"></div>
               </div>
             </div>
           </div>
@@ -875,6 +877,30 @@
         }
         container.classList.remove('hidden');
         btn.textContent = 'Hide status history ↑';
+      });
+    });
+
+    list.querySelectorAll('.create-jira').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const threatId = btn.dataset.threatId;
+        const original = btn.textContent;
+        btn.disabled = true; btn.textContent = 'Creating…';
+        try {
+          const r = await Auth.fetch('/api/create-ticket', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ threat_model_id: currentTM.id, threat_id: threatId }),
+          });
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.detail || 'Ticket creation failed');
+          UI.toast(`Jira ticket ${d.key} created`, 'success');
+          btn.textContent = `✓ ${d.key}`;
+          btn.classList.remove('btn-secondary'); btn.classList.add('btn-ghost');
+          if (d.url) { btn.onclick = () => window.open(d.url, '_blank'); btn.disabled = false; btn.title = 'Open in Jira'; }
+        } catch (err) {
+          UI.toast(err.message || 'Could not create Jira ticket', 'error', 8000);
+          btn.disabled = false; btn.textContent = original;
+        }
       });
     });
   }
@@ -1025,6 +1051,10 @@
       });
     }
   }
+
+  // Learn whether Jira is configured so threats can offer a "Create Jira ticket"
+  // action. Non-blocking — the dashboard renders regardless.
+  fetch('/api/health').then(r => r.json()).then(h => { jiraConfigured = !!h.jira_configured; }).catch(() => {});
 
   loadAll();
 })();
