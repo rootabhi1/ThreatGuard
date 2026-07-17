@@ -143,9 +143,15 @@
       </div>
 
       <div class="field hidden" id="structured-field">
-        <label class="field-label">Structured system <span class="field-label-optional">exact — no guessing</span></label>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <label class="field-label" style="margin:0;">Structured system <span class="field-label-optional">exact — no guessing</span></label>
+          <div style="display:flex;gap:6px;">
+            <button type="button" id="btn-structured-example" class="btn btn-ghost btn-sm">Insert example</button>
+            <button type="button" id="btn-structured-template" class="btn btn-ghost btn-sm">⬇ Download template (.txt)</button>
+          </div>
+        </div>
         <textarea name="structured_text" rows="9" class="textarea" style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.8125rem;"
-                  placeholder="# Components — Name : type&#10;User : user&#10;Checkout Service : api&#10;Cassandra : database&#10;Redis : cache&#10;&#10;# Flows — From -> To : protocol, auth, encrypted?&#10;User -> Checkout Service : HTTPS, session, encrypted&#10;Checkout Service -> Cassandra : TCP, credentials, plaintext"></textarea>
+                  placeholder="Name : type          →  one component per line&#10;A -> B : protocol, auth, encrypted?   →  one flow per line&#10;&#10;Use “Insert example” to start from a working sample, or “Download template” for an annotated file to edit."></textarea>
         <div class="field-help">
           One component per line (<code>Name : type</code>) and one flow per line (<code>A -&gt; B : protocol, auth, encrypted?</code>). Exact and fully offline — best for custom or unusual stacks.
           <span id="valid-types-legend" class="text-light"></span>

@@ -307,6 +307,64 @@
   document.querySelectorAll('input[name="input_mode"]').forEach(r =>
     r.addEventListener('change', () => setInputMode(r.value)));
 
+  // ---- Structured mode: annotated template (download) + one-click example ----
+  // '#' and blank lines are ignored by the parser, so this annotated text is both
+  // human-readable documentation and directly analyzable if pasted back as-is.
+  const STRUCTURED_TEMPLATE = [
+    '# ThreatGuard — structured system template',
+    '#',
+    '# Components — one per line:   Name : type',
+    '# Flows      — one per line:   From -> To : protocol, auth, encrypted?',
+    '#   protocol : HTTPS, HTTP, TCP, gRPC, WSS, AMQP, ...',
+    '#   auth     : session, bearer, mtls, api_key, credentials, none',
+    '#   encrypted: encrypted | plaintext',
+    '# Lines starting with "#" and blank lines are ignored.',
+    '#',
+    '# Valid types: user, external_entity, webapp, mobile_app, api, auth_service,',
+    '#              admin_panel, database, datastore, cache, queue, filesystem,',
+    '#              config, payment_service',
+    '',
+    '# --- Components ---',
+    'User               : user',
+    'Checkout Service    : api',
+    'Inventory Service   : api',
+    'Pricing Service     : api',
+    'Orders DB           : database',
+    'Product Cache       : cache',
+    'Event Bus           : queue',
+    '',
+    '# --- Flows ---',
+    'User -> Checkout Service        : HTTPS, session, encrypted',
+    'Checkout Service -> Orders DB    : TCP, credentials, encrypted',
+    'Checkout Service -> Event Bus    : AMQP, mtls, encrypted',
+    'Inventory Service -> Product Cache : TCP, none, plaintext',
+    'Pricing Service -> Orders DB     : TCP, credentials, encrypted',
+  ].join('\n');
+
+  const btnStructExample = document.getElementById('btn-structured-example');
+  if (btnStructExample) btnStructExample.addEventListener('click', () => {
+    const ta = document.querySelector('#form-new-tm textarea[name="structured_text"]');
+    if (!ta) return;
+    if (ta.value.trim() && !confirm('Replace the current structured input with the example?')) return;
+    ta.value = STRUCTURED_TEMPLATE;
+    ta.focus();
+    const err = document.getElementById('structured-error');
+    if (err) { err.classList.add('hidden'); err.textContent = ''; }
+  });
+
+  const btnStructTemplate = document.getElementById('btn-structured-template');
+  if (btnStructTemplate) btnStructTemplate.addEventListener('click', () => {
+    const blob = new Blob([STRUCTURED_TEMPLATE + '\n'], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'threatguard-system-template.txt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
   // ---- Compare (release diff) ----
   function openCompareModal() {
     const analyzed = allTMs.filter(t => t.analysis || t.methodologies);  // any saved model
