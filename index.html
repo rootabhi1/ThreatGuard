@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>ThreatGuard — AI-powered security for engineering teams</title>
-<meta name="description" content="STRIDE, PASTA and LINDDUN threat-modeling methodologies, with DREAD risk scoring and OWASP Top 10 reference mapping, powered by any LLM (Anthropic or OpenAI). Open source, self-hostable."/>
+<title>ThreatGuard — Automated threat modeling for engineering teams</title>
+<meta name="description" content="Turn a system description, structured spec, or architecture diagram into a STRIDE / PASTA / LINDDUN threat model with DREAD scoring, CVSS, CWE, MITRE ATT&CK and OWASP mapping. Microsoft-TMT-style element security attributes, ~40 component types, an interactive DFD editor, and exportable reports. Rules-first and offline; optionally enriched by any LLM. Open source, self-hostable."/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -22,7 +22,7 @@ html{scroll-behavior:smooth}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--txt);line-height:1.6;overflow-x:hidden}
 a{color:var(--green);text-decoration:none}
 
-/* ── NAV ── */
+/* NAV */
 nav{position:sticky;top:0;z-index:100;background:rgba(8,9,14,.94);backdrop-filter:blur(14px);
     border-bottom:1px solid var(--border);padding:0 6%;display:flex;align-items:center;
     justify-content:space-between;height:58px}
@@ -36,8 +36,8 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,9,14,.94);backdrop-filte
           font-size:13px;font-weight:600;transition:opacity .2s;display:flex;align-items:center;gap:6px}
 .nav-cta:hover{opacity:.85}
 
-/* ── HERO ── */
-.hero{text-align:center;padding:100px 6% 80px;position:relative;overflow:hidden}
+/* HERO */
+.hero{text-align:center;padding:100px 6% 70px;position:relative;overflow:hidden}
 .hero::before{content:'';position:absolute;top:-30%;left:50%;transform:translateX(-50%);
               width:700px;height:700px;border-radius:50%;
               background:radial-gradient(circle,rgba(34,197,94,.07) 0%,transparent 70%);pointer-events:none}
@@ -46,7 +46,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,9,14,.94);backdrop-filte
             font-size:12px;font-weight:600;color:var(--green);margin-bottom:24px}
 h1{font-size:clamp(32px,5vw,58px);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:20px}
 h1 span{background:linear-gradient(135deg,var(--green),#4ade80);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero-sub{font-size:clamp(14px,2vw,18px);color:var(--mu);max-width:600px;margin:0 auto 36px}
+.hero-sub{font-size:clamp(14px,2vw,18px);color:var(--mu);max-width:640px;margin:0 auto 36px}
 .hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 .btn-primary{background:var(--green);color:#000;padding:12px 28px;border-radius:10px;
               font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px;transition:opacity .2s}
@@ -56,69 +56,71 @@ h1 span{background:linear-gradient(135deg,var(--green),#4ade80);-webkit-backgrou
               display:inline-flex;align-items:center;gap:8px;transition:all .2s}
 .btn-outline:hover{border-color:var(--green);color:var(--green)}
 
-/* ── METHODOLOGY STRIP ── */
-.method-strip{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:32px 6%;
+/* STRIP */
+.method-strip{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:28px 6%;
               border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.m-pill{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:700;letter-spacing:.05em}
+.m-pill{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:700;letter-spacing:.04em}
 .m-stride{background:var(--blue-d);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
 .m-dread{background:var(--purple-d);color:var(--purple);border:1px solid rgba(168,85,247,.3)}
 .m-linddun{background:var(--green-d);color:var(--green);border:1px solid rgba(34,197,94,.3)}
 .m-pasta{background:var(--amber-d);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
 .m-owasp{background:#1c0010;color:#f472b6;border:1px solid rgba(244,114,182,.3)}
+.m-ref{background:var(--faint);color:var(--mu);border:1px solid var(--border)}
 
-/* ── QUICK START ── */
+/* SECTION */
 .section{padding:72px 6%}
 .section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--green);margin-bottom:12px}
 h2{font-size:clamp(22px,3vw,32px);font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
-.section-sub{color:var(--mu);font-size:14px;margin-bottom:36px}
+.section-sub{color:var(--mu);font-size:14px;margin-bottom:36px;max-width:720px}
 
-.setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-@media(max-width:700px){.setup-grid{grid-template-columns:1fr}}
+/* HOW IT WORKS */
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:820px){.flow{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.flow{grid-template-columns:1fr}}
+.flow-step{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;position:relative}
+.flow-n{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green);margin-bottom:10px}
+.flow-t{font-size:14px;font-weight:700;margin-bottom:6px}
+.flow-d{font-size:12px;color:var(--mu);line-height:1.6}
 
-.setup-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
-.setup-card-head{padding:16px 20px;border-bottom:1px solid var(--border);
-                  display:flex;align-items:center;gap:10px}
-.setup-step-num{width:26px;height:26px;border-radius:6px;background:var(--green-d);
-                color:var(--green);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.setup-card-title{font-size:13px;font-weight:600}
-.setup-card-desc{font-size:11px;color:var(--mu);margin-top:2px}
-pre.code-block{background:#000;border:none;padding:16px 20px;
-               font-family:var(--mono);font-size:12px;color:#a5b4fc;
-               overflow-x:auto;line-height:1.7;position:relative}
-.copy-btn{position:absolute;top:10px;right:10px;background:var(--faint);border:1px solid var(--border);
-          color:var(--mu);font-size:10px;padding:3px 8px;border-radius:4px;cursor:pointer;
-          font-family:var(--mono);}
-.copy-btn:hover{color:var(--txt)}
-.c-g{color:#4ade80}.c-c{color:#6b7280;font-style:italic}.c-v{color:#fbbf24}.c-u{color:#67e8f9}
-
-/* ── FEATURES GRID ── */
-.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+/* FEATURES */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
 .feat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
-           padding:20px;transition:border-color .2s,transform .2s}
+           padding:22px;transition:border-color .2s,transform .2s}
 .feat-card:hover{border-color:rgba(34,197,94,.4);transform:translateY(-2px)}
+.feat-card.hl{border-color:rgba(34,197,94,.35);background:linear-gradient(180deg,rgba(34,197,94,.05),transparent)}
 .feat-icon{font-size:24px;margin-bottom:10px}
 .feat-title{font-size:14px;font-weight:700;margin-bottom:6px}
 .feat-desc{font-size:12px;color:var(--mu);line-height:1.6}
 .feat-new{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;
           background:var(--green-d);color:var(--green);border:1px solid rgba(34,197,94,.3);
-          font-weight:700;margin-top:8px}
+          font-weight:700;margin-top:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{font-family:var(--mono);font-size:10px;color:var(--mu);background:var(--faint);
+      border:1px solid var(--border);border-radius:5px;padding:2px 7px}
 
-/* ── BRANCH CARD ── */
-.branch-card{background:var(--card);border:1px solid var(--border);border-radius:16px;
-             padding:32px;display:grid;grid-template-columns:1fr 1fr;gap:32px}
-@media(max-width:680px){.branch-card{grid-template-columns:1fr}}
-.branch-badge{display:inline-flex;align-items:center;gap:6px;background:var(--faint);
-              border:1px solid var(--border);border-radius:99px;padding:4px 12px;
-              font-family:var(--mono);font-size:11px;color:var(--mu);margin-bottom:12px}
-.branch-badge .dot{width:6px;height:6px;border-radius:50%}
-.branch-title{font-size:16px;font-weight:700;margin-bottom:6px}
-.branch-desc{font-size:12px;color:var(--mu);line-height:1.6;margin-bottom:16px}
-.stat-row{display:flex;gap:16px;flex-wrap:wrap}
-.stat-item{text-align:center}
-.stat-n{font-size:22px;font-weight:800;font-family:var(--mono)}
-.stat-l{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.05em}
+/* STAT ROW */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center}
+.stat-n{font-size:26px;font-weight:800;font-family:var(--mono);color:var(--green)}
+.stat-l{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
 
-/* ── API ENDPOINTS ── */
+/* QUICK START */
+.setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:700px){.setup-grid{grid-template-columns:1fr}}
+.setup-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.setup-card-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.setup-step-num{width:26px;height:26px;border-radius:6px;background:var(--green-d);
+                color:var(--green);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.setup-card-title{font-size:13px;font-weight:600}
+.setup-card-desc{font-size:11px;color:var(--mu);margin-top:2px}
+pre.code-block{background:#000;border:none;padding:16px 20px;font-family:var(--mono);font-size:12px;
+               color:#a5b4fc;overflow-x:auto;line-height:1.7;position:relative}
+.copy-btn{position:absolute;top:10px;right:10px;background:var(--faint);border:1px solid var(--border);
+          color:var(--mu);font-size:10px;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:var(--mono)}
+.copy-btn:hover{color:var(--txt)}
+.c-g{color:#4ade80}.c-c{color:#6b7280;font-style:italic}.c-v{color:#fbbf24}.c-u{color:#67e8f9}
+
+/* API */
 .ep-list{display:flex;flex-direction:column;gap:1px;background:var(--border);border-radius:10px;overflow:hidden}
 .ep{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--card);font-size:12px}
 .ep-method{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;width:50px;text-align:center;flex-shrink:0}
@@ -127,10 +129,8 @@ pre.code-block{background:#000;border:none;padding:16px 20px;
 .m-del{background:#1c0000;color:var(--red)}
 .ep-path{font-family:var(--mono);font-size:11px;color:#93c5fd;min-width:260px}
 .ep-desc{color:var(--mu);flex:1}
-.ep-new-badge{font-size:9px;padding:1px 6px;background:var(--green-d);color:var(--green);
-              border:1px solid rgba(34,197,94,.3);border-radius:3px;font-weight:700;flex-shrink:0}
 
-/* ── TROUBLESHOOT ── */
+/* TROUBLESHOOT */
 .trouble-list{display:flex;flex-direction:column;gap:10px}
 .trouble-item{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
 .trouble-head{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none}
@@ -144,12 +144,12 @@ pre.code-block{background:#000;border:none;padding:16px 20px;
 .trouble-inner{padding:0 16px 14px;border-top:1px solid var(--border)}
 .trouble-inner p{font-size:12px;color:var(--mu);margin:10px 0 6px;line-height:1.6}
 
-/* ── FOOTER ── */
-footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
-       align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+/* FOOTER */
+footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .footer-left{font-size:13px;color:var(--mu)}
 .footer-links{display:flex;gap:20px;font-size:12px}
 .footer-links a{color:var(--mu)}.footer-links a:hover{color:var(--txt)}
+.note{font-size:12px;color:var(--mu);margin-top:14px}
 
 @media(max-width:600px){
   nav .nav-links{display:none}
@@ -162,75 +162,124 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
 
 <!-- NAV -->
 <nav>
-  <div class="logo">
-    <div class="logo-dot"></div>
-    ThreatGuard
-  </div>
+  <div class="logo"><div class="logo-dot"></div> ThreatGuard</div>
   <div class="nav-links">
-    <a href="#quickstart">Quick start</a>
+    <a href="#how">How it works</a>
     <a href="#features">Features</a>
+    <a href="#quickstart">Quick start</a>
     <a href="#api">API</a>
-    <a href="#troubleshoot">Troubleshoot</a>
   </div>
-  <a class="nav-cta" href="https://github.com/rootabhi1/ThreatGuard" target="_blank">
-    ⭐ GitHub
-  </a>
+  <a class="nav-cta" href="https://github.com/rootabhi1/ThreatGuard" target="_blank">⭐ GitHub</a>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge">🛡 Open source · Self-hostable · Anthropic or OpenAI</div>
-  <h1>AI-powered<br/><span>threat modeling</span><br/>for engineering teams</h1>
-  <p class="hero-sub">STRIDE, PASTA and LINDDUN methodologies — with DREAD risk scoring and OWASP Top 10 references applied automatically — in one tool. Paste a description, upload a diagram, or build a DFD — get a prioritized threat list in seconds.</p>
+  <div class="hero-badge">🛡 Open source · Self-hostable · Rules-first, any LLM optional</div>
+  <h1>Automated<br/><span>threat modeling</span><br/>for engineering teams</h1>
+  <p class="hero-sub">Describe a system in plain English, a structured spec, or an uploaded architecture diagram — ThreatGuard turns it into a prioritized, methodology-backed threat model in seconds: STRIDE / PASTA / LINDDUN with DREAD scoring and CVSS, CWE, MITRE ATT&CK &amp; OWASP mapping. Works fully offline; optionally enriched by any LLM.</p>
   <div class="hero-btns">
-    <a class="btn-primary" href="#quickstart">🚀 Run locally</a>
-    <a class="btn-outline" href="sample-report.html" target="_blank">📄 View sample report</a>
+    <a class="btn-outline" href="sample-report.html" target="_blank">📄 View a sample report</a>
+    <a class="btn-primary" href="#quickstart">🚀 Run it locally</a>
     <a class="btn-outline" href="https://github.com/rootabhi1/ThreatGuard" target="_blank">⭐ View on GitHub</a>
   </div>
 </section>
 
-<!-- METHODOLOGIES / SCORING / REFERENCE STRIP -->
+<!-- STRIP -->
 <div class="method-strip">
   <span class="m-pill m-stride">STRIDE</span>
   <span class="m-pill m-pasta">PASTA</span>
   <span class="m-pill m-linddun">LINDDUN</span>
   <span class="m-pill m-dread">DREAD · scoring</span>
-  <span class="m-pill m-owasp">OWASP Top 10 · reference</span>
+  <span class="m-pill m-owasp">OWASP Top 10</span>
+  <span class="m-pill m-ref">CVSS 3.1 / 4.0</span>
+  <span class="m-pill m-ref">CWE</span>
+  <span class="m-pill m-ref">MITRE ATT&amp;CK</span>
+  <span class="m-pill m-ref">SOC 2 · ISO 27001 · PCI-DSS</span>
 </div>
 
-<!-- BRANCHES -->
-<section class="section">
-  <div class="section-label">Branches</div>
-  <h2>Where to find everything</h2>
-  <p class="section-sub">Everything lives on <strong>main</strong> — a single source of truth.</p>
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <div class="section-label">How it works</div>
+  <h2>From a description to a reviewed threat model</h2>
+  <p class="section-sub">A deterministic rule engine does the modeling; you refine it; AI is optional enrichment on top. Every output is a draft for a human to review — not a security sign-off.</p>
+  <div class="flow">
+    <div class="flow-step"><div class="flow-n">01 · DESCRIBE</div><div class="flow-t">Text, structured, or diagram</div><div class="flow-d">Type a plain-English description, enter a precise structured spec, or upload a PNG/JPEG/WebP architecture diagram. Components, flows, and trust boundaries are extracted automatically.</div></div>
+    <div class="flow-step"><div class="flow-n">02 · ANALYZE</div><div class="flow-t">Rules + optional AI</div><div class="flow-d">STRIDE / PASTA / LINDDUN run deterministically with DREAD scoring and CVSS / CWE / ATT&amp;CK / OWASP / compliance mapping. A configured LLM can add context-specific threats on top.</div></div>
+    <div class="flow-step"><div class="flow-n">03 · REFINE</div><div class="flow-t">DFD editor + security attributes</div><div class="flow-d">Drag the data-flow diagram, edit components and flows, and answer Microsoft-TMT-style security properties. Re-run to fold your answers into a sharper threat list.</div></div>
+    <div class="flow-step"><div class="flow-n">04 · TRACK &amp; SHARE</div><div class="flow-t">Reports, status, diffs</div><div class="flow-d">Track per-threat remediation status, diff releases, export HTML / PDF / Markdown / CSV / executive reports, share read-only links, and file Jira tickets.</div></div>
+  </div>
+</section>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-    <div class="branch-card" style="grid-template-columns:1fr">
-      <div>
-        <div class="branch-badge"><span class="dot" style="background:#64748b"></span> main</div>
-        <div class="branch-title">Original application</div>
-        <div class="branch-desc">The clean, unmodified original codebase. STRIDE, PASTA and LINDDUN methodologies with DREAD risk scoring. Interactive DFD builder, project management, auth, reports.</div>
-        <div class="stat-row">
-          <div class="stat-item"><div class="stat-n" style="color:#64748b">4</div><div class="stat-l">Analysis methods</div></div>
-          <div class="stat-item"><div class="stat-n" style="color:#64748b">~800</div><div class="stat-l">app.py lines</div></div>
-        </div>
-        <a class="btn-outline" style="margin-top:16px;display:inline-flex" href="https://github.com/rootabhi1/ThreatGuard/tree/main" target="_blank">View main →</a>
-      </div>
+<!-- FEATURES -->
+<section class="section" id="features" style="background:var(--surf);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="section-label">Capabilities</div>
+  <h2>What ThreatGuard offers</h2>
+  <p class="section-sub">A rules-first engine with the depth of a dedicated threat-modeling tool — plus modern cloud coverage and optional AI.</p>
+
+  <div class="feat-grid">
+    <div class="feat-card hl">
+      <div class="feat-icon">🛡</div>
+      <div class="feat-title">Element security attributes</div>
+      <div class="feat-desc">Answer Microsoft Threat Modeling Tool–style properties on each component and flow. A risky answer generates a specific, DREAD-scored threat on re-analysis.</div>
+      <div class="chips"><span class="chip">encrypted at rest</span><span class="chip">stores credentials</span><span class="chip">enforces authz</span><span class="chip">MFA</span><span class="chip">PII/PHI/PCI</span><span class="chip">TLS cert validation</span><span class="chip">replay protection</span></div>
+      <span class="feat-new">NEW</span>
     </div>
-    <div class="branch-card" style="grid-template-columns:1fr;border-color:rgba(34,197,94,.3)">
-      <div>
-        <div class="branch-badge"><span class="dot" style="background:var(--green)"></span> main · enhanced</div>
-        <div class="branch-title">All enhancements ✦</div>
-        <div class="branch-desc">OWASP Top 10 references, MITRE ATT&CK mapping, CVSS 4.0, compliance controls, custom rules, dark mode, keyboard shortcuts, share links, AI code fixes, PostgreSQL, health checks, CI/CD, and more.</div>
-        <div class="stat-row">
-          <div class="stat-item"><div class="stat-n" style="color:var(--green)">5</div><div class="stat-l">Analysis methods</div></div>
-          <div class="stat-item"><div class="stat-n" style="color:var(--green)">+15</div><div class="stat-l">New features</div></div>
-          <div class="stat-item"><div class="stat-n" style="color:var(--green)">+7</div><div class="stat-l">New endpoints</div></div>
-          <div class="stat-item"><div class="stat-n" style="color:var(--green)">78</div><div class="stat-l">Total files</div></div>
-        </div>
-        <a class="btn-primary" style="margin-top:16px;display:inline-flex" href="https://github.com/rootabhi1/ThreatGuard/tree/main" target="_blank">View on main →</a>
-      </div>
+    <div class="feat-card hl">
+      <div class="feat-icon">🧩</div>
+      <div class="feat-title">~40 component types</div>
+      <div class="feat-desc">The classic set plus cloud-native and modern services — auto-detected from a plain-English description and first-class in the editor and diagram extraction.</div>
+      <div class="chips"><span class="chip">serverless</span><span class="chip">kubernetes</span><span class="chip">object_storage</span><span class="chip">llm</span><span class="chip">identity_provider</span><span class="chip">waf</span><span class="chip">data_warehouse</span><span class="chip">search</span></div>
+      <span class="feat-new">NEW</span>
     </div>
+    <div class="feat-card hl">
+      <div class="feat-icon">🕸</div>
+      <div class="feat-title">Interactive DFD editor</div>
+      <div class="feat-desc">Drag-and-drop data-flow diagram with automatic trust-boundary inference, cross-boundary flow flagging, encryption indicators, add/edit/delete, and touch support. The same diagram renders in every report.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">✍️</div>
+      <div class="feat-title">Three ways to describe a system</div>
+      <div class="feat-desc">Plain-English text, a precise structured spec (no guessing), or an uploaded architecture diagram turned into a model by a vision LLM.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🎯</div>
+      <div class="feat-title">Rich, explainable scoring</div>
+      <div class="feat-desc">Every threat maps to a methodology, a DREAD score, CVSS 3.1 &amp; 4.0, a CWE, a MITRE ATT&amp;CK technique/tactic, an OWASP Top 10 reference, and SOC 2 / ISO 27001 / PCI-DSS controls — with concrete mitigations.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🤖</div>
+      <div class="feat-title">Optional AI — any provider</div>
+      <div class="feat-desc">Anthropic or any OpenAI-compatible endpoint (OpenAI, Azure, Ollama, vLLM…). Adds context-specific threats, diagram extraction, executive narratives, and before/after code fixes. Configure via env or the admin UI (keys encrypted at rest). No key ⇒ full rules-only mode.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">👥</div>
+      <div class="feat-title">Team workflow</div>
+      <div class="feat-desc">Editable Release → Feature → Threat Model hierarchy, role-based access (user / management / admin), per-threat status tracking, release-to-release diffs, read-only share links, custom rules, an optional Jira integration, and an audit log.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📄</div>
+      <div class="feat-title">Exportable reports</div>
+      <div class="feat-desc">HTML, PDF, Markdown, a CSV risk register, and an executive summary — each with the full threat list, scores, mappings, and a data-flow diagram.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔒</div>
+      <div class="feat-title">Offline &amp; private by default</div>
+      <div class="feat-desc">With no LLM key, nothing leaves your machine — the full methodology engine still runs. Self-hosted, single-binary-simple, no telemetry.</div>
+    </div>
+  </div>
+</section>
+
+<!-- AT A GLANCE -->
+<section class="section">
+  <div class="section-label">At a glance</div>
+  <h2>Depth without the setup</h2>
+  <p class="section-sub">Everything lives on <strong>main</strong> — one source of truth, MIT-licensed.</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-n">3</div><div class="stat-l">Methodologies</div></div>
+    <div class="stat"><div class="stat-n">~40</div><div class="stat-l">Component types</div></div>
+    <div class="stat"><div class="stat-n">25</div><div class="stat-l">Security attributes</div></div>
+    <div class="stat"><div class="stat-n">5</div><div class="stat-l">Report formats</div></div>
+    <div class="stat"><div class="stat-n">0</div><div class="stat-l">API keys required</div></div>
   </div>
 </section>
 
@@ -238,277 +287,108 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
 <section class="section" id="quickstart" style="background:var(--surf);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
   <div class="section-label">Quick start</div>
   <h2>Run locally in 4 steps</h2>
-  <p class="section-sub">Runs from the <strong>main</strong> branch. Python 3.11+ required.</p>
+  <p class="section-sub">Python 3.11+. Or skip to <code>docker compose up --build</code>.</p>
 
   <div class="setup-grid">
     <div class="setup-card">
-      <div class="setup-card-head">
-        <div class="setup-step-num">1</div>
-        <div>
-          <div class="setup-card-title">Clone the repo</div>
-          <div class="setup-card-desc">Tip: <code>make dev</code> from the repo root does steps 2–4</div>
-        </div>
-      </div>
-      <pre class="code-block"><button class="copy-btn" onclick="cp(this)">copy</button><span class="c-g">git clone</span> \
-  https://github.com/rootabhi1/\
-  ThreatGuard
+      <div class="setup-card-head"><div class="setup-step-num">1</div><div><div class="setup-card-title">Clone the repo</div><div class="setup-card-desc">The app lives in <code>threat-modeler/</code></div></div></div>
+      <pre class="code-block"><button class="copy-btn" onclick="cp(this)">copy</button><span class="c-g">git clone</span> https://github.com/rootabhi1/ThreatGuard
 <span class="c-g">cd</span> ThreatGuard/threat-modeler</pre>
     </div>
-
     <div class="setup-card">
-      <div class="setup-card-head">
-        <div class="setup-step-num">2</div>
-        <div>
-          <div class="setup-card-title">Create virtual env + install</div>
-          <div class="setup-card-desc">Isolate dependencies</div>
-        </div>
-      </div>
-      <pre class="code-block"><button class="copy-btn" onclick="cp(this)">copy</button><span class="c-c"># Mac / Linux</span>
-<span class="c-g">python3 -m venv</span> .venv
-<span class="c-g">source</span> .venv/bin/activate
-<span class="c-g">pip install</span> -r requirements.txt
-
-<span class="c-c"># Windows</span>
-<span class="c-g">python -m venv</span> .venv
-.venv\Scripts\activate
+      <div class="setup-card-head"><div class="setup-step-num">2</div><div><div class="setup-card-title">Virtual env + install</div><div class="setup-card-desc">Isolate dependencies</div></div></div>
+      <pre class="code-block"><button class="copy-btn" onclick="cp(this)">copy</button><span class="c-g">python3 -m venv</span> .venv
+<span class="c-g">source</span> .venv/bin/activate   <span class="c-c"># Windows: .venv\Scripts\activate</span>
 <span class="c-g">pip install</span> -r requirements.txt</pre>
     </div>
-
     <div class="setup-card">
-      <div class="setup-card-head">
-        <div class="setup-step-num">3</div>
-        <div>
-          <div class="setup-card-title">Set environment variables</div>
-          <div class="setup-card-desc">3 required · rest are optional</div>
-        </div>
-      </div>
+      <div class="setup-card-head"><div class="setup-step-num">3</div><div><div class="setup-card-title">Set environment variables</div><div class="setup-card-desc">Only JWT_SECRET is required</div></div></div>
       <pre class="code-block"><button class="copy-btn" onclick="cp(this)">copy</button><span class="c-c"># Required</span>
+<span class="c-g">export</span> <span class="c-v">JWT_SECRET</span>=$(python3 -c "import secrets;print(secrets.token_urlsafe(48))")
+
+<span class="c-c"># Optional — seed an admin (else the first person to register becomes admin)</span>
 <span class="c-g">export</span> <span class="c-v">INITIAL_ADMIN_EMAIL</span>=admin@example.com
-<span class="c-g">export</span> <span class="c-v">INITIAL_ADMIN_PASSWORD</span>=changeme123
-<span class="c-g">export</span> <span class="c-v">JWT_SECRET</span>=$(python3 -c \
-  "import secrets; print(secrets.token_urlsafe(48))")
+<span class="c-g">export</span> <span class="c-v">INITIAL_ADMIN_PASSWORD</span>=ChangeMe123!
 
-<span class="c-c"># Optional — enables AI features</span>
-<span class="c-g">export</span> <span class="c-v">ANTHROPIC_API_KEY</span>=sk-ant-...</pre>
+<span class="c-c"># Optional — enable AI (or set it later in Admin → Settings)</span>
+<span class="c-g">export</span> <span class="c-v">ANTHROPIC_API_KEY</span>=sk-ant-...   <span class="c-c"># or OPENAI_API_KEY (+ OPENAI_BASE_URL)</span></pre>
     </div>
-
     <div class="setup-card">
-      <div class="setup-card-head">
-        <div class="setup-step-num">4</div>
-        <div>
-          <div class="setup-card-title">Start the server</div>
-          <div class="setup-card-desc">Visit http://localhost:8000</div>
-        </div>
-      </div>
-      <pre class="code-block"><button class="copy-btn" onclick="cp(this)">copy</button><span class="c-c"># Option A — launcher script</span>
-<span class="c-g">chmod +x</span> run.sh && ./run.sh
-
-<span class="c-c"># Option B — Python directly</span>
-<span class="c-g">python</span> app.py
-
-<span class="c-c"># Option C — with auto-reload</span>
+      <div class="setup-card-head"><div class="setup-step-num">4</div><div><div class="setup-card-title">Start the server</div><div class="setup-card-desc">Then open http://localhost:8000</div></div></div>
+      <pre class="code-block"><button class="copy-btn" onclick="cp(this)">copy</button><span class="c-c"># any of:</span>
+<span class="c-g">./run.sh</span>
 <span class="c-g">uvicorn</span> app:app --reload --port 8000
-
-<span class="c-c"># Option D — Docker</span>
 <span class="c-g">docker compose up</span> --build</pre>
     </div>
   </div>
 
   <div style="margin-top:20px;background:var(--green-d);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:16px 20px;font-size:13px;color:var(--green)">
-    ✓ <strong>Verify it's working:</strong>
+    ✓ <strong>Verify:</strong>
     <code style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.3);padding:1px 6px;border-radius:3px;margin:0 4px">curl http://localhost:8000/healthz</code>
-    → should return <code style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.3);padding:1px 6px;border-radius:3px">{"status":"ok","version":"2.1"}</code>
-    &nbsp;·&nbsp; Then open <a href="http://localhost:8000/docs" style="color:var(--green);font-weight:600">http://localhost:8000/docs</a> for the interactive API explorer.
-  </div>
-</section>
-
-<!-- FEATURES -->
-<section class="section" id="features">
-  <div class="section-label">Features</div>
-  <h2>What's in the feature branch</h2>
-  <p class="section-sub">All features on top of the original — nothing removed or broken.</p>
-
-  <div class="feat-grid">
-    <div class="feat-card">
-      <div class="feat-icon">🎯</div>
-      <div class="feat-title">OWASP Top 10 2021 references</div>
-      <div class="feat-desc">Findings are automatically cross-linked to the relevant OWASP Top 10 risk (A01 Broken Access Control through A10 SSRF). A reference mapping on threats — not a separate methodology.</div>
-      <span class="feat-new">NEW</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon">⚡</div>
-      <div class="feat-title">MITRE ATT&CK mapping</div>
-      <div class="feat-desc">Every threat now shows its ATT&CK Technique ID and tactic. Clickable badge links directly to attack.mitre.org.</div>
-      <span class="feat-new">NEW</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon">📋</div>
-      <div class="feat-title">Compliance controls</div>
-      <div class="feat-desc">SOC2, ISO 27001, and PCI-DSS control IDs mapped from CWE per threat. Shown in expanded threat cards and CSV export.</div>
-      <span class="feat-new">NEW</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon">🔧</div>
-      <div class="feat-title">AI code fix generator</div>
-      <div class="feat-desc">Click Fix on any threat — The AI generates a before/after code snippet in your stack. Copy to clipboard.</div>
-      <span class="feat-new">NEW</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon">⚙️</div>
-      <div class="feat-title">Custom threat rules</div>
-      <div class="feat-desc">Define domain-specific threats in the UI. They persist to DB and run alongside built-in analysis every time.</div>
-      <span class="feat-new">NEW</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon">🔗</div>
-      <div class="feat-title">Share link</div>
-      <div class="feat-desc">Generate a 7-day read-only URL. Stakeholders can view the interactive report with no login required.</div>
-      <span class="feat-new">NEW</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon">🌙</div>
-      <div class="feat-title">Dark / light mode</div>
-      <div class="feat-desc">Toggle in the header. Preference saved to localStorage. Full dark theme with CSS variables.</div>
-      <span class="feat-new">NEW</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon">⌨️</div>
-      <div class="feat-title">Keyboard shortcuts</div>
-      <div class="feat-desc"><code>n</code> component · <code>f</code> flow · <code>b</code> boundary · <code>a</code> auto-layout · <code>Ctrl+S</code> save · <code>?</code> help overlay.</div>
-      <span class="feat-new">NEW</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon">📊</div>
-      <div class="feat-title">Release diff view</div>
-      <div class="feat-desc">Compare two saved threat models: new threats, resolved, severity changes, and attack surface delta.</div>
-      <span class="feat-new">NEW</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon">🖼️</div>
-      <div class="feat-title">Diagram upload</div>
-      <div class="feat-desc">Drop an architecture PNG/JPG/WebP. AI vision extracts components, flows, and trust boundaries automatically.</div>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon">📐</div>
-      <div class="feat-title">5 system templates</div>
-      <div class="feat-desc">SaaS Web App, Mobile + API, Microservices, Data Pipeline, IoT. Load in one click and edit before analyzing.</div>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon">📄</div>
-      <div class="feat-title">Executive report</div>
-      <div class="feat-desc">The configured LLM writes the narrative — Executive Summary, Top Risks, Actions. Download as HTML or PDF (WeasyPrint).</div>
-    </div>
+    → <code style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.3);padding:1px 6px;border-radius:3px">{"status":"ok"}</code>.
+    &nbsp;Interactive API explorer at <a href="http://localhost:8000/docs" style="color:var(--green);font-weight:600">/docs</a>.
   </div>
 </section>
 
 <!-- API -->
-<section class="section" id="api" style="background:var(--surf);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+<section class="section" id="api">
   <div class="section-label">API reference</div>
   <h2>REST API</h2>
-  <p class="section-sub">Full Swagger docs at <code style="font-family:var(--mono);font-size:12px">http://localhost:8000/docs</code> after starting the server.</p>
-
+  <p class="section-sub">Auth with a JWT bearer token. Full Swagger docs at <code style="font-family:var(--mono);font-size:12px">/docs</code> after the server starts.</p>
   <div class="ep-list">
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/auth/login</span><span class="ep-desc">Get JWT token</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/analyze</span><span class="ep-desc">Run threat model (dedup + custom rules + notify)</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/extract-from-text</span><span class="ep-desc">Text description → components</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/extract-from-diagram</span><span class="ep-desc">AI vision → components</span></div>
-    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/templates</span><span class="ep-desc">5 built-in system templates</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/custom-rules</span><span class="ep-desc">Create custom threat rule</span><span class="ep-new-badge">NEW</span></div>
-    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/custom-rules</span><span class="ep-desc">List your custom rules</span><span class="ep-new-badge">NEW</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat-status</span><span class="ep-desc">Set per-threat remediation status</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat-status/bulk</span><span class="ep-desc">Bulk update multiple statuses</span><span class="ep-new-badge">NEW</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/share/:id</span><span class="ep-desc">Generate 7-day read-only share link</span><span class="ep-new-badge">NEW</span></div>
-    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/share/:token</span><span class="ep-desc">View shared report (no auth)</span><span class="ep-new-badge">NEW</span></div>
-    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/releases/:a/diff/:b</span><span class="ep-desc">Compare two saved threat models</span><span class="ep-new-badge">NEW</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat/fix</span><span class="ep-desc">AI before/after code fix</span><span class="ep-new-badge">NEW</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/report/csv</span><span class="ep-desc">Download risk register CSV</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/report/executive</span><span class="ep-desc">AI-narrated executive HTML/PDF</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/create-ticket</span><span class="ep-desc">Create a Jira issue from a threat</span></div>
-    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/healthz</span><span class="ep-desc">Liveness probe</span><span class="ep-new-badge">NEW</span></div>
-    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/readyz</span><span class="ep-desc">Readiness probe — pings DB</span><span class="ep-new-badge">NEW</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/auth/register</span><span class="ep-desc">Sign up (first registrant becomes admin)</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/auth/login</span><span class="ep-desc">Get a JWT token</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/extract-from-text</span><span class="ep-desc">Plain-English description → system model</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/extract-structured</span><span class="ep-desc">Structured spec → system model</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat-models/from-diagram</span><span class="ep-desc">AI vision: diagram → model</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat-models/:id/analyze</span><span class="ep-desc">Run the analysis</span></div>
+    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/threat-models/:id/report/:fmt</span><span class="ep-desc">html · pdf · markdown · csv · executive</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat/fix</span><span class="ep-desc">AI before/after code fix</span></div>
+    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/releases/:a/diff/:b</span><span class="ep-desc">Compare two threat models</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/share/:id</span><span class="ep-desc">Read-only share link</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/create-ticket</span><span class="ep-desc">File a Jira issue from a threat</span></div>
+    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/healthz · /readyz</span><span class="ep-desc">Liveness / readiness probes</span></div>
   </div>
 </section>
 
 <!-- TROUBLESHOOT -->
-<section class="section" id="troubleshoot">
+<section class="section" id="troubleshoot" style="background:var(--surf);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
   <div class="section-label">Troubleshooting</div>
   <h2>Common issues</h2>
-  <p class="section-sub">Most problems are solved by setting the 3 required env vars and activating the venv.</p>
-
+  <p class="section-sub">Most problems are solved by setting <code>JWT_SECRET</code> and activating the venv.</p>
   <div class="trouble-list">
     <div class="trouble-item">
-      <div class="trouble-head" onclick="tog(this)">
-        <span class="trouble-icon">🔴</span>
-        <span class="trouble-title">Server starts but LLM features show "disabled"</span>
-        <span class="trouble-chev">▼</span>
-      </div>
+      <div class="trouble-head" onclick="tog(this)"><span class="trouble-icon">🟢</span><span class="trouble-title">AI features show "not configured"</span><span class="trouble-chev">▼</span></div>
       <div class="trouble-body"><div class="trouble-inner">
-        <p>Set <code>ANTHROPIC_API_KEY=sk-ant-...</code> — the app works without it (rules-based analysis runs, diagram upload returns a stub), but AI vision, AI fixes, and executive-report narration need the key.</p>
-        <pre class="code-block"><span class="c-g">export</span> <span class="c-v">ANTHROPIC_API_KEY</span>=sk-ant-...</pre>
+        <p>Expected without a key — the rule engine still produces a full threat model. Add a key in <strong>Admin → Settings → AI provider</strong>, or set an env var, to enable AI threat suggestions, diagram vision, executive narratives, and code fixes.</p>
+        <pre class="code-block"><span class="c-g">export</span> <span class="c-v">ANTHROPIC_API_KEY</span>=sk-ant-...   <span class="c-c"># or OPENAI_API_KEY</span></pre>
       </div></div>
     </div>
     <div class="trouble-item">
-      <div class="trouble-head" onclick="tog(this)">
-        <span class="trouble-icon">🔴</span>
-        <span class="trouble-title">ModuleNotFoundError on startup</span>
-        <span class="trouble-chev">▼</span>
-      </div>
+      <div class="trouble-head" onclick="tog(this)"><span class="trouble-icon">🔴</span><span class="trouble-title">ModuleNotFoundError on startup</span><span class="trouble-chev">▼</span></div>
       <div class="trouble-body"><div class="trouble-inner">
-        <p>Your venv isn't activated or pip install wasn't run. You should see <code>(.venv)</code> in your terminal prompt.</p>
-        <pre class="code-block"><span class="c-c"># Mac/Linux</span>
-<span class="c-g">source</span> .venv/bin/activate
+        <p>The venv isn't activated or dependencies aren't installed. You should see <code>(.venv)</code> in your prompt.</p>
+        <pre class="code-block"><span class="c-g">source</span> .venv/bin/activate
 <span class="c-g">pip install</span> -r requirements.txt</pre>
       </div></div>
     </div>
     <div class="trouble-item">
-      <div class="trouble-head" onclick="tog(this)">
-        <span class="trouble-icon">🔴</span>
-        <span class="trouble-title">Port 8000 already in use</span>
-        <span class="trouble-chev">▼</span>
-      </div>
+      <div class="trouble-head" onclick="tog(this)"><span class="trouble-icon">🔴</span><span class="trouble-title">Port 8000 already in use</span><span class="trouble-chev">▼</span></div>
       <div class="trouble-body"><div class="trouble-inner">
         <pre class="code-block"><span class="c-g">uvicorn</span> app:app --reload --port 8001
-<span class="c-c"># or kill whatever is using 8000:</span>
-<span class="c-g">lsof</span> -ti:8000 | xargs kill</pre>
+<span class="c-c"># or free 8000:</span> <span class="c-g">lsof</span> -ti:8000 | xargs kill</pre>
       </div></div>
     </div>
     <div class="trouble-item">
-      <div class="trouble-head" onclick="tog(this)">
-        <span class="trouble-icon">🔴</span>
-        <span class="trouble-title">401 Unauthorized on API calls</span>
-        <span class="trouble-chev">▼</span>
-      </div>
+      <div class="trouble-head" onclick="tog(this)"><span class="trouble-icon">🔴</span><span class="trouble-title">401 Unauthorized on API calls</span><span class="trouble-chev">▼</span></div>
       <div class="trouble-body"><div class="trouble-inner">
-        <p>Token expired (15 min TTL) or server restarted without a persistent JWT_SECRET. Re-login to get a fresh token. Set a permanent JWT_SECRET value so tokens survive restarts.</p>
-        <pre class="code-block"><span class="c-v">TOKEN</span>=$(curl -s -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"changeme123"}' \
-  | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")</pre>
+        <p>Token expired or the server restarted without a persistent <code>JWT_SECRET</code>. Re-login for a fresh token, and set a permanent <code>JWT_SECRET</code> so tokens survive restarts.</p>
       </div></div>
     </div>
     <div class="trouble-item">
-      <div class="trouble-head" onclick="tog(this)">
-        <span class="trouble-icon">🔴</span>
-        <span class="trouble-title">Tests fail with fixture or DB errors</span>
-        <span class="trouble-chev">▼</span>
-      </div>
+      <div class="trouble-head" onclick="tog(this)"><span class="trouble-icon">💡</span><span class="trouble-title">Interactive API docs (Swagger)</span><span class="trouble-chev">▼</span></div>
       <div class="trouble-body"><div class="trouble-inner">
-        <p>Run pytest from inside the <code>threat-modeler/</code> directory with env vars set.</p>
-        <pre class="code-block"><span class="c-g">cd</span> threat-modeler
-<span class="c-g">export</span> <span class="c-v">INITIAL_ADMIN_EMAIL</span>=admin@example.com
-<span class="c-g">export</span> <span class="c-v">INITIAL_ADMIN_PASSWORD</span>=changeme123
-<span class="c-g">export</span> <span class="c-v">JWT_SECRET</span>=test-secret
-<span class="c-g">pytest</span> tests/test_new_endpoints.py -v</pre>
-      </div></div>
-    </div>
-    <div class="trouble-item">
-      <div class="trouble-head" onclick="tog(this)">
-        <span class="trouble-icon">💡</span>
-        <span class="trouble-title">Interactive API docs (Swagger)</span>
-        <span class="trouble-chev">▼</span>
-      </div>
-      <div class="trouble-body"><div class="trouble-inner">
-        <p>FastAPI auto-generates interactive docs. Go to <code>http://localhost:8000/docs</code>, click <strong>Authorize</strong>, paste your Bearer token, and test any endpoint without writing curl commands.</p>
+        <p>FastAPI auto-generates docs at <code>/docs</code> — click <strong>Authorize</strong>, paste your bearer token, and try any endpoint without writing curl.</p>
       </div></div>
     </div>
   </div>
@@ -516,7 +396,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
 
 <!-- FOOTER -->
 <footer>
-  <div class="footer-left">🛡 ThreatGuard · MIT License · rootabhi1</div>
+  <div class="footer-left">🛡 ThreatGuard · MIT License · a draft-for-review tool, not a security sign-off</div>
   <div class="footer-links">
     <a href="https://github.com/rootabhi1/ThreatGuard" target="_blank">GitHub</a>
     <a href="sample-report.html" target="_blank">Sample report</a>
