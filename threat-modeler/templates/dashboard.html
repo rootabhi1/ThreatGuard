@@ -87,6 +87,12 @@
     </div>
     <form id="form-new-tm" class="modal-body flex-col gap-4">
       <div class="field">
+        <label class="field-label">Start from a template <span class="field-label-optional">optional</span></label>
+        <div id="template-chips" class="flex gap-2" style="flex-wrap: wrap;"></div>
+        <div id="template-selected" class="field-help hidden"></div>
+      </div>
+
+      <div class="field">
         <label class="field-label">Feature</label>
         <select name="feature_id" id="select-feature" required class="select">
           <option value="">Loading...</option>

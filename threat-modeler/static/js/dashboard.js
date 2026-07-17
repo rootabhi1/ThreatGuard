@@ -8,6 +8,8 @@
   const esc = UI.escapeHtml;
   let allTMs = [];
   let allFeatures = [];
+  let allTemplates = [];
+  let selectedTemplate = null;   // when set, create uses this structured system directly
 
   // =========================================================================
   //  Load
@@ -199,15 +201,71 @@
     } catch { badge.textContent = 'Unknown'; }
   }
 
+  // Quick-start templates (ported from the legacy canvas). Selecting one loads a
+  // ready-made system so create can skip text-extraction and use it directly.
+  async function loadTemplates() {
+    const host = document.getElementById('template-chips');
+    if (!host) return;
+    if (!allTemplates.length) {
+      try {
+        const r = await Auth.fetch('/api/templates');
+        allTemplates = r.ok ? await r.json() : [];
+      } catch { allTemplates = []; }
+    }
+    if (!allTemplates.length) { host.innerHTML = '<span class="text-xs text-light">No templates available.</span>'; return; }
+    host.innerHTML = allTemplates.map((t, i) =>
+      `<button type="button" data-tpl="${i}" class="btn btn-sm btn-secondary">${esc(t.icon || '📦')} ${esc(t.name)}</button>`
+    ).join('');
+    host.querySelectorAll('[data-tpl]').forEach(btn =>
+      btn.addEventListener('click', () => selectTemplate(parseInt(btn.dataset.tpl), btn)));
+  }
+
+  function selectTemplate(idx, btn) {
+    const t = allTemplates[idx];
+    if (!t) return;
+    selectedTemplate = t;
+    const nameInput = document.querySelector('#form-new-tm input[name="name"]');
+    const sysText = document.querySelector('#form-new-tm textarea[name="system_text"]');
+    if (nameInput && !nameInput.value.trim()) nameInput.value = t.name;
+    if (sysText) sysText.value =
+      `${t.description || t.name}\nComponents: ${(t.components || []).map(c => c.name).join(', ')}`;
+    document.querySelectorAll('#template-chips [data-tpl]').forEach(b => b.classList.remove('btn-primary'));
+    if (btn) { btn.classList.add('btn-primary'); }
+    const note = document.getElementById('template-selected');
+    if (note) {
+      note.classList.remove('hidden');
+      note.innerHTML = `Using template <strong>${esc(t.name)}</strong> — ${(t.components || []).length} components, ${(t.data_flows || []).length} flows. ` +
+        `<button type="button" id="clear-template" class="btn btn-sm btn-ghost" style="padding:0 6px;">Clear</button>`;
+      const clr = document.getElementById('clear-template');
+      if (clr) clr.addEventListener('click', clearTemplate);
+    }
+  }
+
+  function clearTemplate() {
+    selectedTemplate = null;
+    document.querySelectorAll('#template-chips [data-tpl]').forEach(b => b.classList.remove('btn-primary'));
+    const note = document.getElementById('template-selected');
+    if (note) { note.classList.add('hidden'); note.innerHTML = ''; }
+  }
+
   function openNewModal() {
     const form = document.getElementById('form-new-tm');
     if (form) form.reset();
     const stride = document.querySelector('input[name="methodology"][value="stride"]');
     if (stride) stride.checked = true;
     document.getElementById('new-tm-error').classList.add('hidden');
+    clearTemplate();
+    loadTemplates();
     populateFeatureSelect();
     updateLlmStatusBadge();
     UI.showModal('modal-new-tm');
+    // Editing the system description by hand means the user is going custom —
+    // drop the template so we extract from their text instead.
+    const sysText = document.querySelector('#form-new-tm textarea[name="system_text"]');
+    if (sysText && !sysText._tplWired) {
+      sysText._tplWired = true;
+      sysText.addEventListener('input', () => { if (selectedTemplate) clearTemplate(); });
+    }
   }
 
   document.getElementById('btn-new-tm').addEventListener('click', openNewModal);
@@ -233,19 +291,34 @@
       if (methodologies.length === 0) throw new Error('Pick at least one methodology');
       const useLlm = document.getElementById('use-llm').checked;
 
-      setProgress(useLlm ? 'Extracting components with AI...' : 'Extracting components...');
-      const extractResp = await Auth.fetch('/api/extract-from-text', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: fd.get('system_text'), use_llm: useLlm }),
-      });
-      if (!extractResp.ok) throw new Error((await extractResp.json()).detail || 'Extraction failed');
-      const system = await extractResp.json();
-      if (!system.name) system.name = fd.get('name');
-      // Stash the inference mode + source text for later display
-      system._boundary_inference_mode = system.boundary_inference_mode || 'heuristic';
-      system._source_text = fd.get('system_text');
-      delete system.boundary_inference_mode;
+      let system;
+      if (selectedTemplate) {
+        // A ready-made template already has structured components/flows/boundaries —
+        // use them directly instead of re-deriving from text.
+        setProgress('Loading template...');
+        system = {
+          name: fd.get('name') || selectedTemplate.name,
+          description: fd.get('description') || selectedTemplate.description || '',
+          components: JSON.parse(JSON.stringify(selectedTemplate.components || [])),
+          data_flows: JSON.parse(JSON.stringify(selectedTemplate.data_flows || [])),
+          trust_boundaries: JSON.parse(JSON.stringify(selectedTemplate.trust_boundaries || [])),
+        };
+        system._source_text = fd.get('system_text');
+      } else {
+        setProgress(useLlm ? 'Extracting components with AI...' : 'Extracting components...');
+        const extractResp = await Auth.fetch('/api/extract-from-text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: fd.get('system_text'), use_llm: useLlm }),
+        });
+        if (!extractResp.ok) throw new Error((await extractResp.json()).detail || 'Extraction failed');
+        system = await extractResp.json();
+        if (!system.name) system.name = fd.get('name');
+        // Stash the inference mode + source text for later display
+        system._boundary_inference_mode = system.boundary_inference_mode || 'heuristic';
+        system._source_text = fd.get('system_text');
+        delete system.boundary_inference_mode;
+      }
 
       setProgress('Creating threat model...');
       const createResp = await Auth.fetch('/api/threat-models', {
@@ -323,6 +396,102 @@
     renderDetail();
   }
 
+  // ---- Analysis tab helpers (ported from the legacy canvas so these advertised
+  // views live in the primary, authenticated dashboard) ----
+  const SEV_HEX = { Critical: '#b91c1c', High: '#d97706', Medium: '#ca8a04', Low: '#16a34a', Info: '#0284c7' };
+  const SEV_SCORE = { Critical: 5, High: 4, Medium: 3, Low: 2, Info: 1 };
+  const sevHex = s => SEV_HEX[s] || '#64748b';
+
+  // Likelihood × Impact grid. Impact = severity; likelihood from DREAD
+  // exploitability when present, else a heuristic from severity.
+  function riskMatrixHTML(analysis) {
+    const threats = (analysis && analysis.threats) || [];
+    const cells = {};
+    threats.forEach(t => {
+      const impact = SEV_SCORE[t.severity] || 2;
+      const dread = t.dread;
+      let likelihood = dread ? Math.round(((dread.E_exploitability || 5) / 10) * 5) : Math.ceil(impact * 0.7);
+      likelihood = Math.max(1, Math.min(5, likelihood));
+      (cells[`${likelihood},${impact}`] ||= []).push(t);
+    });
+    window._matrixData = cells;
+    const LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Very High'];
+    const cellBg = (r, c) => { const s = r * c; return s >= 16 ? '#fef2f2' : s >= 9 ? '#fff7ed' : s >= 4 ? '#fefce8' : '#f0fdf4'; };
+    return `
+      <div class="card p-4 mb-4">
+        <div class="text-xs font-semibold text-light" style="text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Risk matrix — Likelihood × Impact</div>
+        <div style="overflow-x:auto;">
+        <table style="border-collapse:collapse;font-size:11px;min-width:360px;width:100%;">
+          <thead><tr><th></th>${[1,2,3,4,5].map(c=>`<th style="padding:4px 8px;color:#475569;text-align:center;">${LABELS[c]}<br/><span style="font-size:9px;opacity:.6">Impact</span></th>`).join('')}</tr></thead>
+          <tbody>
+            ${[5,4,3,2,1].map(row=>`<tr>
+              <td style="padding:4px 8px;color:#475569;text-align:right;white-space:nowrap;">${LABELS[row]}<br/><span style="font-size:9px;opacity:.6">Likelihood</span></td>
+              ${[1,2,3,4,5].map(col=>{
+                const items = cells[`${row},${col}`] || [];
+                return `<td style="padding:4px;text-align:center;background:${cellBg(row,col)};border:1px solid #e2e8f0;cursor:${items.length?'pointer':'default'};"
+                  ${items.length?`onclick="window._showMatrixCell('${row},${col}')"`:''} title="${esc(items.map(t=>t.title).join(', '))}">
+                  ${items.length?`<span style="display:inline-block;min-width:22px;height:22px;line-height:22px;background:${sevHex(items[0].severity)};color:#fff;border-radius:50%;font-weight:600;">${items.length}</span>`:''}
+                </td>`;
+              }).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        </div>
+        <p class="text-xs text-light" style="margin-top:6px;">Click any populated cell to list its threats. Number = threat count; colour = risk level.</p>
+      </div>`;
+  }
+
+  // Multi-hop attack paths: entry components → reachable targets, ranked by criticality.
+  function attackPathsHTML(analysis) {
+    const threats = (analysis && analysis.threats) || [];
+    const sys = (analysis && analysis.system) || {};
+    const components = sys.components || [], flows = sys.data_flows || [], boundaries = sys.trust_boundaries || [];
+    const compById = {}; components.forEach(c => compById[c.id] = c);
+    const threatsFor = (c) => threats.filter(t => t.component_id === c.id || t.component_name === c.name);
+    const entryIds = new Set(components.filter(c => ['user','external_entity','mobile_app'].includes(c.type)).map(c => c.id));
+    const adj = {}; flows.forEach(f => (adj[f.from] ||= []).push({ to: f.to, flow: f }));
+    const paths = [];
+    entryIds.forEach(start => {
+      const sc = compById[start]; if (!sc) return;
+      (adj[start] || []).forEach(({ to: mid, flow: f1 }) => {
+        const mc = compById[mid]; if (!mc) return;
+        const crosses = boundaries.some(b => (b.contains||[]).includes(start) !== (b.contains||[]).includes(mid));
+        const near = [...threatsFor(sc), ...threatsFor(mc)];
+        if (!near.some(t => ['Critical','High'].includes(t.severity))) return;
+        const hops = adj[mid] || [];
+        if (hops.length) hops.forEach(({ to: dest }) => {
+          const dc = compById[dest]; if (!dc || dest === start) return;
+          const all = [...threatsFor(sc), ...threatsFor(mc), ...threatsFor(dc)];
+          paths.push({ nodes: [sc, mc, dc], flows: [f1], threats: all, critCount: all.filter(t=>t.severity==='Critical').length, crosses });
+        });
+        else paths.push({ nodes: [sc, mc], flows: [f1], threats: near, critCount: near.filter(t=>t.severity==='Critical').length, crosses });
+      });
+    });
+    const seen = new Set();
+    const unique = paths.filter(p => { const k = p.nodes.map(n=>n.id).join('→'); if (seen.has(k)) return false; seen.add(k); return true; })
+                        .sort((a,b) => b.critCount - a.critCount).slice(0, 5);
+    if (!unique.length) return `<div class="card p-4"><div class="text-xs font-semibold text-light" style="text-transform:uppercase;letter-spacing:.05em;">⚡ Top attack paths</div><p class="text-sm text-light mt-2">No multi-hop attack paths with high-severity threats were found for this system.</p></div>`;
+    return `
+      <div class="card p-4" style="background:#fff7ed;border-color:#fed7aa;">
+        <div class="text-xs font-semibold" style="color:#9a3412;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">⚡ Top attack paths</div>
+        <p class="text-xs" style="color:#7c3012;margin:0 0 10px;">Multi-hop paths an attacker could follow through your system, ordered by severity.</p>
+        ${unique.map(path=>`
+          <div style="background:#fff;border:1px solid #fed7aa;border-left:3px solid ${path.critCount>0?'#e11d48':'#f97316'};border-radius:8px;padding:12px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+              ${path.nodes.map((n,i)=>`<span style="font-size:12px;font-weight:600;color:#0f172a;background:#f8fafc;padding:3px 8px;border-radius:4px;border:1px solid #e2e8f0;">${esc(n.name)}</span>${i<path.nodes.length-1?`<span style="color:#94a3b8;">${path.flows[i]&&!path.flows[i].encrypted?'⚠→':'→'}</span>`:''}`).join('')}
+              ${path.crosses?'<span style="font-size:10px;padding:2px 6px;background:#fef2f2;color:#991b1b;border-radius:99px;">crosses trust boundary</span>':''}
+            </div>
+            <div class="text-xs text-light">${path.threats.length} threats · ${path.critCount>0?`<span style="color:#e11d48;font-weight:600;">${path.critCount} Critical</span> · `:''}Entry: <strong>${esc(path.nodes[0].type)}</strong> → Target: <strong>${esc(path.nodes[path.nodes.length-1].type)}</strong></div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  window._showMatrixCell = function (key) {
+    const threats = (window._matrixData || {})[key] || [];
+    if (!threats.length) return;
+    UI.toast(threats.map(t => `${t.severity}: ${t.title}`).join('\n'), 'info', 6000);
+  };
+
   function renderDetail() {
     const tm = currentTM;
     const featureName = (allFeatures.find(f => f.id === tm.feature_id) || {}).name || `#${tm.feature_id}`;
@@ -365,6 +534,7 @@
       <!-- Tabs -->
       <div class="tabs">
         <button data-tab="threats" class="tab active">Threats <span class="tab-badge">${total}</span></button>
+        <button data-tab="analysis" class="tab">Analysis</button>
         <button data-tab="dfd" class="tab">Data Flow Diagram</button>
         <button data-tab="system" class="tab">System Components</button>
       </div>
@@ -388,9 +558,16 @@
             <button data-download="markdown" data-tm-id="${tm.id}" class="btn btn-sm btn-secondary">↓ MD</button>
             <button data-download="html" data-tm-id="${tm.id}" class="btn btn-sm btn-secondary">↓ HTML</button>
             <button data-download="pdf" data-tm-id="${tm.id}" class="btn btn-sm btn-secondary">↓ PDF</button>
+            <button data-download="csv" data-tm-id="${tm.id}" class="btn btn-sm btn-secondary">↓ CSV</button>
           </div>
         </div>
         <div id="threat-list" class="flex-col gap-2"></div>
+      </div>
+
+      <!-- Analysis panel: risk matrix + attack paths -->
+      <div id="tab-analysis" class="tab-panel hidden">
+        ${riskMatrixHTML(analysis)}
+        ${attackPathsHTML(analysis)}
       </div>
 
       <!-- DFD panel -->
@@ -731,7 +908,7 @@
       btn.addEventListener('click', async () => {
         const fmt = btn.dataset.download;
         const tmId = btn.dataset.tmId;
-        const ext = fmt === 'markdown' ? 'md' : fmt === 'pdf' ? 'pdf' : 'html';
+        const ext = { markdown: 'md', pdf: 'pdf', csv: 'csv', html: 'html' }[fmt] || 'html';
         const original = btn.innerHTML;
         btn.innerHTML = '<span class="dots-loader"><span></span><span></span><span></span></span>';
         try {
