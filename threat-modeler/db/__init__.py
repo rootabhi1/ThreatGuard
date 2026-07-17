@@ -48,6 +48,18 @@ CREATE TABLE IF NOT EXISTS share_tokens (
 );
 """
 
+# Admin-configurable integration settings (LLM provider, Jira, …). One JSON blob
+# per namespace; secret fields inside the blob are encrypted at rest (see
+# db/settings.py). Admin-only at the API layer.
+INIT_SQL_APP_SETTINGS = """
+CREATE TABLE IF NOT EXISTS app_settings (
+    namespace  TEXT PRIMARY KEY,
+    value      TEXT NOT NULL DEFAULT '{}',
+    updated_by INTEGER,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+"""
+
 DB_PATH = Path(os.getenv("THREAT_MODELER_DB", "data/threat_modeler.db"))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -242,6 +254,7 @@ def init_db():
     # Extra feature tables added after the base schema shipped
     _run_migration(INIT_SQL_CUSTOM_RULES)
     _run_migration(INIT_SQL_SHARE_TOKENS)
+    _run_migration(INIT_SQL_APP_SETTINGS)
     _create_seed_admin_if_missing()
 
 
