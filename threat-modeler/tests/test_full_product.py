@@ -180,16 +180,15 @@ check(a, "infer-trust-boundaries endpoint", C.post("/api/infer-trust-boundaries"
 check(a, "dfd-svg endpoint", C.post("/api/dfd-svg", headers=AH, json={"system": SYSTEM}).status_code == 200)
 
 # ============ G. DIAGRAM UPLOAD ============
-a = area("G. Diagram Upload")
+a = area("G. Diagram Upload (AI-only)")
 img = tiny_png()
+# Diagram analysis is AI-vision only. With no AI provider configured (as in this
+# test env) the endpoints return 400 pointing the user at Admin -> Settings.
 r = C.post("/api/extract-from-diagram", headers=AH, files={"file": ("a.png", img, "image/png")}, data={"description": "x"})
-check(a, "extract-from-diagram returns model", r.status_code == 200 and "components" in r.json())
-check(a, "offline stub fallback used", r.json().get("extraction_method") == "stub-fallback")
+check(a, "extract-from-diagram requires AI (400 unconfigured)", r.status_code == 400, f"HTTP {r.status_code}")
 check(a, "requires auth (401 no token)", C.post("/api/extract-from-diagram", files={"file": ("a.png", img, "image/png")}).status_code == 401)
-check(a, "rejects non-image (415)", C.post("/api/extract-from-diagram", headers=AH, files={"file": ("a.txt", b"hi", "text/plain")}).status_code == 415)
-check(a, "rejects empty file (400)", C.post("/api/extract-from-diagram", headers=AH, files={"file": ("a.png", b"", "image/png")}).status_code == 400)
 one = C.post("/api/threat-models/from-diagram", headers=AH, files={"file": ("d.png", img, "image/png")}, data={"feature_id": str(feat["id"]), "methodologies": "stride,linddun", "analyze": "true"})
-check(a, "one-shot from-diagram creates+analyzes", one.status_code == 200 and one.json()["analysis"]["summary"]["total"] > 0, f"threats={one.json().get('analysis',{}).get('summary',{}).get('total')}")
+check(a, "one-shot from-diagram requires AI (400)", one.status_code == 400, f"HTTP {one.status_code}")
 
 # ============ H. MULTI-LLM ============
 a = area("H. Multi-LLM")
@@ -244,9 +243,14 @@ check(a, "invalid share token 404", C.get("/share/deadbeefnope").status_code == 
 
 # ============ K. RELEASE DIFF ============
 a = area("K. Release Diff")
-rel2 = C.post("/api/releases", headers=AH, json={"name": "R2", "description": ""}).json()
-dr = C.get(f"/api/releases/{rel['id']}/diff/{rel2['id']}", headers=AH)
+# The diff endpoint compares two THREAT MODELS (by id). Create a second one and
+# analyze both so the diff has real content.
+tm_diff_b = C.post("/api/threat-models", headers=AH, json={"feature_id": feat["id"], "name": "DiffB", "description": "", "system": SYSTEM, "methodologies": ["stride"]}).json()
+C.post(f"/api/threat-models/{tm['id']}/analyze", headers=AH, json={"methodologies": ["stride"], "use_llm": False})
+C.post(f"/api/threat-models/{tm_diff_b['id']}/analyze", headers=AH, json={"methodologies": ["stride"], "use_llm": False})
+dr = C.get(f"/api/releases/{tm['id']}/diff/{tm_diff_b['id']}", headers=AH)
 check(a, "release diff endpoint", dr.status_code == 200, f"HTTP {dr.status_code}")
+check(a, "diff returns summary", "summary" in dr.json())
 
 # ============ L. STATUS WORKFLOW ============
 a = area("L. Threat Status")

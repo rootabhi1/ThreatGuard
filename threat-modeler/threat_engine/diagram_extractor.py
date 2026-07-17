@@ -1,17 +1,16 @@
 """diagram_extractor.py — Extract system components from an uploaded architecture diagram.
 
-Uses Claude vision API to identify components, data flows, and trust boundaries
-from architecture diagrams (PNG/JPG/WebP).
+Uses a vision-capable LLM to identify components, data flows, and trust
+boundaries from the image. The calling endpoints require an AI provider to be
+configured; the stub below is only a last-resort safety net if a configured
+vision call returns nothing.
 """
 from __future__ import annotations
 import json
 
 
 def extract_from_diagram(image_bytes: bytes, media_type: str, description: str = "") -> dict:
-    """Analyze an architecture diagram image and return a system model.
-    
-    Falls back to a stub if no LLM provider is configured.
-    """
+    """Analyze an architecture diagram image with a vision LLM and return a system model."""
     from .llm import complete_vision, llm_available, strip_fences
     if not llm_available():
         return _stub_result(description)
@@ -92,15 +91,15 @@ Rules:
             b["contains"] = [cid for cid in b.get("contains", []) if cid in comp_ids]
         result["trust_boundaries"] = [b for b in result.get("trust_boundaries", []) if b.get("contains")]
         
-        result["extraction_method"] = "claude-vision"
+        result["extraction_method"] = "llm_vision"
         return result
     except Exception as e:
-        print(f"[diagram_extractor] Claude vision failed: {e}")
+        print(f"[diagram_extractor] vision extraction failed: {e}")
         return _stub_result(description)
 
 
 def _stub_result(description: str) -> dict:
-    """Return a minimal stub when Claude API is unavailable."""
+    """Last-resort editable starter model if a configured vision call returns nothing."""
     return {
         "components": [
             {"id": "c_user", "name": "User", "type": "user", "description": "End user"},
@@ -119,5 +118,6 @@ def _stub_result(description: str) -> dict:
             {"id": "b_data", "name": "Data Tier", "contains": ["c_db"]},
         ],
         "extraction_method": "stub-fallback",
-        "note": "Set ANTHROPIC_API_KEY to enable real diagram analysis with Claude vision."
+        "note": "This is a generic starter model — no vision AI or OCR was available to read the diagram. "
+                "Edit the components in the Data Flow Diagram tab, or configure an AI provider in Admin → Settings for full diagram analysis."
     }
