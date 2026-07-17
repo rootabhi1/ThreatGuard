@@ -8,7 +8,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker)](https://docker.com)
 [![Azure](https://img.shields.io/badge/Azure-deployable-0078D4?style=flat-square&logo=microsoftazure)](https://azure.com)
-[![Claude AI](https://img.shields.io/badge/Claude_AI-enhanced-CC785C?style=flat-square)](https://anthropic.com)
+[![AI-enhanced](https://img.shields.io/badge/AI-enhanced-6366f1?style=flat-square)](https://anthropic.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
 *Describe your system in plain English → get a full STRIDE / DREAD / PASTA / LINDDUN threat model in seconds*
@@ -43,7 +43,7 @@
 |---------|---------|
 | 📝 **Text-to-Threat-Model** | Describe your system in plain English — engine auto-extracts components, data flows, trust boundaries |
 | 🔍 **Multi-Methodology** | STRIDE, LINDDUN, PASTA — run simultaneously, with DREAD risk scoring & OWASP reference mapping applied automatically |
-| 🤖 **Claude AI Enhancement** | Optional — context-specific threats, smarter trust boundaries, richer mitigations |
+| 🤖 **AI Enhancement** | Optional — context-specific threats, smarter trust boundaries, richer mitigations |
 | 🏢 **Full RBAC** | Admin / Management / User roles with feature-level access control |
 | 📊 **DFD Auto-Generator** | SVG data flow diagrams with Internet / DMZ / App / Data trust zones |
 | 📄 **Export Reports** | PDF, HTML, or Markdown |
@@ -114,7 +114,7 @@ Plain-text system description
   │   components,    │     │  │  STRIDE · DREAD            │  │
   │   data flows,    │     │  │  PASTA  · LINDDUN          │  │
   │   trust zones)   │     │  └────────────────────────────┘  │
-  └─────────────────┘     │  + Claude AI (optional)           │
+  └─────────────────┘     │  + AI / LLM (optional)            │
                           └──────────────┬───────────────────┘
                                          │
                           ┌──────────────▼───────────────────┐
@@ -147,7 +147,7 @@ Plain-text system description
 | `INITIAL_ADMIN_EMAIL` | ✅ | — | Admin account email (created on first run) |
 | `INITIAL_ADMIN_PASSWORD` | ✅ | — | Admin password (min 8 chars) |
 | `JWT_SECRET` | ✅ | — | Random 48-char string for signing tokens |
-| `ANTHROPIC_API_KEY` | Optional | — | Enables Claude AI enrichment |
+| `ANTHROPIC_API_KEY` | Optional | — | Enables AI enrichment |
 | `HOST` | Optional | `127.0.0.1` | Bind address (`0.0.0.0` for Docker) |
 | `PORT` | Optional | `8000` | Server port |
 | `CORS_ORIGINS` | Optional | `*` | Allowed origins (restrict in production) |
@@ -232,7 +232,7 @@ threat-modeler/
 ├── TESTING.md             # 📋 Full testing guide (505 lines)
 ├── auth/                  # JWT auth + RBAC
 ├── db/                    # SQLite CRUD layer
-├── threat_engine/         # STRIDE/DREAD/PASTA/LINDDUN + Claude AI
+├── threat_engine/         # STRIDE/DREAD/PASTA/LINDDUN + AI
 ├── static/                # CSS + Vanilla JS frontend
 ├── templates/             # Jinja2 HTML templates
 ├── tests/                 # pytest + shell smoke tests
@@ -259,7 +259,7 @@ MIT — free for personal and commercial use.
 
 <div align="center">
 
-Built with FastAPI · SQLite · Claude AI · Azure · Python 3.12
+Built with FastAPI · SQLite · Anthropic/OpenAI · Azure · Python 3.12
 
 **[⬆ Back to top](#)**
 

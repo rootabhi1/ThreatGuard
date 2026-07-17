@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ThreatGuard — AI-powered security for engineering teams</title>
-<meta name="description" content="STRIDE, PASTA and LINDDUN threat-modeling methodologies, with DREAD risk scoring and OWASP Top 10 reference mapping, powered by Claude AI. Open source, self-hostable."/>
+<meta name="description" content="STRIDE, PASTA and LINDDUN threat-modeling methodologies, with DREAD risk scoring and OWASP Top 10 reference mapping, powered by any LLM (Anthropic or OpenAI). Open source, self-hostable."/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -179,7 +179,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge">🛡 Open source · Self-hostable · Claude or OpenAI</div>
+  <div class="hero-badge">🛡 Open source · Self-hostable · Anthropic or OpenAI</div>
   <h1>AI-powered<br/><span>threat modeling</span><br/>for engineering teams</h1>
   <p class="hero-sub">STRIDE, PASTA and LINDDUN methodologies — with DREAD risk scoring and OWASP Top 10 references applied automatically — in one tool. Paste a description, upload a diagram, or build a DFD — get a prioritized threat list in seconds.</p>
   <div class="hero-btns">
@@ -288,7 +288,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
 <span class="c-g">export</span> <span class="c-v">JWT_SECRET</span>=$(python3 -c \
   "import secrets; print(secrets.token_urlsafe(48))")
 
-<span class="c-c"># Optional — enables Claude AI features</span>
+<span class="c-c"># Optional — enables AI features</span>
 <span class="c-g">export</span> <span class="c-v">ANTHROPIC_API_KEY</span>=sk-ant-...</pre>
     </div>
 
@@ -350,7 +350,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
     <div class="feat-card">
       <div class="feat-icon">🔧</div>
       <div class="feat-title">AI code fix generator</div>
-      <div class="feat-desc">Click Fix on any threat — Claude generates a before/after code snippet in your stack. Copy to clipboard.</div>
+      <div class="feat-desc">Click Fix on any threat — The AI generates a before/after code snippet in your stack. Copy to clipboard.</div>
       <span class="feat-new">NEW</span>
     </div>
     <div class="feat-card">
@@ -386,7 +386,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
     <div class="feat-card">
       <div class="feat-icon">🖼️</div>
       <div class="feat-title">Diagram upload</div>
-      <div class="feat-desc">Drop an architecture PNG/JPG/WebP. Claude Vision extracts components, flows, and trust boundaries automatically.</div>
+      <div class="feat-desc">Drop an architecture PNG/JPG/WebP. AI vision extracts components, flows, and trust boundaries automatically.</div>
     </div>
     <div class="feat-card">
       <div class="feat-icon">📐</div>
@@ -396,7 +396,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
     <div class="feat-card">
       <div class="feat-icon">📄</div>
       <div class="feat-title">Executive report</div>
-      <div class="feat-desc">Claude writes the narrative — Executive Summary, Top Risks, Actions. Download as HTML or PDF (WeasyPrint).</div>
+      <div class="feat-desc">The configured LLM writes the narrative — Executive Summary, Top Risks, Actions. Download as HTML or PDF (WeasyPrint).</div>
     </div>
   </div>
 </section>
@@ -411,7 +411,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/auth/login</span><span class="ep-desc">Get JWT token</span></div>
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/analyze</span><span class="ep-desc">Run threat model (dedup + custom rules + notify)</span></div>
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/extract-from-text</span><span class="ep-desc">Text description → components</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/extract-from-diagram</span><span class="ep-desc">Claude Vision → components</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/extract-from-diagram</span><span class="ep-desc">AI vision → components</span></div>
     <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/templates</span><span class="ep-desc">5 built-in system templates</span></div>
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/custom-rules</span><span class="ep-desc">Create custom threat rule</span><span class="ep-new-badge">NEW</span></div>
     <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/custom-rules</span><span class="ep-desc">List your custom rules</span><span class="ep-new-badge">NEW</span></div>
@@ -420,10 +420,10 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/share/:id</span><span class="ep-desc">Generate 7-day read-only share link</span><span class="ep-new-badge">NEW</span></div>
     <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/share/:token</span><span class="ep-desc">View shared report (no auth)</span><span class="ep-new-badge">NEW</span></div>
     <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/releases/:a/diff/:b</span><span class="ep-desc">Compare two saved threat models</span><span class="ep-new-badge">NEW</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat/fix</span><span class="ep-desc">AI before/after code fix (Claude)</span><span class="ep-new-badge">NEW</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat/fix</span><span class="ep-desc">AI before/after code fix</span><span class="ep-new-badge">NEW</span></div>
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/report/csv</span><span class="ep-desc">Download risk register CSV</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/report/executive</span><span class="ep-desc">Claude-narrated executive HTML/PDF</span></div>
-    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/create-ticket</span><span class="ep-desc">Create GitHub Issue or Jira ticket</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/report/executive</span><span class="ep-desc">AI-narrated executive HTML/PDF</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/create-ticket</span><span class="ep-desc">Create a Jira issue from a threat</span></div>
     <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/healthz</span><span class="ep-desc">Liveness probe</span><span class="ep-new-badge">NEW</span></div>
     <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/readyz</span><span class="ep-desc">Readiness probe — pings DB</span><span class="ep-new-badge">NEW</span></div>
   </div>
@@ -443,7 +443,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;
         <span class="trouble-chev">▼</span>
       </div>
       <div class="trouble-body"><div class="trouble-inner">
-        <p>Set <code>ANTHROPIC_API_KEY=sk-ant-...</code> — the app works without it (rules-based analysis runs, diagram upload returns a stub), but Claude Vision, AI fixes, and executive report narration need the key.</p>
+        <p>Set <code>ANTHROPIC_API_KEY=sk-ant-...</code> — the app works without it (rules-based analysis runs, diagram upload returns a stub), but AI vision, AI fixes, and executive-report narration need the key.</p>
         <pre class="code-block"><span class="c-g">export</span> <span class="c-v">ANTHROPIC_API_KEY</span>=sk-ant-...</pre>
       </div></div>
     </div>
