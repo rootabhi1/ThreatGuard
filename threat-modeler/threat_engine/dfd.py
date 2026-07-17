@@ -43,62 +43,84 @@ def _category(component_type: str) -> str:
     return "process"
 
 
+# Horizontal/vertical spacing for the columnar layout. Column gap is wide enough
+# that a trust-boundary box drawn around one column (which pads by ~112px each
+# side in _draw_boundary) never overlaps the neighbouring column.
+_COL_GAP = 300
+_ROW_GAP = 150
+_MARGIN = 90
+
+
 def _auto_layout(components: list[dict], data_flows: list[dict],
                  width: int = 1000, height: int = 600,
-                 padding: int = 100) -> dict[str, dict]:
-    """Compute (x,y) for each component using a layered/columnar layout.
+                 padding: int = 100, boundaries: list[dict] | None = None) -> dict[str, dict]:
+    """Compute (x,y) for each component.
 
-    Strategy:
-      1. Put external entities (users) on the far left.
-      2. Put data stores on the far right.
-      3. Processes go in middle columns, ordered topologically by flows.
+    When trust boundaries are present, lay out one column *per boundary* (ordered
+    left→right by tier: external → process → store), so each boundary's box wraps
+    a tidy, non-overlapping group — matching the interactive editor. Otherwise fall
+    back to a category-columnar layout (externals left, stores right).
     """
     if not components:
         return {}
-
-    externs    = [c for c in components if _category(c["type"]) == "extern"]
-    stores     = [c for c in components if _category(c["type"]) == "store"]
-    processes  = [c for c in components if _category(c["type"]) == "process"]
-
-    # Topo-ish ordering for processes by flow degree
-    in_deg = {c["id"]: 0 for c in processes}
-    out_deg = {c["id"]: 0 for c in processes}
-    for f in data_flows:
-        if f["to"] in in_deg:    in_deg[f["to"]] += 1
-        if f["from"] in out_deg: out_deg[f["from"]] += 1
-    processes.sort(key=lambda c: (in_deg[c["id"]] - out_deg[c["id"]]))
-
-    # Decide number of process columns based on count
-    n_proc = max(1, len(processes))
-    proc_cols = 1 if n_proc <= 2 else (2 if n_proc <= 5 else 3)
+    boundaries = boundaries or []
+    comp_by_id = {c["id"]: c for c in components}
+    _rank = {"extern": 0, "process": 1, "store": 2}
 
     columns: list[list[dict]] = []
-    if externs:
-        columns.append(externs)
-    # Distribute processes across proc_cols columns
-    for ci in range(proc_cols):
-        col = processes[ci::proc_cols]
-        if col:
-            columns.append(col)
-    if stores:
-        columns.append(stores)
+    if boundaries:
+        assigned: set[str] = set()
+        bands: list[tuple[int, list[dict]]] = []
+        for b in boundaries:
+            members = [comp_by_id[cid] for cid in b.get("contains", []) if cid in comp_by_id]
+            if not members:
+                continue
+            rank = min(_rank.get(_category(m["type"]), 1) for m in members)
+            bands.append((rank, members))
+            assigned.update(m["id"] for m in members)
+        # Components outside every boundary → their own tier-appropriate columns.
+        unbounded = [c for c in components if c["id"] not in assigned]
+        for cat, rk in (("extern", 0), ("process", 1), ("store", 2)):
+            grp = [c for c in unbounded if _category(c["type"]) == cat]
+            if grp:
+                bands.append((rk, grp))
+        bands.sort(key=lambda t: t[0])
+        columns = [members for _, members in bands] or [components]
+    else:
+        externs   = [c for c in components if _category(c["type"]) == "extern"]
+        stores    = [c for c in components if _category(c["type"]) == "store"]
+        processes = [c for c in components if _category(c["type"]) == "process"]
+        in_deg = {c["id"]: 0 for c in processes}
+        out_deg = {c["id"]: 0 for c in processes}
+        for f in data_flows:
+            if f["to"] in in_deg:    in_deg[f["to"]] += 1
+            if f["from"] in out_deg: out_deg[f["from"]] += 1
+        processes.sort(key=lambda c: (in_deg[c["id"]] - out_deg[c["id"]]))
+        n_proc = max(1, len(processes))
+        proc_cols = 1 if n_proc <= 3 else (2 if n_proc <= 8 else 3)
+        if externs:
+            columns.append(externs)
+        for ci in range(proc_cols):
+            col = processes[ci::proc_cols]
+            if col:
+                columns.append(col)
+        if stores:
+            columns.append(stores)
+        if not columns:
+            columns = [components]
 
-    if not columns:
-        columns = [components]
-
-    # Place each column
+    # Place columns left→right with fixed, generous spacing (natural coordinates;
+    # render_dfd_svg sizes the viewBox to fit).
     positions: dict[str, dict] = {}
-    n_cols = len(columns)
-    col_gap = (width - 2 * padding) / max(1, n_cols - 1) if n_cols > 1 else 0
+    tallest = max((len(col) for col in columns), default=1)
+    band_h = max(1, tallest - 1) * _ROW_GAP
     for ci, col in enumerate(columns):
-        x = padding + ci * col_gap if n_cols > 1 else width / 2
+        x = _MARGIN + ci * _COL_GAP
         n = len(col)
-        if n == 1:
-            positions[col[0]["id"]] = {"x": x, "y": height / 2}
-        else:
-            row_gap = (height - 2 * padding) / (n - 1)
-            for ri, c in enumerate(col):
-                positions[c["id"]] = {"x": x, "y": padding + ri * row_gap}
+        # centre each column vertically within the tallest band
+        y0 = _MARGIN + (band_h - max(0, n - 1) * _ROW_GAP) / 2
+        for ri, c in enumerate(col):
+            positions[c["id"]] = {"x": x, "y": y0 + ri * _ROW_GAP}
     return positions
 
 
@@ -264,7 +286,7 @@ def _draw_boundary(boundary: dict, positions: dict, palette: dict,
     )
     parts.append(
         f'<rect x="{x + 10:.1f}" y="{y - 11:.1f}" rx="3" ry="3" '
-        f'width="{len(name) * 7 + 18}" height="22" fill="{palette["stroke"]}"/>'
+        f'width="{len(name) * 7 + 40}" height="22" fill="{palette["stroke"]}"/>'
     )
     parts.append(
         f'<text x="{x + 19:.1f}" y="{y + 4:.1f}" font-size="11" font-weight="600" '
@@ -283,15 +305,35 @@ def render_dfd_svg(system: dict, *, animated: bool = False,
     comp_by_id = {c["id"]: c for c in components}
 
     # Use provided positions if any (for round-tripping with the interactive UI),
-    # otherwise auto-layout.
+    # otherwise auto-layout. If only *some* components have positions, auto-layout
+    # the rest (boundary-aware) rather than mixing a saved arrangement with a
+    # fixed grid — but if none are saved, lay the whole thing out together so the
+    # boundary-aware columns stay coherent.
     pos = {}
     if positions:
         pos = {cid: {"x": p["x"], "y": p["y"]} for cid, p in positions.items()
                if cid in comp_by_id}
     missing = [c for c in components if c["id"] not in pos]
     if missing:
-        auto = _auto_layout(missing, flows, width=width, height=height)
-        pos.update(auto)
+        layout_targets = components if not pos else missing
+        auto = _auto_layout(layout_targets, flows, boundaries=boundaries)
+        for cid, p in auto.items():
+            pos.setdefault(cid, p)
+
+    # Size the viewBox to fit all nodes plus room for boundary boxes + labels,
+    # so nothing is clipped regardless of where the layout placed things.
+    if pos:
+        xs = [p["x"] for p in pos.values()]
+        ys = [p["y"] for p in pos.values()]
+        nw, nh = _node_size("process")
+        m = 130  # margin for boundary padding (~112) + label
+        min_x, min_y = min(xs) - m, min(ys) - m
+        width = max(600, (max(xs) - min_x) + nw + m)
+        height = max(400, (max(ys) - min_y) + nh + m)
+        # shift everything into positive space
+        for p in pos.values():
+            p["x"] -= min_x
+            p["y"] -= min_y
 
     # Build component -> boundary map for cross-boundary highlighting
     comp_boundary = {}

@@ -126,6 +126,26 @@ _EXTRA_TYPES = ["config", "service", "worker", "vpc"]
 # Human-facing list of valid component types (deduped, keyword-mapped first).
 VALID_COMPONENT_TYPES = list(dict.fromkeys(list(_TYPE_KEYWORDS.keys()) + _EXTRA_TYPES))
 
+# Keywords that should display in their conventional casing rather than Title Case
+# (so "llm" → "LLM", not "Llm"). Maps the lowercase keyword to its display form.
+_DISPLAY_NAME = {
+    "llm": "LLM", "api": "API", "s3": "S3", "cdn": "CDN", "waf": "WAF",
+    "iam": "IAM", "dns": "DNS", "sso": "SSO", "idp": "IdP", "iot": "IoT",
+    "etl": "ETL", "sms": "SMS", "gcs": "GCS", "smtp": "SMTP", "k8s": "K8s",
+    "nfs": "NFS", "rds": "RDS", "sqs": "SQS", "hdfs": "HDFS", "grpc": "gRPC",
+    "graphql": "GraphQL", "mysql": "MySQL", "postgres": "Postgres",
+    "mongodb": "MongoDB", "dynamodb": "DynamoDB", "bigquery": "BigQuery",
+    "openai": "OpenAI", "sendgrid": "SendGrid", "mssql": "MSSQL",
+    "ios": "iOS", "opensearch": "OpenSearch", "clickhouse": "ClickHouse",
+}
+
+
+def _display_name(kw: str) -> str:
+    """Human-friendly component name for a matched keyword, respecting common
+    acronym/brand casing instead of blunt Title Case."""
+    return _DISPLAY_NAME.get(kw.lower(), kw.title())
+
+
 def extract_components_from_text(text: str) -> dict:
     """Best-effort extraction. Always good enough for a starting draft —
     user can edit in the UI before running analysis."""
@@ -143,7 +163,7 @@ def extract_components_from_text(text: str) -> dict:
                 if ctype not in seen_types:
                     components.append({
                         "id": f"c_{ctype}",
-                        "name": kw.title(),
+                        "name": _display_name(kw),
                         "type": ctype,
                         "description": f"Detected from description (keyword: '{kw}')",
                     })

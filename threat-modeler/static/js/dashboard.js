@@ -578,6 +578,14 @@
         delete system.boundary_inference_mode;
       }
 
+      // If the user left the optional Notes field blank, seed the description
+      // from what they typed (system text) so the card/header isn't "No description".
+      let description = (fd.get('description') || '').trim();
+      if (!description) {
+        const src = (fd.get('system_text') || fd.get('structured_text') || (system && system._source_text) || '').trim();
+        if (src) description = src.length > 160 ? src.slice(0, 157).trimEnd() + '…' : src;
+      }
+
       setProgress('Creating threat model...');
       const createResp = await Auth.fetch('/api/threat-models', {
         method: 'POST',
@@ -585,7 +593,7 @@
         body: JSON.stringify({
           feature_id: featureId,
           name: fd.get('name'),
-          description: fd.get('description') || '',
+          description,
           system,
           methodologies,
         }),
