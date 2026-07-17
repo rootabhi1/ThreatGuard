@@ -251,11 +251,12 @@
   }
 
   function setInputMode(mode) {
-    const isDiagram = mode === 'diagram';
-    document.getElementById('template-field').classList.toggle('hidden', isDiagram);
-    document.getElementById('system-text-field').classList.toggle('hidden', isDiagram);
+    const isText = mode === 'text', isStructured = mode === 'structured', isDiagram = mode === 'diagram';
+    document.getElementById('template-field').classList.toggle('hidden', !isText);
+    document.getElementById('system-text-field').classList.toggle('hidden', !isText);
+    document.getElementById('structured-field').classList.toggle('hidden', !isStructured);
     document.getElementById('diagram-field').classList.toggle('hidden', !isDiagram);
-    if (isDiagram) clearTemplate();
+    if (!isText) clearTemplate();
   }
 
   function openNewModal() {
@@ -268,6 +269,8 @@
     const textRadio = document.querySelector('input[name="input_mode"][value="text"]');
     if (textRadio) textRadio.checked = true;
     setInputMode('text');
+    const legend = document.getElementById('valid-types-legend');
+    if (legend) legend.innerHTML = ' <strong>Types:</strong> user, external_entity, webapp, mobile_app, api, auth_service, admin_panel, database, datastore, cache, queue, filesystem, config, payment_service.';
     // Diagram upload is AI-vision only — gate it on a configured provider.
     const diagRadio = document.querySelector('input[name="input_mode"][value="diagram"]');
     const diagCard = diagRadio ? diagRadio.closest('.toggle-card') : null;
@@ -303,6 +306,64 @@
   if (btnNewEmpty) btnNewEmpty.addEventListener('click', openNewModal);
   document.querySelectorAll('input[name="input_mode"]').forEach(r =>
     r.addEventListener('change', () => setInputMode(r.value)));
+
+  // ---- Structured mode: annotated template (download) + one-click example ----
+  // '#' and blank lines are ignored by the parser, so this annotated text is both
+  // human-readable documentation and directly analyzable if pasted back as-is.
+  const STRUCTURED_TEMPLATE = [
+    '# ThreatGuard — structured system template',
+    '#',
+    '# Components — one per line:   Name : type',
+    '# Flows      — one per line:   From -> To : protocol, auth, encrypted?',
+    '#   protocol : HTTPS, HTTP, TCP, gRPC, WSS, AMQP, ...',
+    '#   auth     : session, bearer, mtls, api_key, credentials, none',
+    '#   encrypted: encrypted | plaintext',
+    '# Lines starting with "#" and blank lines are ignored.',
+    '#',
+    '# Valid types: user, external_entity, webapp, mobile_app, api, auth_service,',
+    '#              admin_panel, database, datastore, cache, queue, filesystem,',
+    '#              config, payment_service',
+    '',
+    '# --- Components ---',
+    'User               : user',
+    'Checkout Service    : api',
+    'Inventory Service   : api',
+    'Pricing Service     : api',
+    'Orders DB           : database',
+    'Product Cache       : cache',
+    'Event Bus           : queue',
+    '',
+    '# --- Flows ---',
+    'User -> Checkout Service        : HTTPS, session, encrypted',
+    'Checkout Service -> Orders DB    : TCP, credentials, encrypted',
+    'Checkout Service -> Event Bus    : AMQP, mtls, encrypted',
+    'Inventory Service -> Product Cache : TCP, none, plaintext',
+    'Pricing Service -> Orders DB     : TCP, credentials, encrypted',
+  ].join('\n');
+
+  const btnStructExample = document.getElementById('btn-structured-example');
+  if (btnStructExample) btnStructExample.addEventListener('click', () => {
+    const ta = document.querySelector('#form-new-tm textarea[name="structured_text"]');
+    if (!ta) return;
+    if (ta.value.trim() && !confirm('Replace the current structured input with the example?')) return;
+    ta.value = STRUCTURED_TEMPLATE;
+    ta.focus();
+    const err = document.getElementById('structured-error');
+    if (err) { err.classList.add('hidden'); err.textContent = ''; }
+  });
+
+  const btnStructTemplate = document.getElementById('btn-structured-template');
+  if (btnStructTemplate) btnStructTemplate.addEventListener('click', () => {
+    const blob = new Blob([STRUCTURED_TEMPLATE + '\n'], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'threatguard-system-template.txt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
 
   // ---- Compare (release diff) ----
   function openCompareModal() {
@@ -409,7 +470,25 @@
       }
 
       let system;
-      if (selectedTemplate) {
+      if (inputMode === 'structured') {
+        // Exact, deterministic parse of the user's component/flow lines.
+        const structError = document.getElementById('structured-error');
+        structError.classList.add('hidden');
+        setProgress('Parsing structured system...');
+        const sResp = await Auth.fetch('/api/extract-structured', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: fd.get('structured_text') }),
+        });
+        if (!sResp.ok) {
+          const msg = (await sResp.json()).detail || 'Could not parse the structured input';
+          structError.textContent = msg;
+          structError.classList.remove('hidden');
+          throw new Error(msg);
+        }
+        system = await sResp.json();
+        if (!system.name) system.name = fd.get('name');
+        system._source_text = fd.get('structured_text');
+      } else if (selectedTemplate) {
         // A ready-made template already has structured components/flows/boundaries —
         // use them directly instead of re-deriving from text.
         setProgress('Loading template...');

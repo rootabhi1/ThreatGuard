@@ -785,6 +785,21 @@ async def extract_from_text(payload: dict, user: dict = Depends(get_current_user
     return result
 
 
+@app.post("/api/extract-structured")
+async def extract_structured(payload: dict, user: dict = Depends(get_current_user)):
+    """Parse a structured system description ('Name : type' / 'A -> B') into a
+    system model. Deterministic and exact — returns 400 with a line-referenced
+    message on any parse error so the UI can guide the user."""
+    from threat_engine.analyzer import parse_structured_system
+    text = (payload or {}).get("text", "")
+    try:
+        result = parse_structured_system(text)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    result["boundary_inference_mode"] = "heuristic"
+    return result
+
+
 # --- Diagram upload → system model --------------------------------------
 # Accepted image types and a sane upload ceiling for architecture diagrams.
 _DIAGRAM_TYPES = {"image/png": "image/png", "image/jpeg": "image/jpeg",
