@@ -29,6 +29,56 @@ def _sev_class(sev):
             "Low": "sev-low", "Info": "sev-info"}.get(sev, "sev-med")
 
 
+def _render_dataflow_overview(dfs, esc):
+    """Plain-language 'Data-flow overview' card for the HTML report."""
+    if not dfs:
+        return ""
+    st = dfs.get("stats", {}) or {}
+
+    def chip(label, val):
+        return (
+            f'<span style="display:inline-block;background:#f1f5f9;border:1px solid #e2e8f0;'
+            f'border-radius:999px;padding:2px 10px;margin:2px 4px 2px 0;font-size:0.8rem">'
+            f'<strong>{esc(label)}:</strong> {esc(val) if val else "—"}</span>')
+    chips = "".join([
+        chip("Entry points", ", ".join(dfs.get("entry_points") or [])),
+        chip("Data stores", ", ".join(dfs.get("data_stores") or [])),
+        chip("External deps", ", ".join(dfs.get("external_deps") or [])),
+        chip("Boundary crossings", st.get("crossings", 0)),
+        chip("Unencrypted flows", st.get("unencrypted", 0)),
+    ])
+    risky_rows = ""
+    for r in (dfs.get("risky_flows") or [])[:8]:
+        sev = r.get("severity")
+        badge = (f'<span style="color:#b91c1c;font-weight:600">{esc(sev)}</span>'
+                 if sev in ("Critical", "High") else esc(sev or "—"))
+        risky_rows += (
+            f'<tr><td style="padding:4px 8px"><strong>{esc(r["from"])}</strong> → '
+            f'<strong>{esc(r["to"])}</strong></td>'
+            f'<td style="padding:4px 8px;color:#475569">{esc("; ".join(r.get("reasons", [])))}</td>'
+            f'<td style="padding:4px 8px">{badge}</td></tr>')
+    risky_html = (
+        f'<table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:8px">'
+        f'<thead><tr style="text-align:left;color:#64748b;font-size:0.75rem;text-transform:uppercase">'
+        f'<th style="padding:4px 8px">Flow</th><th style="padding:4px 8px">Why it\'s risky</th>'
+        f'<th style="padding:4px 8px">Severity</th></tr></thead><tbody>{risky_rows}</tbody></table>'
+    ) if risky_rows else ""
+    hs = dfs.get("hotspots") or []
+    hs_html = ""
+    if hs:
+        items = " · ".join(f'<strong>{esc(h["component"])}</strong> '
+                           f'({h["critical"]}C/{h["high"]}H)' for h in hs)
+        hs_html = f'<div style="margin-top:10px;font-size:0.85rem"><strong>Risk hotspots:</strong> {items}</div>'
+    assum = (f'<div style="margin-top:10px;font-size:0.82rem;color:#9a3412">⚠ {esc(dfs["assumptions"])}</div>'
+             if dfs.get("assumptions") else "")
+    return (
+        f'<section class="card"><h2>Data-flow overview</h2>'
+        f'<p style="font-size:0.95rem;line-height:1.5">{esc(dfs.get("narrative", ""))}</p>'
+        f'<div style="margin-top:8px">{chips}</div>'
+        f'{risky_html}{hs_html}{assum}</section>'
+    )
+
+
 def to_html(analysis: dict) -> str:
     system = analysis["system"]
     threats = analysis["threats"]
@@ -436,6 +486,8 @@ def to_html(analysis: dict) -> str:
       <strong>{summary['total']}</strong> total threats — {summary['rule_based']} rule-based, {summary['llm_enhanced']} LLM-enhanced, <strong style="color:#b91c1c">{cb_count}</strong> cross-boundary.
     </div>
   </section>
+
+  {_render_dataflow_overview(analysis.get("dataflow_summary"), _esc)}
 
   <section class="card">
     <h2>Data Flow Diagram</h2>

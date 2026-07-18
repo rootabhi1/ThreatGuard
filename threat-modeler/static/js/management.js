@@ -500,6 +500,57 @@
     renderDetail();
   }
 
+  // Plain-language end-to-end data-flow overview (deterministic; from the backend).
+  function dataFlowOverviewHTML(analysis) {
+    const d = analysis && analysis.dataflow_summary;
+    if (!d) return '';
+    const st = d.stats || {};
+    const chipS = 'display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;border-radius:999px;padding:2px 9px;margin:2px 4px 2px 0;font-size:.8rem;cursor:pointer;';
+    const labelS = 'display:inline-block;min-width:104px;font-size:.72rem;color:var(--c-text-light);text-transform:uppercase;letter-spacing:.04em;vertical-align:middle;';
+    const compChip = (n) => `<button style="${chipS}" data-dfo-comp="${esc(n)}" title="Show threats for ${esc(n)}">${esc(n)}</button>`;
+    const group = (label, arr) => (arr && arr.length)
+      ? `<div style="margin:3px 0;"><span style="${labelS}">${label}</span>${arr.map(compChip).join('')}</div>` : '';
+    const statChip = (label, val, warn) =>
+      `<span style="display:inline-block;background:${warn && val > 0 ? '#fef2f2' : '#f1f5f9'};color:${warn && val > 0 ? '#b91c1c' : 'inherit'};border-radius:6px;padding:2px 8px;margin-right:6px;font-size:.8rem;">${label}: <strong>${val}</strong></span>`;
+    const risky = (d.risky_flows || []).slice(0, 5).map(r => {
+      const hot = (r.severity === 'Critical' || r.severity === 'High');
+      return `<li style="margin-bottom:2px;"><strong>${esc(r.from)}</strong> → <strong>${esc(r.to)}</strong> <span class="text-light">— ${esc((r.reasons || []).join('; '))}</span>${r.severity ? ` <span style="${hot ? 'color:var(--c-critical);font-weight:600' : 'color:var(--c-text-light)'}">[${esc(r.severity)}]</span>` : ''}</li>`;
+    }).join('');
+    const hotspots = (d.hotspots || []).map(h =>
+      `${compChip(h.component)}<span class="text-xs text-light" style="margin:0 10px 0 -2px;">${h.critical}C/${h.high}H</span>`).join('');
+    return `
+      <div class="card" style="padding:1rem 1.25rem;margin-bottom:1.25rem;background:linear-gradient(135deg,#f8fafc,#fff);">
+        <div class="flex items-center justify-between mb-2" style="gap:.5rem;flex-wrap:wrap;">
+          <div class="text-xs font-semibold text-light" style="text-transform:uppercase;letter-spacing:.05em;">🧭 Data-flow overview</div>
+          <button id="dfo-copy" class="btn btn-sm btn-ghost">Copy</button>
+        </div>
+        <p class="text-sm" style="line-height:1.5;margin-bottom:.55rem;">${esc(d.narrative || '')}</p>
+        <div style="margin-bottom:.35rem;">${statChip('Boundary crossings', st.crossings || 0)}${statChip('Unencrypted flows', st.unencrypted || 0, true)}</div>
+        ${group('Entry points', d.entry_points)}
+        ${group('Data stores', d.data_stores)}
+        ${group('External', d.external_deps)}
+        ${risky ? `<div style="margin-top:.5rem;"><span style="${labelS}">Riskiest flows</span><ul class="text-sm" style="margin:.2rem 0 0;padding-left:1.1rem;">${risky}</ul></div>` : ''}
+        ${hotspots ? `<div style="margin-top:.5rem;"><span style="${labelS}">Hotspots</span>${hotspots}</div>` : ''}
+        ${d.assumptions ? `<div class="text-xs" style="color:#9a3412;margin-top:.5rem;">⚠ ${esc(d.assumptions)}</div>` : ''}
+      </div>`;
+  }
+
+  function dataFlowOverviewText(d) {
+    if (!d) return '';
+    const L = [d.narrative || '', ''];
+    if ((d.entry_points || []).length) L.push('Entry points: ' + d.entry_points.join(', '));
+    if ((d.data_stores || []).length) L.push('Data stores: ' + d.data_stores.join(', '));
+    if ((d.external_deps || []).length) L.push('External: ' + d.external_deps.join(', '));
+    const st = d.stats || {};
+    L.push(`Boundary crossings: ${st.crossings || 0} | Unencrypted flows: ${st.unencrypted || 0}`);
+    if ((d.risky_flows || []).length) {
+      L.push('', 'Riskiest flows:');
+      d.risky_flows.slice(0, 8).forEach(r => L.push(`  - ${r.from} -> ${r.to} (${(r.reasons || []).join('; ')})${r.severity ? ' [' + r.severity + ']' : ''}`));
+    }
+    if (d.assumptions) L.push('', '! ' + d.assumptions);
+    return L.join('\n');
+  }
+
   function renderDetail() {
     const tm = currentTM;
     const featureName = (allFeatures.find(f => f.id === tm.feature_id) || {}).name || `#${tm.feature_id}`;
@@ -537,6 +588,8 @@
           `).join('')}
         </div>
       </div>
+
+      ${dataFlowOverviewHTML(analysis)}
 
       <div class="tabs" style="margin-bottom: 1rem;">
         <button data-tab="threats" class="tab active">Threats <span class="text-light text-xs">(${total})</span></button>
@@ -649,7 +702,8 @@
       threats = threats.filter(t =>
         (t.title || '').toLowerCase().includes(q) ||
         (t.description || '').toLowerCase().includes(q) ||
-        (t.category || '').toLowerCase().includes(q)
+        (t.category || '').toLowerCase().includes(q) ||
+        (t.component_name || '').toLowerCase().includes(q)
       );
     }
     return threats;
@@ -838,6 +892,24 @@
         filter.severity = filter.severity === sev ? null : sev;
         renderDetail();
       });
+    });
+
+    // Data-flow overview: click a component → filter Threats to it; Copy button.
+    document.querySelectorAll('[data-dfo-comp]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        filter.search = btn.dataset.dfoComp;
+        const tab = document.querySelector('#detail-body .tab[data-tab="threats"]');
+        if (tab) tab.click();
+        const s = document.getElementById('threat-search');
+        if (s) s.value = filter.search;
+        renderThreats();
+      });
+    });
+    const dfoCopy = document.getElementById('dfo-copy');
+    if (dfoCopy) dfoCopy.addEventListener('click', async () => {
+      const txt = dataFlowOverviewText(currentTM.analysis && currentTM.analysis.dataflow_summary);
+      try { await navigator.clipboard.writeText(txt); UI.toast('Overview copied', 'success', 1500); }
+      catch { UI.toast('Copy failed', 'error'); }
     });
 
     const search = document.getElementById('threat-search');
