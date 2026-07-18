@@ -67,6 +67,14 @@ Reports: Markdown, interactive HTML (with embedded DFD), PDF, a CSV risk registe
 | Create users / change roles | — | — | ✓ |
 | Read audit log | — | — | ✓ |
 
+**Management overview** (`/management`) — a read-only portfolio view for management
+and admins: per-feature risk roll-ups, a remediation progress bar, a
+needs-attention panel (models not analyzed, stale models, features with no
+model), OWASP Top 10 coverage with an in-app drill-down into the matching
+threats, a searchable/sortable all-models table with risk badges, and a
+one-click CSV export of every threat. Admins additionally get a "Create Jira
+ticket" action per threat here; the management role stays strictly read-only.
+
 ---
 
 ## Project structure

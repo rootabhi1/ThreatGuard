@@ -40,6 +40,15 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 - **LLM & Jira configured in the admin UI** (Settings tab), with secrets stored
   encrypted at rest, in addition to environment variables. Optional Jira
   integration files a ticket from a threat.
+- **Richer management portfolio view.** The read-only management/admin overview
+  gained a portfolio remediation progress bar; a needs-attention panel that
+  flags blind spots (models not analyzed, stale models, features with no threat
+  model); an in-app OWASP Top 10 drill-down that lists the matching threats
+  across the portfolio (instead of only linking out to owasp.org); a
+  searchable, sortable "all threat models" table with per-model risk badges and
+  analyzed/stale flags; and a one-click CSV export of every threat. Admins can
+  file a Jira ticket directly from this view (the management role stays
+  read-only). Backed by a new `GET /api/management/threats` endpoint.
 
 ### Changed
 - Free-text component names now use conventional acronym/brand casing (LLM, API,
