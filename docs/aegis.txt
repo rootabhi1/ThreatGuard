@@ -1,0 +1,28 @@
+# ThreatGuard — structured system template
+#
+# Components — one per line:   Name : type
+# Flows      — one per line:   From -> To : protocol, auth, encrypted?
+#   protocol : HTTPS, HTTP, TCP, gRPC, WSS, AMQP, ...
+#   auth     : session, bearer, mtls, api_key, credentials, none
+#   encrypted: encrypted | plaintext
+# Lines starting with "#" and blank lines are ignored.
+#
+# Valid types: user, external_entity, webapp, mobile_app, api, auth_service,
+#              admin_panel, database, datastore, cache, queue, filesystem,
+#              config, payment_service
+
+# --- Components ---
+User               : user
+Checkout Service    : api
+Inventory Service   : api
+Pricing Service     : api
+Orders DB           : database
+Product Cache       : cache
+Event Bus           : queue
+
+# --- Flows ---
+User -> Checkout Service        : HTTPS, session, encrypted
+Checkout Service -> Orders DB    : TCP, credentials, encrypted
+Checkout Service -> Event Bus    : AMQP, mtls, encrypted
+Inventory Service -> Product Cache : TCP, none, plaintext
+Pricing Service -> Orders DB     : TCP, credentials, encrypted
