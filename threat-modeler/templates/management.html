@@ -36,6 +36,15 @@
   </div>
 </div>
 
+<!-- Remediation progress -->
+<div id="remediation-card" class="card mb-8 hidden" style="padding: 1rem 1.25rem;">
+  <div class="flex items-center justify-between mb-2" style="flex-wrap: wrap; gap: 0.5rem;">
+    <div class="text-xs font-semibold text-light" style="text-transform: uppercase; letter-spacing: 0.05em;">Remediation progress</div>
+    <div id="remediation-legend" class="text-xs text-light flex gap-3" style="flex-wrap: wrap;"></div>
+  </div>
+  <div id="remediation-bar" style="height: 12px; display: flex; overflow: hidden; border-radius: 999px; background: var(--c-border);"></div>
+</div>
+
 <!-- Tabs -->
 <div class="tabs">
   <button data-tab="features" class="tab active">By Feature</button>
@@ -45,6 +54,10 @@
 
 <!-- BY FEATURE TAB -->
 <section id="tab-features" class="tab-panel">
+  <div id="attention-card" class="card mb-4 hidden" style="padding: 1rem 1.25rem; border-left: 4px solid var(--c-high); background: linear-gradient(135deg, #fff7ed, #fff);">
+    <div class="text-xs font-semibold mb-2" style="color: #9a3412; text-transform: uppercase; letter-spacing: 0.05em;">⚠ Needs attention</div>
+    <div id="attention-body" class="flex gap-2" style="flex-wrap: wrap;"></div>
+  </div>
   <div id="feature-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger"></div>
   <div id="empty-state" class="hidden">
     <div class="card empty-state">
@@ -71,19 +84,25 @@
 
 <!-- ALL TMS TAB -->
 <section id="tab-threats" class="tab-panel hidden">
+  <div class="flex items-center justify-between mb-3 gap-3" style="flex-wrap: wrap;">
+    <input id="tms-search" type="text" placeholder="Search models, features, owners…" class="input" style="width: 20rem; max-width: 100%;">
+    <button id="btn-export-portfolio" class="btn btn-sm btn-secondary">↓ Export all threats (CSV)</button>
+  </div>
   <div class="table-card">
     <table class="table">
       <thead>
         <tr>
-          <th>Threat Model</th>
-          <th>Feature</th>
-          <th>Owner</th>
-          <th>Updated</th>
+          <th data-sort="name" class="cursor-pointer">Threat Model</th>
+          <th data-sort="feature" class="cursor-pointer">Feature</th>
+          <th data-sort="risk" class="cursor-pointer">Risk</th>
+          <th data-sort="status" class="cursor-pointer">Status</th>
+          <th data-sort="owner" class="cursor-pointer">Owner</th>
+          <th data-sort="updated" class="cursor-pointer">Updated</th>
           <th class="text-right">Actions</th>
         </tr>
       </thead>
       <tbody id="all-tms-tbody">
-        <tr><td colspan="5" class="text-center text-light">Loading...</td></tr>
+        <tr><td colspan="7" class="text-center text-light">Loading...</td></tr>
       </tbody>
     </table>
   </div>
@@ -102,6 +121,22 @@
       </button>
     </div>
     <div class="modal-body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- OWASP category drill-down modal -->
+<div id="modal-owasp" class="modal hidden">
+  <div class="modal-card modal-card-lg">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="owasp-title"></div>
+        <div class="modal-subtitle" id="owasp-subtitle"></div>
+      </div>
+      <button data-close-modal class="modal-close">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="owasp-body"></div>
   </div>
 </div>
 
