@@ -1,0 +1,96 @@
+{
+  "_about": "Sample threat models for ThreatGuard's offline (rules-only, no API key) 'New Threat Model' flow. Ten example features: five you paste into the 'Describe in text' tab (system_text), and five in the 'Structured' tab (structured_input). Optionally group them under a release to exercise the Release -> Feature -> Threat Model hierarchy.",
+  "_usage": {
+    "text_samples": "New Threat Model -> 'Describe in text' -> paste `system_text` -> Create & analyze. API: POST /api/extract-from-text {\"text\": ...} then POST /api/threat-models.",
+    "structured_samples": "New Threat Model -> 'Structured' -> paste `structured_input` -> Create & analyze. API: POST /api/extract-structured {\"text\": ...}. Grammar: 'Name : type' per line for components; 'A -> B : protocol, auth, encrypted|plaintext' for flows; '#'/blank lines ignored.",
+    "statuses": "draft | in_review | in_sprint | released | cancelled; target_date is optional (YYYY-MM-DD)."
+  },
+  "release": {
+    "name": "2026 Platform Hardening",
+    "description": "Optional parent release grouping the sample features.",
+    "status": "in_progress",
+    "target_date": "2026-12-31"
+  },
+  "features": [
+    {
+      "name": "User Authentication & SSO",
+      "description": "Threat focus: credential stuffing, token theft, session fixation, weak MFA.",
+      "status": "in_sprint",
+      "target_date": "2026-03-31",
+      "input_mode": "text",
+      "system_text": "Customers sign in to a React web app with email and password or via Google and Okta single sign-on. The web app calls a REST API that validates credentials against an authentication service and issues JWT access tokens with refresh-token rotation. Sessions and rate-limit counters are stored in a Redis cache, and user profiles live in a PostgreSQL database."
+    },
+    {
+      "name": "Payment Checkout Flow",
+      "description": "Threat focus: PCI scope, amount tampering, payment-intent replay, webhook spoofing.",
+      "status": "in_review",
+      "target_date": "2026-04-30",
+      "input_mode": "text",
+      "system_text": "Shoppers check out from a web storefront that sends orders to a checkout API behind an API gateway. The checkout service tokenizes card details through the Stripe payment API and never stores card numbers. Orders are written to a PostgreSQL database, and payment webhooks from Stripe are received by a worker that updates order status."
+    },
+    {
+      "name": "Admin Console & RBAC",
+      "description": "Threat focus: privilege escalation, IDOR, missing authorization, audit-log tampering.",
+      "status": "released",
+      "target_date": "2026-02-15",
+      "input_mode": "text",
+      "system_text": "Internal staff use an admin console, reachable only through a bastion host, to manage refunds and user roles. The console authenticates via SSO against an identity provider, enforces role-based access, reads and writes the accounts PostgreSQL database, and records every action to an append-only audit log."
+    },
+    {
+      "name": "Notification Service",
+      "description": "Threat focus: template/HTML injection, notification spoofing, PII leakage, enumeration.",
+      "status": "in_sprint",
+      "target_date": "2026-05-15",
+      "input_mode": "text",
+      "system_text": "A notification service fans out transactional messages: emails through SendGrid, text messages through an SMS gateway, and mobile push notifications. Application services publish events to a Kafka queue, a worker renders templates, and a secrets manager holds the third-party API keys."
+    },
+    {
+      "name": "File Upload & Media Storage",
+      "description": "Threat focus: unrestricted upload, path traversal, content-type confusion, malware hosting.",
+      "status": "draft",
+      "target_date": "2026-06-30",
+      "input_mode": "text",
+      "system_text": "Users upload profile images and documents from a web app. Files are sent with pre-signed URLs directly to an S3 object store, scanned by a worker for malware, and served back through a CDN. File metadata is kept in a PostgreSQL database."
+    },
+    {
+      "name": "Public REST API & Webhooks",
+      "description": "Threat focus: broken object-level authz, rate-limit bypass, SSRF via webhook URLs, key leakage.",
+      "status": "in_sprint",
+      "target_date": "2026-05-31",
+      "input_mode": "structured",
+      "structured_input": "Client : external_entity\nAPI Gateway : api_gateway\nREST API : api\nAuth Service : auth_service\nPostgres : database\nWebhook Dispatcher : worker\n\nClient -> API Gateway : https, api_key, encrypted\nAPI Gateway -> REST API : https, jwt, encrypted\nREST API -> Auth Service : https, oauth, encrypted\nREST API -> Postgres : sql, password, encrypted\nREST API -> Webhook Dispatcher : tcp, none, plaintext\nWebhook Dispatcher -> Client : https, none, encrypted"
+    },
+    {
+      "name": "Mobile App Backend",
+      "description": "Threat focus: insecure deep links, device-token replay, weak transport validation, root/jailbreak abuse.",
+      "status": "draft",
+      "target_date": "2026-09-30",
+      "input_mode": "structured",
+      "structured_input": "Mobile App : mobile_app\nAPI Gateway : api_gateway\nIdentity Provider : identity_provider\nProfile Service : service\nUsers DB : database\nPush Service : notification_service\n\nMobile App -> API Gateway : https, jwt, encrypted\nAPI Gateway -> Identity Provider : https, oauth, encrypted\nAPI Gateway -> Profile Service : https, mtls, encrypted\nProfile Service -> Users DB : sql, password, encrypted\nProfile Service -> Push Service : https, api_key, encrypted"
+    },
+    {
+      "name": "Data Export & Reporting",
+      "description": "Threat focus: CSV formula injection, over-broad exposure, insecure temp storage, cross-tenant leakage.",
+      "status": "draft",
+      "target_date": "2026-08-31",
+      "input_mode": "structured",
+      "structured_input": "Analyst : user\nReporting UI : webapp\nExport Service : service\nObject Store : object_storage\nData Warehouse : data_warehouse\nScheduler : scheduler\nExport Worker : worker\n\nAnalyst -> Reporting UI : https, sso, encrypted\nReporting UI -> Export Service : https, jwt, encrypted\nScheduler -> Export Worker : https, none, encrypted\nExport Worker -> Data Warehouse : sql, password, encrypted\nExport Worker -> Object Store : https, iam, encrypted\nReporting UI -> Object Store : https, iam, encrypted"
+    },
+    {
+      "name": "Third-party OAuth Integrations",
+      "description": "Threat focus: token scope creep, secret storage, connect-flow CSRF, confused deputy.",
+      "status": "in_review",
+      "target_date": "2026-07-31",
+      "input_mode": "structured",
+      "structured_input": "User : user\nWeb App : webapp\nIntegration Service : service\nSecrets Manager : secrets_manager\nGitHub : external_entity\nSlack : external_entity\nToken DB : database\n\nUser -> Web App : https, session, encrypted\nWeb App -> Integration Service : https, jwt, encrypted\nIntegration Service -> GitHub : https, oauth, encrypted\nIntegration Service -> Slack : https, oauth, encrypted\nIntegration Service -> Secrets Manager : https, iam, encrypted\nIntegration Service -> Token DB : sql, password, encrypted"
+    },
+    {
+      "name": "Search & Indexing Service",
+      "description": "Threat focus: query injection, cross-tenant index access, expensive-query DoS, stale ACLs.",
+      "status": "draft",
+      "target_date": "2026-10-31",
+      "input_mode": "structured",
+      "structured_input": "User : user\nWeb App : webapp\nSearch API : api\nSearch Cluster : search_service\nIndexer : worker\nPrimary DB : database\nEvents Queue : queue\n\nUser -> Web App : https, session, encrypted\nWeb App -> Search API : https, jwt, encrypted\nSearch API -> Search Cluster : https, basic, encrypted\nPrimary DB -> Events Queue : tcp, none, plaintext\nEvents Queue -> Indexer : tcp, none, plaintext\nIndexer -> Search Cluster : https, basic, encrypted"
+    }
+  ]
+}
