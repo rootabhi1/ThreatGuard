@@ -352,6 +352,8 @@
       const compBoundary = {};
       (system.trust_boundaries || []).forEach(b =>
         (b.contains || []).forEach(cid => { compBoundary[cid] = b.id; }));
+      const compName = {};
+      (system.components || []).forEach(c => { compName[c.id] = c.name || c.id; });
       (system.data_flows || []).forEach((f, _flowIdx) => {
         const fromPos = system.layout[f.from];
         const toPos = system.layout[f.to];
@@ -382,6 +384,14 @@
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.setAttribute('class', 'dfd-flow');
         g.setAttribute('data-flow-id', f.id);
+
+        // Native hover tooltip: inspect a flow (endpoints, protocol, auth, encryption)
+        // without clicking — the numbered badge and line both carry it.
+        const sec = (isEncrypted ? 'encrypted' : 'plaintext') + (crossesBoundary ? ', crosses boundary' : '');
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = `[${flowNum}] ${compName[f.from] || f.from} → ${compName[f.to] || f.to}`
+          + ` · ${f.protocol || '—'} · auth: ${f.auth || 'none'} · ${sec}`;
+        g.appendChild(title);
 
         // Hit area (transparent thick line)
         const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');

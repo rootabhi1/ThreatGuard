@@ -114,6 +114,34 @@ def _auto_layout(components: list[dict], data_flows: list[dict],
         if not columns:
             columns = [components]
 
+    # Reduce edge crossings: order nodes within each column by the barycenter of their
+    # connected neighbours (the classic layered-layout heuristic). A few left↔right
+    # sweeps pull connected nodes into vertical alignment across columns, so far fewer
+    # flow lines cross. Deterministic — stable sort, fixed sweep count.
+    if len(columns) > 1 and data_flows:
+        col_of = {c["id"]: ci for ci, col in enumerate(columns) for c in col}
+        neighbors: dict[str, list[str]] = {}
+        for f in data_flows:
+            a, b = f.get("from"), f.get("to")
+            if a in col_of and b in col_of:
+                neighbors.setdefault(a, []).append(b)
+                neighbors.setdefault(b, []).append(a)
+        row_of = {c["id"]: i for col in columns for i, c in enumerate(col)}
+
+        def _bary(c: dict) -> float:
+            rs = [row_of[n] for n in neighbors.get(c["id"], []) if n in row_of]
+            return sum(rs) / len(rs) if rs else float(row_of[c["id"]])
+
+        def _sweep(order) -> None:
+            for ci in order:
+                columns[ci].sort(key=_bary)
+                for i, c in enumerate(columns[ci]):
+                    row_of[c["id"]] = i
+
+        for _ in range(3):
+            _sweep(range(1, len(columns)))            # left → right
+            _sweep(range(len(columns) - 2, -1, -1))   # right → left
+
     # Place bands left→right. A band with more than _MAX_ROWS members wraps into a
     # compact grid (multiple sub-columns) rather than one very tall column, so a
     # single crowded boundary can't blow the whole diagram out to thousands of
@@ -237,7 +265,15 @@ def _draw_flow(flow: dict, comp_by_id: dict, positions: dict,
     cx, cy = mx + nx * curve, my + ny * curve
 
     path_id = f"path_{flow['id']}"
+    # Group the flow so a native hover tooltip (<title>) can describe it without any
+    # inline text on the diagram — hover the line or its badge to inspect the flow.
+    proto = flow.get("protocol") or "—"
+    auth = flow.get("auth") or "none"
+    sec = ("encrypted" if encrypted else "plaintext") + (", crosses boundary" if crosses_boundary else "")
+    num_prefix = f"[{number}] " if number is not None else ""
+    tip = xml_escape(f"{num_prefix}{src['name']} → {dst['name']} · {proto} · auth: {auth} · {sec}")
     parts = []
+    parts.append(f'<g><title>{tip}</title>')
     parts.append(
         f'<path id="{path_id}" d="M {x1:.1f},{y1:.1f} Q {cx:.1f},{cy:.1f} {x2:.1f},{y2:.1f}" '
         f'fill="none" stroke="{color}" stroke-width="{width}" stroke-dasharray="{dash}" marker-end="url(#arrow)"/>'
@@ -269,6 +305,7 @@ def _draw_flow(flow: dict, comp_by_id: dict, positions: dict,
             f'<text x="{bx:.1f}" y="{by + 3.3:.1f}" text-anchor="middle" font-size="10.5" '
             f'font-weight="700" fill="#ffffff" font-family="system-ui,sans-serif">{number}</text>'
         )
+    parts.append('</g>')
     return "".join(parts)
 
 
