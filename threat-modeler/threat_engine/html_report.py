@@ -29,6 +29,41 @@ def _sev_class(sev):
             "Low": "sev-low", "Info": "sev-info"}.get(sev, "sev-med")
 
 
+def _render_model_health(issues, esc):
+    """'Model health' card: what normalization repaired or flagged. Rendered only
+    when there is something to disclose, so clean models show nothing."""
+    if not issues:
+        return ""
+    meta = {
+        "error":   ("#fef2f2", "#fecaca", "#b91c1c", "⛔"),
+        "warning": ("#fffbeb", "#fde68a", "#92400e", "⚠"),
+        "info":    ("#f8fafc", "#e2e8f0", "#475569", "ℹ"),
+    }
+    counts = {"error": 0, "warning": 0, "info": 0}
+    for i in issues:
+        counts[i.get("level", "info")] = counts.get(i.get("level", "info"), 0) + 1
+    order = {"error": 0, "warning": 1, "info": 2}
+    rows = ""
+    for i in sorted(issues, key=lambda x: order.get(x.get("level"), 3)):
+        _, _, fg, icon = meta.get(i.get("level"), meta["info"])
+        rows += (f'<li style="margin:4px 0;line-height:1.45">'
+                 f'<span style="color:{fg}">{icon}</span> {esc(i.get("message", ""))}</li>')
+    summary = " · ".join(s for s in [
+        f'{counts["error"]} need attention' if counts["error"] else "",
+        f'{counts["warning"]} auto-resolved' if counts["warning"] else "",
+        f'{counts["info"]} noted' if counts["info"] else "",
+    ] if s)
+    top_bg, top_bd, top_fg, _ = (meta["error"] if counts["error"]
+                                 else meta["warning"] if counts["warning"] else meta["info"])
+    return (
+        f'<section class="card" style="background:{top_bg};border:1px solid {top_bd}">'
+        f'<h2 style="color:{top_fg}">🩺 Model health — {esc(summary)}</h2>'
+        f'<ul style="margin:6px 0 0;padding-left:18px;font-size:0.88rem">{rows}</ul>'
+        f'<p style="margin-top:8px;font-size:0.8rem;color:#64748b">Nothing was dropped silently; '
+        f'placeholder nodes mark unresolved references.</p></section>'
+    )
+
+
 def _render_dataflow_overview(dfs, esc):
     """Plain-language 'Data-flow overview' card for the HTML report."""
     if not dfs:
@@ -486,6 +521,8 @@ def to_html(analysis: dict) -> str:
       <strong>{summary['total']}</strong> total threats — {summary['rule_based']} rule-based, {summary['llm_enhanced']} LLM-enhanced, <strong style="color:#b91c1c">{cb_count}</strong> cross-boundary.
     </div>
   </section>
+
+  {_render_model_health(analysis.get("model_issues"), _esc)}
 
   {_render_dataflow_overview(analysis.get("dataflow_summary"), _esc)}
 

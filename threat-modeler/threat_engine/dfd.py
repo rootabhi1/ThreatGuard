@@ -317,6 +317,12 @@ def render_dfd_svg(system: dict, *, animated: bool = False,
                    width: int = 1000, height: int = 600,
                    positions: dict | None = None) -> str:
     """Return a complete SVG string for the DFD."""
+    # Repair the model first so a missing id or a dangling flow reference can never
+    # crash the renderer or make a flow silently disappear: normalization assigns
+    # ids and substitutes a visible placeholder node for any undeclared reference.
+    # Idempotent — analysed models arrive already normalized, so this is a no-op there.
+    from .model_health import normalize_system
+    system, _ = normalize_system(system)
     components = system.get("components", []) or []
     flows = system.get("data_flows", []) or []
     boundaries = system.get("trust_boundaries", []) or []
@@ -396,7 +402,12 @@ def render_dfd_svg(system: dict, *, animated: bool = False,
 
 
 def auto_layout_for_frontend(system: dict, width: int = 1000, height: int = 600) -> dict:
-    """Helper exposed to the frontend so initial layout matches what the report uses."""
+    """Helper exposed to the frontend so initial layout matches what the report uses.
+
+    Normalizes first so an editor model with a missing/duplicate id can never crash
+    the layout endpoint (matches render_dfd_svg's guarantee)."""
+    from .model_health import normalize_system
+    system, _ = normalize_system(system)
     return _auto_layout(
         system.get("components", []) or [],
         system.get("data_flows", []) or [],

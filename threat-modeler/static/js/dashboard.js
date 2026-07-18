@@ -548,6 +548,20 @@
           throw new Error(msg);
         }
         system = await sResp.json();
+        // Parsing is lenient: bad lines become line-referenced issues instead of a
+        // hard failure. Surface them, but never block — the user still gets a model.
+        const structIssues = system.issues || [];
+        delete system.issues;
+        delete system.boundary_inference_mode;
+        const structErrors = structIssues.filter(i => i.level === 'error');
+        if (structIssues.length) {
+          const lvl = structErrors.length ? 'warning' : 'info';
+          UI.toast(`Parsed with ${structIssues.length} note${structIssues.length === 1 ? '' : 's'} — see Model health after analysis.`, lvl, 6000);
+          if (structErrors.length) {
+            structError.innerHTML = structErrors.map(i => esc(i.message)).join('<br>');
+            structError.classList.remove('hidden');
+          }
+        }
         if (!system.name) system.name = fd.get('name');
         system._source_text = fd.get('structured_text');
       } else if (selectedTemplate) {
@@ -812,6 +826,44 @@
     return L.join('\n');
   }
 
+  // Model-health banner: shows exactly what normalization repaired or flagged
+  // (missing/duplicate ids, dangling flow references turned into placeholders,
+  // unrecognized types, components outside a boundary). Nothing is ever dropped
+  // silently — this is where the user sees the truth about their input.
+  function modelIssuesHTML(analysis) {
+    const items = (analysis && analysis.model_issues) || [];
+    if (!items.length) return '';
+    const order = { error: 0, warning: 1, info: 2 };
+    const meta = {
+      error:   { bg: '#fef2f2', bd: '#fecaca', fg: '#b91c1c', icon: '⛔', word: 'need attention' },
+      warning: { bg: '#fffbeb', bd: '#fde68a', fg: '#92400e', icon: '⚠', word: 'auto-resolved' },
+      info:    { bg: '#f8fafc', bd: '#e2e8f0', fg: '#475569', icon: 'ℹ', word: 'noted' },
+    };
+    const counts = { error: 0, warning: 0, info: 0 };
+    items.forEach(i => { counts[i.level] = (counts[i.level] || 0) + 1; });
+    const sorted = [...items].sort((a, b) => (order[a.level] ?? 3) - (order[b.level] ?? 3));
+    const top = counts.error ? meta.error : counts.warning ? meta.warning : meta.info;
+    const summary = [
+      counts.error ? `${counts.error} need attention` : '',
+      counts.warning ? `${counts.warning} auto-resolved` : '',
+      counts.info ? `${counts.info} noted` : '',
+    ].filter(Boolean).join(' · ');
+    const rows = sorted.map(i => {
+      const m = meta[i.level] || meta.info;
+      return `<li style="display:flex;gap:.5rem;align-items:flex-start;margin:.25rem 0;">
+        <span style="color:${m.fg};flex-shrink:0;">${m.icon}</span>
+        <span class="text-sm" style="line-height:1.45;">${esc(i.message)}</span></li>`;
+    }).join('');
+    return `
+      <div class="card mb-6" style="padding:.85rem 1.1rem;background:${top.bg};border:1px solid ${top.bd};">
+        <div class="text-xs font-semibold" style="color:${top.fg};text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;">
+          🩺 Model health — ${esc(summary)}
+        </div>
+        <ul style="margin:0;padding-left:.1rem;list-style:none;">${rows}</ul>
+        <div class="text-xs text-light" style="margin-top:.45rem;">Nothing was dropped silently. Fix the flagged items in the Data Flow Diagram tab, then re-run analysis.</div>
+      </div>`;
+  }
+
   function renderDetail() {
     const tm = currentTM;
     const featureName = (allFeatures.find(f => f.id === tm.feature_id) || {}).name || `#${tm.feature_id}`;
@@ -851,6 +903,7 @@
         </div>
       </div>
 
+      ${modelIssuesHTML(analysis)}
       ${dataFlowOverviewHTML(analysis)}
 
       <!-- Tabs -->

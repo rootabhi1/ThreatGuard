@@ -31,6 +31,20 @@ def to_markdown(analysis: dict) -> str:
         lines.append(system["description"])
         lines.append("")
 
+    # ---- Model health (what normalization repaired or flagged) ----
+    model_issues = analysis.get("model_issues") or []
+    if model_issues:
+        _icons = {"error": "⛔", "warning": "⚠", "info": "ℹ"}
+        _rank = {"error": 0, "warning": 1, "info": 2}
+        lines.append("## Model health")
+        lines.append("")
+        lines.append("Nothing in the input was dropped silently. The following was "
+                     "auto-resolved or flagged during analysis:")
+        lines.append("")
+        for i in sorted(model_issues, key=lambda x: _rank.get(x.get("level"), 3)):
+            lines.append(f"- {_icons.get(i.get('level'), 'ℹ')} {i.get('message', '')}")
+        lines.append("")
+
     # ---- Data-flow overview (plain language, before the diagram) ----
     dfs = analysis.get("dataflow_summary")
     if dfs:
@@ -359,12 +373,27 @@ def to_pdf(analysis: dict) -> bytes:
         story.append(Paragraph(system["description"].replace("\n", "<br/>"), body))
         story.append(Spacer(1, 0.12 * inch))
 
+    def _e(s):
+        return (str(s if s is not None else "")
+                .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+    # ---- Model health (what normalization repaired or flagged) ----
+    model_issues = analysis.get("model_issues") or []
+    if model_issues:
+        _icons = {"error": "!", "warning": "!", "info": "i"}
+        _rank = {"error": 0, "warning": 1, "info": 2}
+        story.append(Paragraph("Model health", h2))
+        story.append(Paragraph(
+            "Nothing in the input was dropped silently. The following was "
+            "auto-resolved or flagged during analysis:", small))
+        for i in sorted(model_issues, key=lambda x: _rank.get(x.get("level"), 3)):
+            story.append(Paragraph(
+                f"[{_icons.get(i.get('level'), 'i')}] {_e(i.get('message', ''))}", small))
+        story.append(Spacer(1, 0.14 * inch))
+
     # ---- Data-flow overview (plain-language, before the diagram) ----
     dfs = analysis.get("dataflow_summary")
     if dfs:
-        def _e(s):
-            return (str(s if s is not None else "")
-                    .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
         story.append(Paragraph("Data-flow overview", h2))
         story.append(Paragraph(_e(dfs.get("narrative", "")), body))
         st = dfs.get("stats", {})

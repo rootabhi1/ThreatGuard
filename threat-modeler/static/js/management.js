@@ -551,6 +551,41 @@
     return L.join('\n');
   }
 
+  // Read-only mirror of the dashboard's model-health banner: shows what
+  // normalization repaired or flagged so management sees the same honest account.
+  function modelIssuesHTML(analysis) {
+    const items = (analysis && analysis.model_issues) || [];
+    if (!items.length) return '';
+    const order = { error: 0, warning: 1, info: 2 };
+    const meta = {
+      error:   { bg: '#fef2f2', bd: '#fecaca', fg: '#b91c1c', icon: '⛔' },
+      warning: { bg: '#fffbeb', bd: '#fde68a', fg: '#92400e', icon: '⚠' },
+      info:    { bg: '#f8fafc', bd: '#e2e8f0', fg: '#475569', icon: 'ℹ' },
+    };
+    const counts = { error: 0, warning: 0, info: 0 };
+    items.forEach(i => { counts[i.level] = (counts[i.level] || 0) + 1; });
+    const sorted = [...items].sort((a, b) => (order[a.level] ?? 3) - (order[b.level] ?? 3));
+    const top = counts.error ? meta.error : counts.warning ? meta.warning : meta.info;
+    const summary = [
+      counts.error ? `${counts.error} need attention` : '',
+      counts.warning ? `${counts.warning} auto-resolved` : '',
+      counts.info ? `${counts.info} noted` : '',
+    ].filter(Boolean).join(' · ');
+    const rows = sorted.map(i => {
+      const m = meta[i.level] || meta.info;
+      return `<li style="display:flex;gap:.5rem;align-items:flex-start;margin:.25rem 0;">
+        <span style="color:${m.fg};flex-shrink:0;">${m.icon}</span>
+        <span class="text-sm" style="line-height:1.45;">${esc(i.message)}</span></li>`;
+    }).join('');
+    return `
+      <div class="card mb-6" style="padding:.85rem 1.1rem;background:${top.bg};border:1px solid ${top.bd};">
+        <div class="text-xs font-semibold" style="color:${top.fg};text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;">
+          🩺 Model health — ${esc(summary)}
+        </div>
+        <ul style="margin:0;padding-left:.1rem;list-style:none;">${rows}</ul>
+      </div>`;
+  }
+
   function renderDetail() {
     const tm = currentTM;
     const featureName = (allFeatures.find(f => f.id === tm.feature_id) || {}).name || `#${tm.feature_id}`;
@@ -589,6 +624,7 @@
         </div>
       </div>
 
+      ${modelIssuesHTML(analysis)}
       ${dataFlowOverviewHTML(analysis)}
 
       <div class="tabs" style="margin-bottom: 1rem;">
