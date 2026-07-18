@@ -126,6 +126,7 @@ pre.code-block{background:#000;border:none;padding:16px 20px;font-family:var(--m
 .ep-method{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;width:50px;text-align:center;flex-shrink:0}
 .m-get{background:var(--green-d);color:var(--green)}
 .m-post{background:var(--blue-d);color:var(--blue)}
+.m-put{background:#33270a;color:#fbbf24}
 .m-del{background:#1c0000;color:var(--red)}
 .ep-path{font-family:var(--mono);font-size:11px;color:#93c5fd;min-width:260px}
 .ep-desc{color:var(--mu);flex:1}
@@ -346,13 +347,18 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;align-ite
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/auth/login</span><span class="ep-desc">Get a JWT token</span></div>
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/extract-from-text</span><span class="ep-desc">Plain-English description → system model</span></div>
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/extract-structured</span><span class="ep-desc">Structured spec → system model</span></div>
+    <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat-models</span><span class="ep-desc">Create a threat model from a system</span></div>
+    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/threat-models · /:id</span><span class="ep-desc">List or fetch threat models</span></div>
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat-models/from-diagram</span><span class="ep-desc">AI vision: diagram → model</span></div>
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat-models/:id/analyze</span><span class="ep-desc">Run the analysis</span></div>
+    <div class="ep"><span class="ep-method m-put">PUT</span><span class="ep-path">/api/threat-models/:id/threats/:tid/status</span><span class="ep-desc">Update a threat's status</span></div>
     <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/threat-models/:id/report/:fmt</span><span class="ep-desc">html · pdf · markdown · csv · executive</span></div>
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/threat/fix</span><span class="ep-desc">AI before/after code fix</span></div>
     <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/releases/:a/diff/:b</span><span class="ep-desc">Compare two threat models</span></div>
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/share/:id</span><span class="ep-desc">Read-only share link</span></div>
     <div class="ep"><span class="ep-method m-post">POST</span><span class="ep-path">/api/create-ticket</span><span class="ep-desc">File a Jira issue from a threat</span></div>
+    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/management/overview</span><span class="ep-desc">Per-feature portfolio rollup (management)</span></div>
+    <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/api/management/threats</span><span class="ep-desc">All threats across the portfolio (management)</span></div>
     <div class="ep"><span class="ep-method m-get">GET</span><span class="ep-path">/healthz · /readyz</span><span class="ep-desc">Liveness / readiness probes</span></div>
   </div>
 </section>
