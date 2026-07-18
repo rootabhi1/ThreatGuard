@@ -31,6 +31,44 @@ def to_markdown(analysis: dict) -> str:
         lines.append(system["description"])
         lines.append("")
 
+    # ---- Data-flow overview (plain language, before the diagram) ----
+    dfs = analysis.get("dataflow_summary")
+    if dfs:
+        def _md(s):
+            return str(s).replace("|", "\\|")
+        lines.append("## Data-flow overview")
+        lines.append("")
+        lines.append(dfs.get("narrative", ""))
+        lines.append("")
+        st = dfs.get("stats", {})
+        lines.append(f"- **Entry points:** {', '.join(dfs.get('entry_points') or ['—'])}")
+        lines.append(f"- **Data stores:** {', '.join(dfs.get('data_stores') or ['—'])}")
+        lines.append(f"- **External dependencies:** {', '.join(dfs.get('external_deps') or ['—'])}")
+        lines.append(f"- **Boundary crossings:** {st.get('crossings', 0)}  |  "
+                     f"**Unencrypted flows:** {st.get('unencrypted', 0)}")
+        lines.append("")
+        risky = dfs.get("risky_flows") or []
+        if risky:
+            lines.append("### Riskiest flows")
+            lines.append("")
+            lines.append("| Flow | Why it's risky | Severity |")
+            lines.append("|---|---|---|")
+            for r in risky[:8]:
+                lines.append(f"| {_md(r['from'])} → {_md(r['to'])} | "
+                             f"{'; '.join(r['reasons'])} | {r.get('severity') or '—'} |")
+            lines.append("")
+        hs = dfs.get("hotspots") or []
+        if hs:
+            lines.append("### Risk hotspots")
+            lines.append("")
+            for h in hs:
+                lines.append(f"- **{h['component']}** — {h['critical']} critical, "
+                             f"{h['high']} high ({h['total']} total)")
+            lines.append("")
+        if dfs.get("assumptions"):
+            lines.append(f"> ⚠ {dfs['assumptions']}")
+            lines.append("")
+
     # ---- DFD embed ----
     lines.append("## Data Flow Diagram")
     lines.append("")
@@ -321,13 +359,48 @@ def to_pdf(analysis: dict) -> bytes:
         story.append(Paragraph(system["description"].replace("\n", "<br/>"), body))
         story.append(Spacer(1, 0.12 * inch))
 
+    # ---- Data-flow overview (plain-language, before the diagram) ----
+    dfs = analysis.get("dataflow_summary")
+    if dfs:
+        def _e(s):
+            return (str(s if s is not None else "")
+                    .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+        story.append(Paragraph("Data-flow overview", h2))
+        story.append(Paragraph(_e(dfs.get("narrative", "")), body))
+        st = dfs.get("stats", {})
+        story.append(Paragraph(
+            f"<b>Entry points:</b> {_e(', '.join(dfs.get('entry_points') or ['-']))} &nbsp;|&nbsp; "
+            f"<b>Data stores:</b> {_e(', '.join(dfs.get('data_stores') or ['-']))}", small))
+        story.append(Paragraph(
+            f"<b>External dependencies:</b> {_e(', '.join(dfs.get('external_deps') or ['-']))} &nbsp;|&nbsp; "
+            f"<b>Boundary crossings:</b> {st.get('crossings', 0)} &nbsp;|&nbsp; "
+            f"<b>Unencrypted flows:</b> {st.get('unencrypted', 0)}", small))
+        risky = dfs.get("risky_flows") or []
+        if risky:
+            story.append(Spacer(1, 0.05 * inch))
+            story.append(Paragraph("<b>Riskiest flows</b>", body))
+            for r in risky[:6]:
+                sev = f" [{r['severity']}]" if r.get("severity") else ""
+                story.append(Paragraph(
+                    f"- {_e(r['from'])} to {_e(r['to'])}{sev}: {_e('; '.join(r['reasons']))}", small))
+        hs = dfs.get("hotspots") or []
+        if hs:
+            story.append(Spacer(1, 0.05 * inch))
+            story.append(Paragraph("<b>Risk hotspots:</b> " + _e(", ".join(
+                f"{h['component']} ({h['critical']}C/{h['high']}H)" for h in hs)), small))
+        if dfs.get("assumptions"):
+            story.append(Paragraph(f"<i>{_e(dfs['assumptions'])}</i>", small))
+        story.append(Spacer(1, 0.18 * inch))
+
     # ---- DFD ----
     story.append(Paragraph("Data Flow Diagram", h2))
-    if dfd_drawing is not None:
-        # Scale to fit page width
-        max_w = 7.0 * inch
-        if dfd_drawing.width > max_w:
-            scale = max_w / dfd_drawing.width
+    if dfd_drawing is not None and dfd_drawing.width and dfd_drawing.height:
+        # Scale to fit within the page frame in BOTH dimensions. Fitting to width
+        # only lets a tall diagram exceed the frame height, which aborts the whole
+        # PDF with a reportlab LayoutError (a large model = broken PDF).
+        max_w, max_h = 7.0 * inch, 8.0 * inch
+        scale = min(max_w / dfd_drawing.width, max_h / dfd_drawing.height, 1.0)
+        if scale < 1.0:
             dfd_drawing.width *= scale
             dfd_drawing.height *= scale
             dfd_drawing.scale(scale, scale)
