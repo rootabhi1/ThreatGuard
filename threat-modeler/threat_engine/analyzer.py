@@ -1148,11 +1148,15 @@ def analyze_system(
         "state": state,
     }
 
+    from .dataflow_summary import build_dataflow_summary
+    _untrusted = _untrusted_input_crossings(system, all_threats)
+
     return {
         "system": system,
         "threats": all_threats,
         "summary": summary,
-        "untrusted_crossings": _untrusted_input_crossings(system, all_threats),
+        "dataflow_summary": build_dataflow_summary(system, all_threats, summary, _untrusted),
+        "untrusted_crossings": _untrusted,
         # Only real methodologies belong in this list — reports render it as
         # "Methodologies:". DREAD (scoring) and OWASP (reference) are excluded even
         # if a caller passes them, so they can never be presented as methodologies.
