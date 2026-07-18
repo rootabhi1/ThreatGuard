@@ -213,7 +213,7 @@ def _intersect_node_edge(pos_a: dict, pos_b: dict, w: int, h: int) -> tuple[floa
 
 
 def _draw_flow(flow: dict, comp_by_id: dict, positions: dict,
-               crosses_boundary: bool, anim: bool = False) -> str:
+               crosses_boundary: bool, anim: bool = False, number: int | None = None) -> str:
     src = comp_by_id.get(flow["from"])
     dst = comp_by_id.get(flow["to"])
     if not src or not dst: return ""
@@ -228,12 +228,7 @@ def _draw_flow(flow: dict, comp_by_id: dict, positions: dict,
     dash = "5,4" if not encrypted else "none"
     width = 2.2 if crosses_boundary else 1.6
 
-    label = flow.get("label", "")
-    proto = flow.get("protocol", "")
-    auth  = flow.get("auth") or "none"
-    full_label = f"{label}" + (f" [{proto}]" if proto else "")
     mx, my = (x1 + x2) / 2, (y1 + y2) / 2
-
     # Slight curve perpendicular to the line for clarity
     dx, dy = x2 - x1, y2 - y1
     length = max(1.0, math.hypot(dx, dy))
@@ -255,31 +250,47 @@ def _draw_flow(flow: dict, comp_by_id: dict, positions: dict,
             f'<animate attributeName="stroke-dashoffset" from="0" to="-36" dur="1.6s" repeatCount="indefinite"/>'
             f'</path>'
         )
-    if full_label:
-        # A <textPath> follows its path's direction, so a right-to-left flow would
-        # render the label upside-down. Bind the label to a dedicated invisible
-        # path that always runs left-to-right (endpoints swapped when needed).
-        if (x1, y1) <= (x2, y2):
-            lx1, ly1, lx2, ly2 = x1, y1, x2, y2
-        else:
-            lx1, ly1, lx2, ly2 = x2, y2, x1, y1
-        label_path_id = f"lp_{flow['id']}"
+    # Numbered badge at the midpoint instead of a text label along the line.
+    # Printing "A -> B [proto]" on every edge turns a large diagram into unreadable
+    # overlapping text; a small number keyed to the flow legend stays legible no
+    # matter how dense the graph is. Badge colour still encodes risk (red = unencrypted
+    # or boundary-crossing), and the legend carries protocol / auth / encryption.
+    if number is not None:
         parts.append(
-            f'<path id="{label_path_id}" d="M {lx1:.1f},{ly1:.1f} Q {cx:.1f},{cy:.1f} {lx2:.1f},{ly2:.1f}" '
-            f'fill="none" stroke="none"/>'
+            f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="9.5" fill="{color}" '
+            f'stroke="#ffffff" stroke-width="1.5"/>'
         )
         parts.append(
-            f'<text font-size="10" fill="#475569" font-family="system-ui,sans-serif">'
-            f'<textPath href="#{label_path_id}" startOffset="50%" text-anchor="middle">{xml_escape(full_label)}</textPath>'
-            f'</text>'
+            f'<text x="{cx:.1f}" y="{cy + 3.3:.1f}" text-anchor="middle" font-size="10.5" '
+            f'font-weight="700" fill="#ffffff" font-family="system-ui,sans-serif">{number}</text>'
         )
-
-    # Lock icon (encryption status) at midpoint
-    icon = "🔒" if encrypted else "⚠"
-    parts.append(
-        f'<text x="{cx:.1f}" y="{cy + 4:.1f}" text-anchor="middle" font-size="11" fill="{color}">{icon}</text>'
-    )
     return "".join(parts)
+
+
+def build_flow_legend(system: dict) -> list[dict]:
+    """Numbered legend for the DFD, matching the badge numbers on the rendered SVG.
+
+    Normalizes with the same pass the renderer uses and numbers flows in the same
+    order, so legend entry N always corresponds to badge N on the diagram."""
+    from .model_health import normalize_system
+    system, _ = normalize_system(system)
+    comps = {c["id"]: c for c in system.get("components", []) or []}
+    bmap = {cid: b.get("id") for b in (system.get("trust_boundaries") or [])
+            for cid in (b.get("contains") or [])}
+    legend = []
+    for i, f in enumerate(system.get("data_flows", []) or [], 1):
+        s = comps.get(f.get("from"), {})
+        d = comps.get(f.get("to"), {})
+        legend.append({
+            "n": i,
+            "from": s.get("name", f.get("from", "?")),
+            "to": d.get("name", f.get("to", "?")),
+            "protocol": f.get("protocol", "") or "",
+            "auth": f.get("auth") or "none",
+            "encrypted": bool(f.get("encrypted", True)),
+            "crosses": bmap.get(f.get("from")) != bmap.get(f.get("to")),
+        })
+    return legend
 
 
 def _draw_boundary(boundary: dict, positions: dict, palette: dict,
@@ -388,9 +399,10 @@ def render_dfd_svg(system: dict, *, animated: bool = False,
         palette = _BOUNDARY_PALETTE[i % len(_BOUNDARY_PALETTE)]
         parts.append(_draw_boundary(b, pos, palette, anim=animated))
 
-    # Flows (under nodes)
-    for f in flows:
-        parts.append(_draw_flow(f, comp_by_id, pos, crosses(f), anim=animated))
+    # Flows (under nodes). Numbered 1..N in the same order as build_flow_legend,
+    # so each badge keys to a legend row rather than a text label on the line.
+    for i, f in enumerate(flows, 1):
+        parts.append(_draw_flow(f, comp_by_id, pos, crosses(f), anim=animated, number=i))
 
     # Nodes on top
     for c in components:

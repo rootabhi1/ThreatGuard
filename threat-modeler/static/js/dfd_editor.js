@@ -215,7 +215,9 @@
     system.trust_boundaries = system.trust_boundaries || [];
     system.layout = system.layout || {};
 
-    let layers = { boundaries: true, encryption: true, labels: true };
+    // Labels default OFF: numbered badges keep the canvas readable; users who want
+    // per-edge text labels can switch them on with the "Labels" toggle.
+    let layers = { boundaries: true, encryption: true, labels: false };
     let selected = null;            // { kind: 'component'|'flow'|'boundary', id }
     let dragging = null;            // { id, offsetX, offsetY }
     let flowDrawing = null;         // { fromId, mouseX, mouseY }
@@ -249,7 +251,7 @@
         <div class="dfd-toolbar-group dfd-layer-toggles">
           <label class="dfd-layer-toggle"><input type="checkbox" data-layer="boundaries" checked> Boundaries</label>
           <label class="dfd-layer-toggle"><input type="checkbox" data-layer="encryption" checked> Encryption icons</label>
-          <label class="dfd-layer-toggle"><input type="checkbox" data-layer="labels" checked> Labels</label>
+          <label class="dfd-layer-toggle"><input type="checkbox" data-layer="labels"> Flow labels</label>
         </div>
         <div class="dfd-toolbar-spacer"></div>
         <div class="dfd-toolbar-group">
@@ -344,11 +346,18 @@
         });
       }
 
-      // Data flows
-      (system.data_flows || []).forEach(f => {
+      // Data flows. Numbered badges (keyed to the flow legend / click-to-inspect)
+      // replace inline text labels, which overlap into unreadable clutter on large
+      // models — matching the server-rendered report DFD.
+      const compBoundary = {};
+      (system.trust_boundaries || []).forEach(b =>
+        (b.contains || []).forEach(cid => { compBoundary[cid] = b.id; }));
+      (system.data_flows || []).forEach((f, _flowIdx) => {
         const fromPos = system.layout[f.from];
         const toPos = system.layout[f.to];
         if (!fromPos || !toPos) return;
+        const flowNum = _flowIdx + 1;
+        const crossesBoundary = compBoundary[f.from] !== compBoundary[f.to];
 
         // Center points
         const x1 = fromPos.x + COMP_W / 2;
@@ -396,29 +405,34 @@
         line.setAttribute('marker-end', arrow);
         g.appendChild(line);
 
-        // Encryption icon at midpoint
-        if (layers.encryption) {
+        // Numbered risk badge at midpoint (doubles as the flow's click target).
+        // Red = unencrypted or boundary-crossing (only when the Encryption layer is
+        // on); otherwise slate. Keeps the canvas legible no matter how dense it gets.
+        {
           const mx = (adjX1 + adjX2) / 2;
           const my = (adjY1 + adjY2) / 2;
-          const icon = isEncrypted ? '🔒' : '⚠';
-          const iconBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          iconBg.setAttribute('cx', mx);
-          iconBg.setAttribute('cy', my);
-          iconBg.setAttribute('r', 9);
-          iconBg.setAttribute('fill', 'white');
-          iconBg.setAttribute('stroke', stroke);
-          iconBg.setAttribute('stroke-width', 1);
-          g.appendChild(iconBg);
-          const iconText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          iconText.setAttribute('x', mx);
-          iconText.setAttribute('y', my + 4);
-          iconText.setAttribute('text-anchor', 'middle');
-          iconText.setAttribute('font-size', 10);
-          iconText.textContent = icon;
-          g.appendChild(iconText);
+          const risky = (!isEncrypted || crossesBoundary);
+          const badgeFill = (layers.encryption && risky) ? '#ef4444' : '#64748b';
+          const badgeBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          badgeBg.setAttribute('cx', mx);
+          badgeBg.setAttribute('cy', my);
+          badgeBg.setAttribute('r', 9.5);
+          badgeBg.setAttribute('fill', badgeFill);
+          badgeBg.setAttribute('stroke', 'white');
+          badgeBg.setAttribute('stroke-width', 1.5);
+          g.appendChild(badgeBg);
+          const badgeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          badgeText.setAttribute('x', mx);
+          badgeText.setAttribute('y', my + 3.3);
+          badgeText.setAttribute('text-anchor', 'middle');
+          badgeText.setAttribute('font-size', 10.5);
+          badgeText.setAttribute('font-weight', '700');
+          badgeText.setAttribute('fill', 'white');
+          badgeText.textContent = flowNum;
+          g.appendChild(badgeText);
         }
 
-        // Label
+        // Optional full text label (off by default; toggle "Labels" to show).
         if (layers.labels && f.label) {
           const labelX = (adjX1 + adjX2) / 2;
           const labelY = (adjY1 + adjY2) / 2 - 14;
@@ -473,14 +487,12 @@
                 style="filter: drop-shadow(0 1px 3px rgba(0,0,0,0.1));"/>
           <rect x="0" y="0" width="6" height="${COMP_H}" rx="10" ry="10" fill="${v.color}"/>
           <text x="${COMP_W / 2}" y="22" text-anchor="middle" font-size="14">${v.icon}</text>
-          ${layers.labels ? `
-            <text x="${COMP_W / 2}" y="42" text-anchor="middle" font-size="11" font-weight="600" fill="#0f172a">
-              ${escapeAttr((c.name || '').slice(0, 16))}
-            </text>
-            <text x="${COMP_W / 2}" y="56" text-anchor="middle" font-size="9" fill="#64748b">
-              ${escapeAttr(c.type || '')}
-            </text>
-          ` : ''}
+          <text x="${COMP_W / 2}" y="42" text-anchor="middle" font-size="11" font-weight="600" fill="#0f172a">
+            ${escapeAttr((c.name || '').slice(0, 16))}
+          </text>
+          <text x="${COMP_W / 2}" y="56" text-anchor="middle" font-size="9" fill="#64748b">
+            ${escapeAttr(c.type || '')}
+          </text>
         `;
         componentsLayer.appendChild(g);
 

@@ -555,7 +555,9 @@
   // normalization repaired or flagged so management sees the same honest account.
   function modelIssuesHTML(analysis) {
     const items = (analysis && analysis.model_issues) || [];
-    if (!items.length) return '';
+    // Only surface the banner for real repairs/problems (error/warning); purely
+    // informational notes stay out of the read-only UI (reports still list them).
+    if (!items.some(i => i.level === 'error' || i.level === 'warning')) return '';
     const order = { error: 0, warning: 1, info: 2 };
     const meta = {
       error:   { bg: '#fef2f2', bd: '#fecaca', fg: '#b91c1c', icon: '⛔' },
@@ -658,7 +660,7 @@
 
       <div id="detail-tab-dfd" class="detail-tab-panel hidden">
         <div class="card mb-4" style="padding: 1rem;">
-          <p class="text-xs text-light mb-2">🔒 Solid lines = encrypted · ⚠ Dashed red = unencrypted/cross-boundary</p>
+          <p class="text-xs text-light mb-2">Numbered badges = flows (red = unencrypted/cross-boundary) · click a badge to inspect</p>
           <div id="dfd-container" style="background: white; border-radius: 6px; padding: 0.75rem; overflow: auto; max-height: 70vh;">
             <div class="text-center" style="padding: 3rem 0;">
               <div class="dots-loader" style="color: var(--c-brand);"><span></span><span></span><span></span></div>

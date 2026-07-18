@@ -832,7 +832,10 @@
   // silently — this is where the user sees the truth about their input.
   function modelIssuesHTML(analysis) {
     const items = (analysis && analysis.model_issues) || [];
-    if (!items.length) return '';
+    // Only surface the banner when normalization actually repaired or flagged
+    // something (error/warning). Purely informational notes stay out of the UI so
+    // a well-formed model shows no banner at all; reports still list everything.
+    if (!items.some(i => i.level === 'error' || i.level === 'warning')) return '';
     const order = { error: 0, warning: 1, info: 2 };
     const meta = {
       error:   { bg: '#fef2f2', bd: '#fecaca', fg: '#b91c1c', icon: '⛔', word: 'need attention' },
@@ -860,7 +863,7 @@
           🩺 Model health — ${esc(summary)}
         </div>
         <ul style="margin:0;padding-left:.1rem;list-style:none;">${rows}</ul>
-        <div class="text-xs text-light" style="margin-top:.45rem;">Nothing was dropped silently. Fix the flagged items in the Data Flow Diagram tab, then re-run analysis.</div>
+        ${counts.error ? `<div class="text-xs text-light" style="margin-top:.45rem;">Resolve the flagged items in the Data Flow Diagram tab, then re-run analysis.</div>` : ''}
       </div>`;
   }
 
@@ -949,7 +952,7 @@
       <!-- DFD panel -->
       <div id="tab-dfd" class="tab-panel hidden">
         <div class="flex items-center justify-between mb-3 gap-2" style="flex-wrap: wrap;">
-          <div class="text-xs text-light">🔒 Solid = encrypted · ⚠ Dashed red = unencrypted/cross-boundary · drag components, click to edit</div>
+          <div class="text-xs text-light">Numbered badges = flows (red = unencrypted/cross-boundary) · click a badge to inspect · drag components to arrange</div>
           <button id="btn-save-dfd" class="btn btn-sm btn-primary hidden">Save layout & changes</button>
         </div>
         <div id="dfd-container" class="dfd-container" style="height: 600px;">
