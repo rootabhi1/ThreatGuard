@@ -136,6 +136,20 @@ def main():
     empty = parse_structured_system("# just a comment\n\n")
     check(empty["components"] == [] and empty["issues"], "empty structured input returns issues, never raises")
 
+    print("=== assumptions are disclosed for both text paths ===")
+    from threat_engine.analyzer import extract_components_from_text
+    ft = extract_components_from_text("a web app with an api and a postgres database")
+    check(len(ft.get("assumptions", [])) >= 2, "free-text extraction discloses assumptions")
+    check(any("inferred" in a.lower() or "assumed" in a.lower() for a in ft["assumptions"]),
+          "free-text assumptions mention inferred/assumed flows")
+    st = parse_structured_system("A : api\nB : database\nA -> B")  # no attrs on the flow
+    check(any("assumed" in a.lower() for a in st.get("assumptions", [])),
+          "structured input discloses defaulted flow attributes as an assumption")
+    # analyze_system surfaces persisted assumptions
+    ft["_assumptions"] = ft["assumptions"]
+    res_ft = analyze_system(ft, ["stride"])
+    check(len(res_ft.get("assumptions", [])) >= 2, "analysis exposes assumptions from a text-seeded model")
+
     print()
     print("=" * 60)
     print(f"  Model-health / no-silent-failure: {_passed} passed, {_failed} failed")

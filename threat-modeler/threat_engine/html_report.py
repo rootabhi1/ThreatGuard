@@ -62,6 +62,20 @@ def _render_model_health(issues, esc):
     )
 
 
+def _render_assumptions(items, esc):
+    """Collapsible 'Assumptions' card — what was inferred when the model was seeded
+    from text (topology, defaulted protocol/auth/encryption, auto-added actor)."""
+    if not items:
+        return ""
+    rows = "".join(f'<li style="margin:3px 0;line-height:1.45">{esc(a)}</li>' for a in items)
+    return (
+        f'<details class="card" style="background:#f8fafc;border:1px solid #e2e8f0">'
+        f'<summary style="cursor:pointer;font-weight:600;color:#334155">'
+        f'💡 Assumptions ({len(items)}) — what was inferred, not stated</summary>'
+        f'<ul style="margin:8px 0 0;padding-left:18px;font-size:0.9rem">{rows}</ul></details>'
+    )
+
+
 def _render_flow_legend(legend, esc):
     """Numbered flow legend keyed to the badges on the DFD, so the diagram itself
     stays free of overlapping text labels while every flow's detail stays available."""
@@ -84,12 +98,20 @@ def _render_flow_legend(legend, esc):
             f'<td style="padding:3px 8px;color:#475569">{esc(f["auth"])}</td>'
             f'<td style="padding:3px 8px;color:#475569">{enc}{cross}</td>'
             f'</tr>')
-    return (
+    table = (
         f'<table style="width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:10px">'
         f'<thead><tr style="text-align:left;color:#64748b;font-size:0.72rem;text-transform:uppercase">'
         f'<th style="padding:3px 8px">#</th><th style="padding:3px 8px">Flow</th>'
         f'<th style="padding:3px 8px">Protocol</th><th style="padding:3px 8px">Auth</th>'
         f'<th style="padding:3px 8px">Security</th></tr></thead><tbody>{rows}</tbody></table>'
+    )
+    # Collapse a long legend by default so the diagram isn't buried under a wall of
+    # rows; small ones stay open. Native <details> — no JS, works in the static report.
+    open_attr = " open" if len(legend) <= 8 else ""
+    return (
+        f'<details{open_attr} style="margin-top:8px">'
+        f'<summary style="cursor:pointer;font-size:0.82rem;color:#334155;font-weight:600">'
+        f'Flow legend ({len(legend)} flows)</summary>{table}</details>'
     )
 
 
@@ -553,6 +575,8 @@ def to_html(analysis: dict) -> str:
   </section>
 
   {_render_model_health(analysis.get("model_issues"), _esc)}
+
+  {_render_assumptions(analysis.get("assumptions"), _esc)}
 
   {_render_dataflow_overview(analysis.get("dataflow_summary"), _esc)}
 

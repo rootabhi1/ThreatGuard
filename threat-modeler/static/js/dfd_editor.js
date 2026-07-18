@@ -409,8 +409,11 @@
         // Red = unencrypted or boundary-crossing (only when the Encryption layer is
         // on); otherwise slate. Keeps the canvas legible no matter how dense it gets.
         {
-          const mx = (adjX1 + adjX2) / 2;
-          const my = (adjY1 + adjY2) / 2;
+          // Stagger the badge along the edge (by flow number) so converging flows
+          // don't stack their badges at a single point.
+          const bt = 0.30 + ((flowNum - 1) % 4) * 0.12;
+          const mx = adjX1 + (adjX2 - adjX1) * bt;
+          const my = adjY1 + (adjY2 - adjY1) * bt;
           const risky = (!isEncrypted || crossesBoundary);
           const badgeFill = (layers.encryption && risky) ? '#ef4444' : '#64748b';
           const badgeBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');

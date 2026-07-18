@@ -588,6 +588,19 @@
       </div>`;
   }
 
+  function assumptionsHTML(analysis) {
+    const items = (analysis && analysis.assumptions) || [];
+    if (!items.length) return '';
+    const rows = items.map(a => `<li style="margin:.2rem 0;line-height:1.45">${esc(a)}</li>`).join('');
+    return `
+      <details class="card mb-6" style="padding:.7rem 1.1rem;background:#f8fafc;border:1px solid #e2e8f0;">
+        <summary style="cursor:pointer;font-size:.72rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.05em;">
+          💡 Assumptions (${items.length}) — what was inferred, not stated
+        </summary>
+        <ul style="margin:.5rem 0 0;padding-left:1.1rem;font-size:.85rem;color:#334155;">${rows}</ul>
+      </details>`;
+  }
+
   function renderDetail() {
     const tm = currentTM;
     const featureName = (allFeatures.find(f => f.id === tm.feature_id) || {}).name || `#${tm.feature_id}`;
@@ -627,6 +640,7 @@
       </div>
 
       ${modelIssuesHTML(analysis)}
+      ${assumptionsHTML(analysis)}
       ${dataFlowOverviewHTML(analysis)}
 
       <div class="tabs" style="margin-bottom: 1rem;">

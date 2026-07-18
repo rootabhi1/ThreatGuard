@@ -171,7 +171,8 @@ def extract_components_from_text(text: str) -> dict:
                 break
 
     # Always include a "user" if nothing user-facing detected
-    if not any(c["type"] == "user" for c in components):
+    _added_default_user = not any(c["type"] == "user" for c in components)
+    if _added_default_user:
         components.insert(0, {
             "id": "c_user", "name": "User", "type": "user",
             "description": "Default end user (auto-added)",
@@ -210,10 +211,26 @@ def extract_components_from_text(text: str) -> dict:
                 "auth": "credentials", "encrypted": False,
             })
 
+    # Free-text extraction is a best-effort guess, so be explicit about everything it
+    # inferred rather than read. These assumptions ride with the model and are shown
+    # to the user (UI + reports) so they know exactly what to verify.
+    assumptions: list[str] = [
+        "Components were detected by keyword; components of the same type are collapsed "
+        "into one. Use structured input or the diagram editor for an exact inventory.",
+    ]
+    if _added_default_user:
+        assumptions.insert(0, "Added a default 'User' actor — none was described in the text.")
+    if data_flows:
+        assumptions.append(
+            f"Inferred {len(data_flows)} data flow(s) from component types — the topology, "
+            f"protocols, authentication and encryption were not stated and are assumed "
+            f"(e.g. app→datastore links are assumed unencrypted). Verify each in the diagram.")
+
     return {
         "components": components,
         "data_flows": data_flows,
         "trust_boundaries": _infer_boundaries_for_extracted(components, text),
+        "assumptions": assumptions,
     }
 
 
@@ -287,6 +304,7 @@ def parse_structured_system(text: str) -> dict:
         _issue("error", "No components found. Add at least one line like 'API : api'.")
 
     data_flows: list[dict] = []
+    n_default_attrs = 0
     for lineno, line in flow_lines:
         endpoints, _, attrs = line.partition(":")
         src_name, _, dst_name = endpoints.partition("->")
@@ -294,6 +312,8 @@ def parse_structured_system(text: str) -> dict:
         if not src_name or not dst_name:
             _issue("error", f"Line {lineno}: a flow needs both a source and a target ('A -> B'). Skipped.")
             continue
+        if not attrs.strip():
+            n_default_attrs += 1
         src = by_name.get(src_name.lower())
         dst = by_name.get(dst_name.lower())
         # An undeclared endpoint is NOT repaired here: the flow keeps a reference to
@@ -324,11 +344,23 @@ def parse_structured_system(text: str) -> dict:
             "auth": auth, "encrypted": encrypted,
         })
 
+    # Structured input is exact for what you write, but unspecified flow attributes
+    # fall back to defaults — disclose that so those defaults aren't mistaken for facts.
+    assumptions: list[str] = []
+    if n_default_attrs:
+        assumptions.append(
+            f"{n_default_attrs} flow(s) had no protocol/auth/encryption specified — assumed "
+            f"HTTPS, no authentication, and encrypted. Add attributes after the flow "
+            f"(e.g. 'A -> B : TCP, mtls, encrypted') to make these explicit.")
+    if not any(b.get("contains") for b in _infer_boundaries_for_extracted(components, text)):
+        assumptions.append("Trust boundaries were inferred heuristically from component types.")
+
     return {
         "components": components,
         "data_flows": data_flows,
         "trust_boundaries": _infer_boundaries_for_extracted(components, text),
         "issues": issues,
+        "assumptions": assumptions,
     }
 
 
@@ -1194,6 +1226,10 @@ def analyze_system(
         # dangling flow references turned into placeholders, invalid types, …).
         # Surfaced in the UI and reports so no auto-repair is ever hidden.
         "model_issues": model_issues,
+        # Assumptions made when the model was seeded from text (inferred topology,
+        # defaulted protocol/auth/encryption, auto-added actor). Captured at creation
+        # and carried on the system so the reader knows what is stated vs. assumed.
+        "assumptions": (system.get("_assumptions") or system.get("assumptions") or []),
         # Only real methodologies belong in this list — reports render it as
         # "Methodologies:". DREAD (scoring) and OWASP (reference) are excluded even
         # if a caller passes them, so they can never be presented as methodologies.

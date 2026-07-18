@@ -44,6 +44,17 @@ def to_markdown(analysis: dict) -> str:
             lines.append(f"- {_icons.get(i.get('level'), 'ℹ')} {i.get('message', '')}")
         lines.append("")
 
+    # ---- Assumptions (what was inferred, not stated) ----
+    assumptions = analysis.get("assumptions") or []
+    if assumptions:
+        lines.append("## Assumptions")
+        lines.append("")
+        lines.append("_What was inferred when the model was seeded from text, not explicitly stated:_")
+        lines.append("")
+        for a in assumptions:
+            lines.append(f"- {a}")
+        lines.append("")
+
     # ---- Data-flow overview (plain language, before the diagram) ----
     dfs = analysis.get("dataflow_summary")
     if dfs:
@@ -100,8 +111,15 @@ def to_markdown(analysis: dict) -> str:
     lines.append("")
     legend = build_flow_legend(system)
     if legend:
-        lines.append("### Flow legend")
-        lines.append("")
+        # Collapse a long legend so it doesn't bury the diagram (GitHub/most viewers
+        # render <details>); short ones stay open.
+        collapse = len(legend) > 8
+        if collapse:
+            lines.append(f"<details><summary>Flow legend ({len(legend)} flows)</summary>")
+            lines.append("")
+        else:
+            lines.append("### Flow legend")
+            lines.append("")
         lines.append("| # | Flow | Protocol | Auth | Security |")
         lines.append("|---|---|---|---|---|")
         for f in legend:
@@ -110,6 +128,9 @@ def to_markdown(analysis: dict) -> str:
             lines.append(f"| {f['n']} | {f['from']} → {f['to']} | "
                          f"{f['protocol'] or '—'} | {f['auth']} | {sec} |")
         lines.append("")
+        if collapse:
+            lines.append("</details>")
+            lines.append("")
     # Also list trust boundaries explicitly so even non-SVG-rendering tools see them
     boundaries = system.get("trust_boundaries", []) or []
     if boundaries:
@@ -400,6 +421,16 @@ def to_pdf(analysis: dict) -> bytes:
         for i in sorted(model_issues, key=lambda x: _rank.get(x.get("level"), 3)):
             story.append(Paragraph(
                 f"[{_icons.get(i.get('level'), 'i')}] {_e(i.get('message', ''))}", small))
+        story.append(Spacer(1, 0.14 * inch))
+
+    # ---- Assumptions (what was inferred, not stated) ----
+    assumptions = analysis.get("assumptions") or []
+    if assumptions:
+        story.append(Paragraph("Assumptions", h2))
+        story.append(Paragraph(
+            "What was inferred when the model was seeded from text, not explicitly stated:", small))
+        for a in assumptions:
+            story.append(Paragraph(f"- {_e(a)}", small))
         story.append(Spacer(1, 0.14 * inch))
 
     # ---- Data-flow overview (plain-language, before the diagram) ----

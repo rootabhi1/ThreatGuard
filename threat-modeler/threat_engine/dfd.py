@@ -250,18 +250,23 @@ def _draw_flow(flow: dict, comp_by_id: dict, positions: dict,
             f'<animate attributeName="stroke-dashoffset" from="0" to="-36" dur="1.6s" repeatCount="indefinite"/>'
             f'</path>'
         )
-    # Numbered badge at the midpoint instead of a text label along the line.
-    # Printing "A -> B [proto]" on every edge turns a large diagram into unreadable
-    # overlapping text; a small number keyed to the flow legend stays legible no
-    # matter how dense the graph is. Badge colour still encodes risk (red = unencrypted
-    # or boundary-crossing), and the legend carries protocol / auth / encryption.
+    # Numbered badge on the edge instead of a text label along the line. Printing
+    # "A -> B [proto]" on every edge turns a large diagram into unreadable overlapping
+    # text; a small number keyed to the flow legend stays legible. The badge is
+    # staggered along the edge (by flow number) rather than fixed at the midpoint, so
+    # many flows converging on the same region don't pile their badges on top of each
+    # other. Colour still encodes risk; the legend carries protocol / auth / encryption.
     if number is not None:
+        t = 0.30 + ((number - 1) % 4) * 0.12   # 0.30, 0.42, 0.54, 0.66 along the curve
+        omt = 1.0 - t
+        bx = omt * omt * x1 + 2 * omt * t * cx + t * t * x2
+        by = omt * omt * y1 + 2 * omt * t * cy + t * t * y2
         parts.append(
-            f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="9.5" fill="{color}" '
+            f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="9.5" fill="{color}" '
             f'stroke="#ffffff" stroke-width="1.5"/>'
         )
         parts.append(
-            f'<text x="{cx:.1f}" y="{cy + 3.3:.1f}" text-anchor="middle" font-size="10.5" '
+            f'<text x="{bx:.1f}" y="{by + 3.3:.1f}" text-anchor="middle" font-size="10.5" '
             f'font-weight="700" fill="#ffffff" font-family="system-ui,sans-serif">{number}</text>'
         )
     return "".join(parts)
