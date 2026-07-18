@@ -221,7 +221,9 @@
     let selected = null;            // { kind: 'component'|'flow'|'boundary', id }
     let dragging = null;            // { id, offsetX, offsetY }
     let flowDrawing = null;         // { fromId, mouseX, mouseY }
-    let zoom = 1;
+    // Navigation is viewBox-based (not CSS scale): this makes Fit, pan and zoom
+    // consistent and keeps pointer math (getScreenCTM) correct at any zoom.
+    const view = { x: 0, y: 0, w: CANVAS_W, h: CANVAS_H };
 
     // Toolbar + canvas + side panel
     container.innerHTML = '';
@@ -255,13 +257,32 @@
         </div>
         <div class="dfd-toolbar-spacer"></div>
         <div class="dfd-toolbar-group">
+          <button data-act="help" class="btn btn-sm btn-ghost" title="What do the shapes and colours mean?">? Guide</button>
+          <button data-act="fit" class="btn btn-sm btn-ghost" title="Fit the whole diagram in view">⊡ Fit</button>
           <button data-act="zoom-out" class="btn btn-sm btn-ghost" title="Zoom out">−</button>
           <span id="dfd-zoom-label" class="text-xs text-light" style="min-width: 36px; text-align: center;">100%</span>
           <button data-act="zoom-in" class="btn btn-sm btn-ghost" title="Zoom in">+</button>
         </div>
       </div>
       <div class="dfd-mode-banner hidden" id="dfd-mode-banner"></div>
-      <div class="dfd-canvas-wrap">
+      <div class="dfd-canvas-wrap" style="position:relative;overflow:hidden;">
+        <div id="dfd-empty" class="hidden" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;">
+          <div style="text-align:center;max-width:340px;background:rgba(255,255,255,0.92);border:1px dashed #cbd5e1;border-radius:12px;padding:20px 24px;pointer-events:auto;">
+            <div style="font-size:1.6rem;margin-bottom:6px;">🗺️</div>
+            <div style="font-weight:700;color:#334155;margin-bottom:4px;">Your diagram is empty</div>
+            <div style="font-size:.85rem;color:#64748b;line-height:1.5;">${opts.readOnly ? 'No components have been added to this model yet.' : 'Click <b>＋ Component</b> to add your first element, then <b>→ Flow</b> to connect two components. <b>? Guide</b> explains the notation.'}</div>
+          </div>
+        </div>
+        <div id="dfd-help" class="hidden" style="position:absolute;top:8px;right:8px;width:250px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:12px 14px;z-index:3;font-size:.8rem;color:#334155;line-height:1.5;">
+          <div style="font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">Notation<span data-act="help-close" style="cursor:pointer;color:#94a3b8;">✕</span></div>
+          <div style="margin:3px 0;"><b>Rounded box</b> = process/service</div>
+          <div style="margin:3px 0;"><b>Open box</b> = data store</div>
+          <div style="margin:3px 0;"><b>Sharp box</b> = external entity / user</div>
+          <div style="margin:3px 0;"><b>Dashed area</b> = trust boundary</div>
+          <div style="margin:3px 0;"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#ef4444;vertical-align:middle;"></span> red badge/line = unencrypted or boundary-crossing flow</div>
+          <div style="margin:3px 0;"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#64748b;vertical-align:middle;"></span> grey badge = encrypted internal flow</div>
+          <div style="margin-top:6px;color:#64748b;">Hover a flow for its details · drag components to arrange · scroll/Fit to navigate.</div>
+        </div>
         <svg class="dfd-canvas" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" preserveAspectRatio="xMidYMid meet">
           <defs>
             <pattern id="dfd-grid" width="${GRID}" height="${GRID}" patternUnits="userSpaceOnUse">
@@ -525,6 +546,10 @@
           });
         }
       });
+
+      // Empty-state guide toggles with content
+      const emptyEl = container.querySelector('#dfd-empty');
+      if (emptyEl) emptyEl.classList.toggle('hidden', (system.components || []).length > 0);
 
       // Flow-drawing overlay
       if (flowDrawing) {
@@ -1038,17 +1063,74 @@
         else if (act === 'auto-layout') autoArrange();
         else if (act === 'reinfer-heuristic') reinferBoundaries(false);
         else if (act === 'reinfer-llm') reinferBoundaries(true);
-        else if (act === 'zoom-in') { zoom = Math.min(zoom + 0.1, 2); applyZoom(); }
-        else if (act === 'zoom-out') { zoom = Math.max(zoom - 0.1, 0.4); applyZoom(); }
+        else if (act === 'zoom-in') zoomBy(1 / 1.2);
+        else if (act === 'zoom-out') zoomBy(1.2);
+        else if (act === 'fit') fitView();
+        else if (act === 'help') toggleHelp();
+        else if (act === 'help-close') toggleHelp(false);
       });
     });
 
-    function applyZoom() {
-      svg.style.transform = `scale(${zoom})`;
-      svg.style.transformOrigin = 'top left';
+    const ASPECT = CANVAS_W / CANVAS_H;
+
+    function applyView() {
+      svg.setAttribute('viewBox', `${view.x.toFixed(1)} ${view.y.toFixed(1)} ${view.w.toFixed(1)} ${view.h.toFixed(1)}`);
       const lbl = container.querySelector('#dfd-zoom-label');
-      if (lbl) lbl.textContent = Math.round(zoom * 100) + '%';
+      if (lbl) lbl.textContent = Math.round((CANVAS_W / view.w) * 100) + '%';
     }
+
+    function zoomBy(factor) {
+      const cx = view.x + view.w / 2, cy = view.y + view.h / 2;
+      let w = view.w * factor;
+      w = Math.max(CANVAS_W * 0.25, Math.min(CANVAS_W * 4, w));
+      view.w = w; view.h = w / ASPECT;
+      view.x = cx - view.w / 2; view.y = cy - view.h / 2;
+      applyView();
+    }
+
+    function fitView() {
+      const ps = Object.values(system.layout || {});
+      if (!ps.length) { view.x = 0; view.y = 0; view.w = CANVAS_W; view.h = CANVAS_H; return applyView(); }
+      const pad = 70;
+      const minX = Math.min(...ps.map(p => p.x)) - pad;
+      const minY = Math.min(...ps.map(p => p.y)) - pad;
+      const maxX = Math.max(...ps.map(p => p.x)) + COMP_W + pad;
+      const maxY = Math.max(...ps.map(p => p.y)) + COMP_H + pad;
+      let w = maxX - minX, h = maxY - minY;
+      if (w / h < ASPECT) w = h * ASPECT; else h = w / ASPECT;
+      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+      view.w = w; view.h = h; view.x = cx - w / 2; view.y = cy - h / 2;
+      applyView();
+    }
+
+    const helpEl = container.querySelector('#dfd-help');
+    function toggleHelp(force) {
+      const show = force === undefined ? helpEl.classList.contains('hidden') : force;
+      helpEl.classList.toggle('hidden', !show);
+    }
+
+    // Pan by dragging the empty canvas background (allowed even in read-only view).
+    svg.addEventListener('pointerdown', (e) => {
+      const onBackground = e.target === svg || (e.target.tagName === 'rect' && e.target.parentNode === svg);
+      if (!onBackground || flowDrawing) return;
+      const sx = e.clientX, sy = e.clientY, vx = view.x, vy = view.y;
+      const rect = svg.getBoundingClientRect();
+      const scaleX = view.w / rect.width, scaleY = view.h / rect.height;
+      let panned = false;
+      const move = (ev) => {
+        panned = true;
+        view.x = vx - (ev.clientX - sx) * scaleX;
+        view.y = vy - (ev.clientY - sy) * scaleY;
+        applyView();
+      };
+      const up = () => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        if (panned) svg._suppressClick = true;
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    });
 
     container.querySelectorAll('[data-layer]').forEach(cb => {
       cb.addEventListener('change', () => {
@@ -1075,8 +1157,9 @@
       render();
     });
 
-    // Click on empty canvas deselects
+    // Click on empty canvas deselects (but not right after a pan drag)
     svg.addEventListener('click', (e) => {
+      if (svg._suppressClick) { svg._suppressClick = false; return; }
       if (e.target === svg || e.target.tagName === 'rect' && e.target.parentNode === svg) {
         if (flowDrawing) cancelFlowDrawing();
         else deselect();
@@ -1095,8 +1178,10 @@
       container.innerHTML = '';
     }
 
-    // Initial paint
+    // Initial paint, then fit the whole diagram into view so large models aren't
+    // clipped and the user starts with everything visible.
     render();
+    fitView();
 
     return { getSystem, destroy, render };
   }
