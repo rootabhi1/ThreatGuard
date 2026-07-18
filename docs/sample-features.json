@@ -1,0 +1,77 @@
+{
+  "_about": "Sample Features for trying out ThreatGuard's Release → Feature → Threat Model hierarchy. Create the release first (POST /api/features needs a real release_id), then create each feature under it. Field names and the `status` values match the app's Feature API (see threat-modeler/app.py → FeatureCreateRequest).",
+  "_usage": [
+    "1. Sign in and create a release:  POST /api/releases  {\"name\": ...}",
+    "2. Take the returned release id and create each feature:  POST /api/features  {\"release_id\": <id>, ...}",
+    "3. Add a threat model under any feature and analyze it (rules-only works offline).",
+    "Statuses: draft | in_review | in_sprint | released | cancelled. target_date is optional (YYYY-MM-DD)."
+  ],
+  "release": {
+    "name": "2026 Platform Hardening",
+    "description": "Cross-cutting release used to threat-model the core surfaces of a typical SaaS platform.",
+    "status": "in_progress",
+    "target_date": "2026-12-31"
+  },
+  "features": [
+    {
+      "name": "User Authentication & SSO",
+      "description": "Email/password login with account lockout plus OAuth/OIDC single sign-on (Google, Okta). Issues short-lived JWTs with refresh-token rotation. Threat focus: credential stuffing, token theft, session fixation.",
+      "status": "in_sprint",
+      "target_date": "2026-03-31"
+    },
+    {
+      "name": "Payment Checkout Flow",
+      "description": "Cart checkout that tokenizes cards via a third-party processor (Stripe) and never stores PAN data. Threat focus: PCI scope, tampering with amounts, replay of payment intents, webhook spoofing.",
+      "status": "in_review",
+      "target_date": "2026-04-30"
+    },
+    {
+      "name": "Admin Console & RBAC",
+      "description": "Back-office console with role-based access (user / management / admin), impersonation, and an audit log. Threat focus: privilege escalation, IDOR, missing authorization checks, audit-log tampering.",
+      "status": "released",
+      "target_date": "2026-02-15"
+    },
+    {
+      "name": "Public REST API & Webhooks",
+      "description": "Versioned public API with API-key and OAuth auth, per-key rate limiting, and signed outbound webhooks. Threat focus: broken object-level authorization, rate-limit bypass, SSRF via webhook URLs, key leakage.",
+      "status": "in_sprint",
+      "target_date": "2026-05-31"
+    },
+    {
+      "name": "File Upload & Media Storage",
+      "description": "Direct-to-object-store (S3) uploads with pre-signed URLs, virus scanning, and CDN delivery. Threat focus: unrestricted file upload, path traversal, content-type confusion, malware distribution.",
+      "status": "draft",
+      "target_date": "2026-06-30"
+    },
+    {
+      "name": "Notification Service",
+      "description": "Fan-out email (SendGrid), SMS gateway, and mobile push. Templates rendered from user-influenced data. Threat focus: template/HTML injection, notification spoofing, PII leakage to third parties, enumeration via delivery status.",
+      "status": "in_sprint",
+      "target_date": "2026-05-15"
+    },
+    {
+      "name": "Data Export & Reporting",
+      "description": "Async CSV/PDF exports and a reporting warehouse (Snowflake) fed by a data pipeline. Threat focus: CSV formula injection, over-broad data exposure, insecure temporary storage, cross-tenant leakage.",
+      "status": "draft",
+      "target_date": "2026-08-31"
+    },
+    {
+      "name": "Third-party OAuth Integrations",
+      "description": "Connect external SaaS accounts (GitHub, Slack, Jira) via OAuth and store scoped tokens encrypted at rest. Threat focus: token scope creep, secret storage, CSRF on the connect flow, confused-deputy attacks.",
+      "status": "in_review",
+      "target_date": "2026-07-31"
+    },
+    {
+      "name": "Mobile App Backend",
+      "description": "BFF (backend-for-frontend) API for iOS/Android with device binding, certificate pinning support, and push registration. Threat focus: insecure deep links, replay of device tokens, weak transport validation, jailbreak/root abuse.",
+      "status": "draft",
+      "target_date": "2026-09-30"
+    },
+    {
+      "name": "Search & Indexing Service",
+      "description": "Full-text search over tenant data using an external search cluster, with per-tenant index isolation. Threat focus: query injection, cross-tenant index access, denial of service via expensive queries, stale ACLs after permission changes.",
+      "status": "draft",
+      "target_date": "2026-10-31"
+    }
+  ]
+}
