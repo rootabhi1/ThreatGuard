@@ -60,6 +60,7 @@ ThreatGuard turns a description of a system — typed, drawn on a canvas, or **u
 - **Diagram upload** — drop in a PNG/JPEG/WebP architecture diagram; with a vision-capable LLM it is turned into a system model, otherwise you get an editable starting point.
 - **Optional LLM enrichment** — AI fix generation, diagram extraction and richer narratives via **Anthropic** or any **OpenAI-compatible** endpoint (OpenAI, Azure, Ollama, vLLM, …). Configure it with environment variables **or** in the admin UI (Settings → AI provider; keys stored encrypted at rest). Absent a key, everything still works in rules-only mode.
 - **Team workflow** — Release → Feature → Threat Model hierarchy (all editable and deletable), role-based access (user / management / admin), per-threat status tracking, release-to-release diffs, read-only share links, custom rules, an optional Jira integration to file a ticket from a threat, and an audit log.
+- **Management portfolio view** — a read-only overview for management and admins: per-feature risk roll-ups, a portfolio remediation progress bar, blind-spot detection (models not analyzed, stale models, features with no model), OWASP Top 10 coverage with an in-app drill-down into the matching threats, a searchable/sortable all-models table with risk badges, and one-click CSV export of every threat. Admins can file a Jira ticket straight from this view.
 - **Reports** — HTML, PDF, Markdown, a CSV risk register, and an executive summary.
 
 ---
@@ -73,6 +74,10 @@ A full generated report is checked in at **[`docs/sample-report.html`](docs/samp
 | ![Dashboard](docs/screenshots/01_dashboard.png) | ![New threat model](docs/screenshots/02_new_threat_model.png) |
 | **Analysis & risk matrix** | **Interactive data-flow diagram** |
 | ![Analysis](docs/screenshots/03_threat_analysis.png) | ![Data-flow diagram](docs/screenshots/04_dfd.png) |
+
+**Management portfolio view** — per-feature risk roll-ups, remediation progress, blind-spot detection, and OWASP coverage across every model:
+
+![Management overview](docs/screenshots/05_management.png)
 
 Ready-to-use example system definitions and generated reports are in
 [`examples/`](examples/) — start with `examples/systems/simple-api.json`.
