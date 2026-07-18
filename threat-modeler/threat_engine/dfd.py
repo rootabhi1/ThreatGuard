@@ -49,6 +49,11 @@ def _category(component_type: str) -> str:
 _COL_GAP = 300
 _ROW_GAP = 150
 _MARGIN = 90
+# Within a single band/boundary, a large group wraps into this many rows before
+# starting a new sub-column, so one crowded boundary can't make the whole diagram
+# absurdly tall. Sub-columns sit inside the same boundary box.
+_MAX_ROWS = 6
+_SUB_COL_GAP = 190
 
 
 def _auto_layout(components: list[dict], data_flows: list[dict],
@@ -109,18 +114,31 @@ def _auto_layout(components: list[dict], data_flows: list[dict],
         if not columns:
             columns = [components]
 
-    # Place columns left→right with fixed, generous spacing (natural coordinates;
-    # render_dfd_svg sizes the viewBox to fit).
+    # Place bands left→right. A band with more than _MAX_ROWS members wraps into a
+    # compact grid (multiple sub-columns) rather than one very tall column, so a
+    # single crowded boundary can't blow the whole diagram out to thousands of
+    # pixels tall. Bands have variable widths, so x is accumulated. Natural
+    # coordinates; render_dfd_svg sizes the viewBox to fit.
+    def _grid_dims(n: int) -> tuple[int, int]:
+        rows = min(max(1, n), _MAX_ROWS)
+        sub_cols = max(1, math.ceil(n / _MAX_ROWS))
+        return rows, sub_cols
+
     positions: dict[str, dict] = {}
-    tallest = max((len(col) for col in columns), default=1)
-    band_h = max(1, tallest - 1) * _ROW_GAP
-    for ci, col in enumerate(columns):
-        x = _MARGIN + ci * _COL_GAP
+    tallest_rows = max((_grid_dims(len(col))[0] for col in columns), default=1)
+    band_h = max(1, tallest_rows - 1) * _ROW_GAP
+    cur_x = _MARGIN
+    for col in columns:
         n = len(col)
-        # centre each column vertically within the tallest band
-        y0 = _MARGIN + (band_h - max(0, n - 1) * _ROW_GAP) / 2
-        for ri, c in enumerate(col):
-            positions[c["id"]] = {"x": x, "y": y0 + ri * _ROW_GAP}
+        rows, sub_cols = _grid_dims(n)
+        col_h = max(0, rows - 1) * _ROW_GAP
+        y0 = _MARGIN + (band_h - col_h) / 2  # centre the grid vertically
+        for i, c in enumerate(col):
+            si, ri = divmod(i, rows)          # sub-column, row (fill top→bottom)
+            positions[c["id"]] = {"x": cur_x + si * _SUB_COL_GAP,
+                                  "y": y0 + ri * _ROW_GAP}
+        band_w = max(0, sub_cols - 1) * _SUB_COL_GAP
+        cur_x += band_w + _COL_GAP
     return positions
 
 
