@@ -743,6 +743,40 @@ async def management_overview(
     return domain.management_overview()
 
 
+@app.get("/api/management/threats")
+async def management_threats(
+    actor: dict = Depends(require_permission("view.management")),
+):
+    """Compact, flattened list of every threat across all models. Powers the
+    management OWASP drill-down, remediation focus, and portfolio CSV export.
+    Deliberately omits heavy fields (description, mitigations) to stay small."""
+    features = {f["id"]: f for f in domain.list_features()}
+    out: list[dict] = []
+    for tm in domain.list_threat_models():
+        full = domain.get_threat_model(tm["id"])
+        analysis = (full or {}).get("analysis")
+        if not analysis:
+            continue
+        statuses = domain.list_threat_statuses(tm["id"]) or {}
+        fname = (features.get(tm.get("feature_id")) or {}).get("name", "")
+        for t in (analysis.get("threats") or []):
+            st = statuses.get(t.get("id")) or {}
+            out.append({
+                "tm_id": tm["id"],
+                "tm_name": tm.get("name", ""),
+                "feature": fname,
+                "id": t.get("id"),
+                "title": t.get("title", ""),
+                "severity": t.get("severity", ""),
+                "category": t.get("category", ""),
+                "owasp": domain._extract_owasp_label(t.get("references") or []),
+                "cwe": (t.get("cwe") or {}).get("id", ""),
+                "status": st.get("status", "open"),
+                "updated_at": st.get("updated_at"),
+            })
+    return out
+
+
 @app.get("/api/audit-log")
 async def admin_audit_log(
     limit: int = 200,

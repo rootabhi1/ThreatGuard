@@ -10,6 +10,14 @@
   let allTMs = [];
   let allUsers = [];
   let overview = [];
+  let mgThreats = [];            // flat threat list across all models
+  let jiraConfigured = false;    // gates the admin "Create Jira ticket" action
+  const isAdmin = (me.user || me).role === 'admin';
+  const STALE_DAYS = 30;
+  const SEV_ORDER = { Critical: 4, High: 3, Medium: 2, Low: 1, Info: 0 };
+  let tmsSort = { key: 'updated', dir: -1 };   // -1 desc, 1 asc
+  let tmsSearch = '';
+  let tmsFeatureFilter = null;
 
   // OWASP top 10 (2021) reference labels
   const OWASP_2021 = {
@@ -23,6 +31,27 @@
     "A08:2021": "Software and Data Integrity Failures",
     "A09:2021": "Security Logging and Monitoring Failures",
     "A10:2021": "Server-Side Request Forgery",
+  };
+
+  // Short in-app descriptions so managers don't have to leave for owasp.org
+  const OWASP_DESC = {
+    "A01:2021": "Users acting outside their intended permissions — missing authorization, IDOR, privilege escalation.",
+    "A02:2021": "Failures protecting data in transit or at rest — weak/again absent encryption, exposed secrets.",
+    "A03:2021": "Untrusted input interpreted as code or query — SQL, command, LDAP, and cross-site scripting.",
+    "A04:2021": "Missing or ineffective security controls by design, before a line of code is written.",
+    "A05:2021": "Insecure defaults, verbose errors, unnecessary features, or unpatched configuration.",
+    "A06:2021": "Using components with known vulnerabilities or that are unsupported / out of date.",
+    "A07:2021": "Weaknesses in confirming identity — credential stuffing, weak sessions, missing MFA.",
+    "A08:2021": "Code and infrastructure that don't protect against integrity violations (unsigned updates, insecure deserialization).",
+    "A09:2021": "Insufficient logging, detection, and alerting — breaches go unnoticed.",
+    "A10:2021": "Server-Side Request Forgery — the server is coerced into making unintended requests.",
+  };
+
+  const daysSince = (iso) => {
+    if (!iso) return null;
+    const t = Date.parse(iso);
+    if (isNaN(t)) return null;
+    return Math.floor((Date.now() - t) / 86400000);
   };
 
   function fmtDuration(seconds) {
@@ -51,10 +80,12 @@
   }
 
   async function loadAll() {
-    const [overviewR, tmsR, featuresR] = await Promise.all([
+    const [overviewR, tmsR, featuresR, threatsR, healthR] = await Promise.all([
       Auth.fetch('/api/management/overview'),
       Auth.fetch('/api/threat-models'),
       Auth.fetch('/api/features'),
+      Auth.fetch('/api/management/threats'),
+      Auth.fetch('/api/health'),
     ]);
     if (!overviewR.ok || !tmsR.ok || !featuresR.ok) {
       UI.toast('Failed to load data', 'error');
@@ -63,16 +94,23 @@
     overview = await overviewR.json();
     allTMs = await tmsR.json();
     allFeatures = await featuresR.json();
+    mgThreats = threatsR.ok ? await threatsR.json() : [];
+    try { if (healthR.ok) jiraConfigured = !!(await healthR.json()).jira_configured; } catch {}
     try {
       const usersR = await Auth.fetch('/api/users');
       if (usersR.ok) allUsers = await usersR.json();
     } catch {}
 
     renderMetrics();
+    renderRemediation();
+    renderAttention();
     renderFeatures();
     renderOwasp();
     renderTMs();
   }
+
+  // Set of tm_ids that have at least one analyzed threat.
+  function analyzedTmIds() { return new Set(mgThreats.map(t => t.tm_id)); }
 
   function renderMetrics() {
     let totalTMs = 0, totalThreats = 0, criticalCount = 0, mitigatedCount = 0;
@@ -87,6 +125,54 @@
     UI.animateCount(document.getElementById('m-threats'), totalThreats);
     UI.animateCount(document.getElementById('m-critical'), criticalCount);
     UI.animateCount(document.getElementById('m-mitigated'), mitigatedCount);
+  }
+
+  // Portfolio remediation progress bar (open → mitigated), from the flat list.
+  function renderRemediation() {
+    const card = document.getElementById('remediation-card');
+    if (!mgThreats.length) { card.classList.add('hidden'); return; }
+    const counts = { open: 0, in_progress: 0, mitigated: 0, accepted_risk: 0, false_positive: 0 };
+    mgThreats.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; });
+    const total = mgThreats.length;
+    const segs = [
+      { k: 'mitigated', label: 'Mitigated', color: 'var(--c-success)' },
+      { k: 'in_progress', label: 'In progress', color: 'var(--c-high)' },
+      { k: 'accepted_risk', label: 'Accepted', color: 'var(--c-info)' },
+      { k: 'false_positive', label: 'False positive', color: 'var(--c-text-light)' },
+      { k: 'open', label: 'Open', color: 'var(--c-critical)' },
+    ];
+    document.getElementById('remediation-bar').innerHTML = segs.filter(s => counts[s.k] > 0).map(s =>
+      `<div title="${s.label}: ${counts[s.k]}" style="width:${counts[s.k] / total * 100}%; background:${s.color};"></div>`
+    ).join('');
+    document.getElementById('remediation-legend').innerHTML = segs.map(s =>
+      `<span class="flex items-center gap-1"><span style="width:8px;height:8px;border-radius:2px;display:inline-block;background:${s.color};"></span>${s.label} ${counts[s.k]}</span>`
+    ).join('');
+    card.classList.remove('hidden');
+  }
+
+  // Blind-spots: models not analyzed, stale models, features with no model.
+  function renderAttention() {
+    const card = document.getElementById('attention-card');
+    const body = document.getElementById('attention-body');
+    const analyzed = analyzedTmIds();
+    const notAnalyzed = allTMs.filter(t => !analyzed.has(t.id));
+    const stale = allTMs.filter(t => analyzed.has(t.id) && (daysSince(t.updated_at) || 0) > STALE_DAYS);
+    const tmByFeature = {};
+    allTMs.forEach(t => { tmByFeature[t.feature_id] = (tmByFeature[t.feature_id] || 0) + 1; });
+    const featsNoModel = allFeatures.filter(f => !tmByFeature[f.id]);
+    const chip = (n, label, tab) =>
+      `<button class="btn btn-sm" data-attn="${tab}" style="background:#fff;border:1px solid #fdba74;color:#9a3412;">${n} ${label}</button>`;
+    const chips = [];
+    if (notAnalyzed.length) chips.push(chip(notAnalyzed.length, `model${notAnalyzed.length !== 1 ? 's' : ''} not analyzed`, 'threats'));
+    if (stale.length) chips.push(chip(stale.length, `stale model${stale.length !== 1 ? 's' : ''} (>${STALE_DAYS}d)`, 'threats'));
+    if (featsNoModel.length) chips.push(chip(featsNoModel.length, `feature${featsNoModel.length !== 1 ? 's' : ''} with no threat model`, 'features'));
+    if (!chips.length) { card.classList.add('hidden'); return; }
+    body.innerHTML = chips.join('');
+    body.querySelectorAll('[data-attn]').forEach(b => b.addEventListener('click', () => {
+      const tab = document.querySelector(`.tab[data-tab="${b.dataset.attn}"]`);
+      if (tab) tab.click();
+    }));
+    card.classList.remove('hidden');
   }
 
   function renderFeatures() {
@@ -187,7 +273,8 @@
         threatsTab.classList.add('active');
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
         document.getElementById('tab-threats').classList.remove('hidden');
-        renderTMs(fid);
+        tmsFeatureFilter = fid;
+        renderTMs();
       });
     });
   }
@@ -224,9 +311,10 @@
                          sev === 'high' ? 'linear-gradient(135deg, #fff7ed, #fff)' :
                          sev === 'medium' ? 'linear-gradient(135deg, #fefce8, #fff)' :
                          'linear-gradient(135deg, #f8fafc, #fff)';
+      const clickable = count > 0;
       return `
-        <div class="card" style="padding: 1.25rem; background: ${bgGradient};">
-          <div class="flex justify-between items-start mb-3">
+        <div class="card ${clickable ? 'card-hover cursor-pointer' : ''}" ${clickable ? `data-owasp-code="${code}"` : ''} style="padding: 1.25rem; background: ${bgGradient};">
+          <div class="flex justify-between items-start mb-2">
             <div>
               <div class="text-xs font-bold text-light" style="text-transform: uppercase; letter-spacing: 0.05em;">${code}</div>
               <div style="font-weight: 700; font-size: 0.95rem; margin-top: 2px;">${esc(title)}</div>
@@ -236,42 +324,154 @@
               <div class="text-xs text-light">${pct}%</div>
             </div>
           </div>
+          <p class="text-xs text-light mb-3" style="line-height: 1.4;">${esc(OWASP_DESC[code] || '')}</p>
           <div class="progress-bar" style="height: 6px;">
             <div class="progress-bar-fill" style="background: var(${colorVar}); width: ${pct}%;"></div>
           </div>
-          <a href="https://owasp.org/Top10/${code.replace(':', '_')}-${title.replace(/ /g, '_')}/" target="_blank" rel="noopener" class="text-xs mt-2" style="color: var(--c-brand); text-decoration: none; display: inline-block;">Learn more →</a>
+          <div class="flex items-center gap-3 mt-2">
+            ${clickable ? `<span class="text-xs" style="color: var(--c-brand); font-weight: 500;">View ${count} threat${count !== 1 ? 's' : ''} →</span>` : '<span class="text-xs text-light">No threats detected</span>'}
+            <a href="https://owasp.org/Top10/${code.replace(':', '_')}-${title.replace(/ /g, '_')}/" target="_blank" rel="noopener" class="text-xs" style="color: var(--c-text-light); text-decoration: none; margin-left: auto;" onclick="event.stopPropagation()">owasp.org ↗</a>
+          </div>
         </div>
       `;
     }).join('');
+
+    grid.querySelectorAll('[data-owasp-code]').forEach(el => {
+      el.addEventListener('click', () => openOwasp(el.dataset.owaspCode, OWASP_2021[el.dataset.owaspCode]));
+    });
   }
 
-  function renderTMs(filterFeatureId) {
-    const tbody = document.getElementById('all-tms-tbody');
-    const filtered = filterFeatureId ? allTMs.filter(t => t.feature_id === filterFeatureId) : allTMs;
-    if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-light" style="padding: 2rem;">No threat models</td></tr>';
+  // Drill into a single OWASP category: list its threats across the portfolio.
+  function openOwasp(code, title) {
+    UI.showModal('modal-owasp');
+    document.getElementById('owasp-title').textContent = `${code} — ${title}`;
+    const rows = mgThreats
+      .filter(t => (t.owasp || '').startsWith(code))
+      .sort((a, b) => (SEV_ORDER[b.severity] || 0) - (SEV_ORDER[a.severity] || 0));
+    document.getElementById('owasp-subtitle').textContent =
+      `${rows.length} threat${rows.length !== 1 ? 's' : ''} across the portfolio`;
+    const body = document.getElementById('owasp-body');
+    if (!rows.length) {
+      body.innerHTML = '<p class="text-sm text-light">No threats in this category.</p>';
       return;
     }
+    body.innerHTML = `
+      <p class="text-sm text-light mb-4">${esc(OWASP_DESC[code] || '')}</p>
+      <div class="table-card"><table class="table">
+        <thead><tr><th>Severity</th><th>Threat</th><th>Model</th><th>Feature</th><th>Status</th></tr></thead>
+        <tbody>
+          ${rows.map(t => `
+            <tr class="cursor-pointer" data-open-tm="${t.tm_id}">
+              <td><span class="sev sev-${t.severity || 'Medium'}">${esc(t.severity || 'Medium')}</span></td>
+              <td>${esc(t.title || 'Untitled')}</td>
+              <td><strong>${esc(t.tm_name)}</strong></td>
+              <td class="text-light">${esc(t.feature || '')}</td>
+              <td><span class="status status-${t.status || 'open'}">${(t.status || 'open').replace('_', ' ')}</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table></div>`;
+    body.querySelectorAll('[data-open-tm]').forEach(el => el.addEventListener('click', () => {
+      UI.hideModal('modal-owasp');
+      openDetail(parseInt(el.dataset.openTm));
+    }));
+  }
+
+  function tmSeverity(tmId) {
+    const s = { Critical: 0, High: 0, Medium: 0, Low: 0, Info: 0 };
+    mgThreats.forEach(t => { if (t.tm_id === tmId && s[t.severity] !== undefined) s[t.severity]++; });
+    return s;
+  }
+
+  function renderTMs() {
+    const tbody = document.getElementById('all-tms-tbody');
+    const analyzed = analyzedTmIds();
     const featureMap = Object.fromEntries(allFeatures.map(f => [f.id, f]));
     const userMap = Object.fromEntries(allUsers.map(u => [u.id, u]));
 
-    tbody.innerHTML = filtered.map(t => {
-      const feature = featureMap[t.feature_id];
-      const owner = userMap[t.owner_id];
-      return `
-        <tr class="cursor-pointer" data-tm-id="${t.id}">
-          <td><strong>${esc(t.name)}</strong></td>
-          <td>${esc(feature ? feature.name : '#' + t.feature_id)}</td>
-          <td>${esc(owner ? owner.email : '#' + t.owner_id)}</td>
-          <td class="text-light text-xs">${(t.updated_at || '').slice(0, 10)}</td>
-          <td class="text-right" style="color: var(--c-brand); font-weight: 500;">View →</td>
-        </tr>
-      `;
-    }).join('');
+    let rows = tmsFeatureFilter ? allTMs.filter(t => t.feature_id === tmsFeatureFilter) : allTMs.slice();
+    if (tmsSearch) {
+      const q = tmsSearch.toLowerCase();
+      rows = rows.filter(t => {
+        const fname = (featureMap[t.feature_id] || {}).name || '';
+        const owner = (userMap[t.owner_id] || {}).email || '';
+        return (t.name || '').toLowerCase().includes(q) ||
+               fname.toLowerCase().includes(q) || owner.toLowerCase().includes(q);
+      });
+    }
 
-    document.querySelectorAll('[data-tm-id]').forEach(el => {
-      el.addEventListener('click', () => openDetail(parseInt(el.dataset.tmId)));
+    const enrich = rows.map(t => {
+      const sev = tmSeverity(t.id);
+      return {
+        t, sev,
+        risk: sev.Critical * 1000 + sev.High * 100 + sev.Medium * 10 + sev.Low,
+        feature: (featureMap[t.feature_id] || {}).name || ('#' + t.feature_id),
+        owner: (userMap[t.owner_id] || {}).email || ('#' + t.owner_id),
+        analyzed: analyzed.has(t.id),
+        stale: analyzed.has(t.id) && (daysSince(t.updated_at) || 0) > STALE_DAYS,
+      };
     });
+
+    const { key, dir } = tmsSort;
+    enrich.sort((a, b) => {
+      if (key === 'name') return dir * (a.t.name || '').localeCompare(b.t.name || '');
+      if (key === 'feature') return dir * a.feature.localeCompare(b.feature);
+      if (key === 'owner') return dir * a.owner.localeCompare(b.owner);
+      if (key === 'risk') return dir * (a.risk - b.risk);
+      if (key === 'status') {
+        const rank = r => (!r.analyzed ? 0 : r.stale ? 1 : 2);
+        return dir * (rank(a) - rank(b));
+      }
+      const av = a.t.updated_at || '', bv = b.t.updated_at || '';
+      return dir * (av < bv ? -1 : av > bv ? 1 : 0);
+    });
+
+    if (!enrich.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-light" style="padding: 2rem;">No threat models</td></tr>';
+    } else {
+      const badge = (n, cls) => n > 0
+        ? `<span class="sev sev-${cls}" style="padding: 1px 6px; font-size: 0.7rem;">${cls[0]}${n}</span>` : '';
+      tbody.innerHTML = enrich.map(r => {
+        const riskCell = r.analyzed
+          ? `<div class="flex gap-1" style="flex-wrap: wrap;">${badge(r.sev.Critical, 'Critical')}${badge(r.sev.High, 'High')}${badge(r.sev.Medium, 'Medium') || '<span class="text-xs text-light">low risk</span>'}</div>`
+          : '<span class="text-xs text-light">—</span>';
+        const statusCell = !r.analyzed
+          ? '<span class="status status-open">Not analyzed</span>'
+          : (r.stale ? '<span class="status status-in_progress">Stale</span>' : '<span class="status status-mitigated">Analyzed</span>');
+        return `
+          <tr class="cursor-pointer" data-tm-id="${r.t.id}">
+            <td><strong>${esc(r.t.name)}</strong></td>
+            <td>${esc(r.feature)}</td>
+            <td>${riskCell}</td>
+            <td>${statusCell}</td>
+            <td class="text-light">${esc(r.owner)}</td>
+            <td class="text-light text-xs">${(r.t.updated_at || '').slice(0, 10)}${r.stale ? ` · <span style="color: var(--c-high);">${daysSince(r.t.updated_at)}d</span>` : ''}</td>
+            <td class="text-right" style="color: var(--c-brand); font-weight: 500;">View →</td>
+          </tr>`;
+      }).join('');
+      tbody.querySelectorAll('[data-tm-id]').forEach(el =>
+        el.addEventListener('click', () => openDetail(parseInt(el.dataset.tmId))));
+    }
+
+    document.querySelectorAll('#tab-threats th[data-sort]').forEach(th => {
+      const base = th.textContent.replace(/\s*[▲▼]$/, '');
+      th.textContent = base + (th.dataset.sort === tmsSort.key ? (tmsSort.dir === 1 ? ' ▲' : ' ▼') : '');
+    });
+  }
+
+  function exportPortfolioCsv() {
+    if (!mgThreats.length) { UI.toast('No analyzed threats to export', 'error'); return; }
+    const cols = ['Threat Model', 'Feature', 'Threat ID', 'Title', 'Severity', 'Category', 'OWASP', 'CWE', 'Status'];
+    const escCsv = (v) => { v = (v == null ? '' : String(v)); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const lines = [cols.join(',')];
+    mgThreats.forEach(t => lines.push(
+      [t.tm_name, t.feature, t.id, t.title, t.severity, t.category, t.owasp || '', t.cwe || '', t.status].map(escCsv).join(',')));
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'portfolio_threats.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    UI.toast('Portfolio CSV exported', 'success', 1500);
   }
 
   // ============================================================================
@@ -573,6 +773,12 @@
                     </div>
                   </div>
                 ` : ''}
+
+                ${(isAdmin && jiraConfigured) ? `
+                  <div class="detail-section" style="border-top: 1px solid var(--c-border); padding-top: 0.75rem;">
+                    <button class="create-jira btn btn-sm btn-secondary" data-threat-id="${esc(t.id)}">Create Jira ticket</button>
+                  </div>
+                ` : ''}
               </div>
             </div>
           `;
@@ -587,6 +793,30 @@
         const icon = h.querySelector('.expand-icon');
         detail.classList.toggle('hidden');
         if (icon) icon.style.transform = detail.classList.contains('hidden') ? '' : 'rotate(180deg)';
+      });
+    });
+
+    list.querySelectorAll('.create-jira').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const threatId = btn.dataset.threatId;
+        const original = btn.textContent;
+        btn.disabled = true; btn.textContent = 'Creating…';
+        try {
+          const r = await Auth.fetch('/api/create-ticket', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ threat_model_id: currentTM.id, threat_id: threatId }),
+          });
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.detail || 'Ticket creation failed');
+          UI.toast(`Jira ticket ${d.key} created`, 'success');
+          btn.textContent = `✓ ${d.key}`;
+          btn.classList.remove('btn-secondary'); btn.classList.add('btn-ghost');
+          if (d.url) { btn.onclick = () => window.open(d.url, '_blank'); btn.disabled = false; btn.title = 'Open in Jira'; }
+        } catch (err) {
+          UI.toast(err.message || 'Could not create Jira ticket', 'error', 8000);
+          btn.disabled = false; btn.textContent = original;
+        }
       });
     });
   }
@@ -658,6 +888,21 @@
       onChange: function () {},
     });
   }
+
+  // All-models toolbar: search, sortable headers, portfolio export
+  document.getElementById('tms-search').addEventListener('input', (e) => {
+    tmsSearch = e.target.value;
+    renderTMs();
+  });
+  document.querySelectorAll('#tab-threats th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const k = th.dataset.sort;
+      if (tmsSort.key === k) tmsSort.dir *= -1;
+      else tmsSort = { key: k, dir: (k === 'updated' || k === 'risk') ? -1 : 1 };
+      renderTMs();
+    });
+  });
+  document.getElementById('btn-export-portfolio').addEventListener('click', exportPortfolioCsv);
 
   document.getElementById('btn-refresh').addEventListener('click', loadAll);
   loadAll();
