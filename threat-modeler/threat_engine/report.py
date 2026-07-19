@@ -546,6 +546,27 @@ def to_pdf(analysis: dict) -> bytes:
         ("ALIGN", (1, 0), (1, -1), "CENTER"),
     ]))
     story.append(t)
+    story.append(Spacer(1, 0.12 * inch))
+
+    # Framework coverage — how many threats map to each OWASP framework (matches the
+    # coloured badges in the HTML report and the coverage strip in the app).
+    _fw_counts = {}
+    for _t in threats:
+        for _fr in _t.get("frameworks") or []:
+            _fw_counts[_fr["framework"]] = _fw_counts.get(_fr["framework"], 0) + 1
+    if _fw_counts:
+        _fw_meta = {
+            "WEB":     ("OWASP Web", "#334155"), "API": ("OWASP API", "#0e7490"),
+            "MOBILE":  ("OWASP Mobile", "#047857"), "LLM": ("OWASP LLM", "#6d28d9"),
+            "AGENTIC": ("OWASP Agentic", "#a21caf"),
+        }
+        _parts = [
+            f"<font color='{_fw_meta[k][1]}'><b>{_fw_meta[k][0]}:</b> {_fw_counts[k]}</font>"
+            for k in ["WEB", "API", "MOBILE", "LLM", "AGENTIC"] if _fw_counts.get(k)
+        ]
+        story.append(Paragraph("<b>Framework coverage</b> &nbsp; " + " &nbsp;·&nbsp; ".join(_parts), body))
+        story.append(Paragraph(
+            "Threats mapped to each OWASP Top-10 framework. A threat can map to more than one.", small))
     story.append(Spacer(1, 0.18 * inch))
 
     # Components
