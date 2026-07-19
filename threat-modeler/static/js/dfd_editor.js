@@ -527,11 +527,18 @@
           <text x="${COMP_W / 2}" y="56" text-anchor="middle" font-size="9" fill="#64748b">
             ${escapeAttr(c.type || '')}
           </text>
+          ${opts.readOnly ? '' : `
+            <circle class="dfd-connect-handle" cx="${COMP_W}" cy="${COMP_H / 2}" r="6"
+                    fill="#6366f1" stroke="#fff" stroke-width="1.5" opacity="0.85"
+                    style="cursor:crosshair;"><title>Drag to another component to connect a flow</title></circle>`}
         `;
         componentsLayer.appendChild(g);
 
         if (!opts.readOnly) {
           g.style.touchAction = 'none';
+          // Drag the connect handle → draw a flow to whatever component you release on.
+          const handle = g.querySelector('.dfd-connect-handle');
+          if (handle) handle.addEventListener('pointerdown', (e) => startConnectDrag(e, c.id));
           g.addEventListener('pointerdown', (e) => beginDrag(e, c.id));
           g.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -733,9 +740,14 @@
       const f = system.data_flows.find(x => x.id === id);
       if (!f) return hidePanel();
       sidePanel.classList.remove('hidden');
+      const fromName = (system.components.find(c => c.id === f.from) || {}).name || f.from;
+      const toName = (system.components.find(c => c.id === f.to) || {}).name || f.to;
       sidePanel.innerHTML = `
         <div class="dfd-panel-header">
-          <div class="dfd-panel-title">Data flow</div>
+          <div>
+            <div class="dfd-panel-title">Data flow</div>
+            <div class="text-xs text-light" style="margin-top:2px;">${escapeAttr(fromName)} → ${escapeAttr(toName)}</div>
+          </div>
           <button class="dfd-panel-close" data-act="close">✕</button>
         </div>
         <div class="dfd-panel-body">
@@ -951,20 +963,58 @@
         cancelFlowDrawing();
         return;
       }
+      const from = flowDrawing.fromId;
+      cancelFlowDrawing();
+      createFlow(from, toId);
+    }
+
+    // Create a flow between two components (shared by click-to-connect, drag-to-connect).
+    function createFlow(fromId, toId) {
       const newFlow = {
-        id: genId('f'),
-        from: flowDrawing.fromId,
-        to: toId,
-        label: 'Data',
-        protocol: 'HTTPS',
-        auth: '',
-        encrypted: true,
+        id: genId('f'), from: fromId, to: toId,
+        label: 'Data', protocol: 'HTTPS', auth: '', encrypted: true,
       };
       system.data_flows.push(newFlow);
-      cancelFlowDrawing();
       render();
       selectFlow(newFlow.id);
       opts.onChange(getSystem());
+    }
+
+    // Which component's box contains a canvas-space point (for drag-to-connect release).
+    function componentAt(cp) {
+      for (const c of (system.components || [])) {
+        const p = system.layout[c.id];
+        if (p && cp.x >= p.x && cp.x <= p.x + COMP_W && cp.y >= p.y && cp.y <= p.y + COMP_H) {
+          return c.id;
+        }
+      }
+      return null;
+    }
+
+    // Drag from a component's connect handle to another component to create a flow.
+    function startConnectDrag(e, fromId) {
+      if (opts.readOnly) return;
+      e.stopPropagation();          // don't also start a reposition drag
+      e.preventDefault();
+      flowDrawing = { fromId, mouseX: 0, mouseY: 0 };
+      svg.style.cursor = 'crosshair';
+      showBanner('Release on the destination component to connect. Press Esc to cancel.');
+      const move = (ev) => {
+        const cp = clientToCanvas(ev);
+        flowDrawing.mouseX = cp.x;
+        flowDrawing.mouseY = cp.y;
+        render();
+      };
+      const up = (ev) => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        const target = componentAt(clientToCanvas(ev));
+        const from = flowDrawing && flowDrawing.fromId;
+        cancelFlowDrawing();
+        if (from && target && target !== from) createFlow(from, target);
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
     }
 
     function cancelFlowDrawing() {
