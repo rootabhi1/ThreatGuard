@@ -548,6 +548,22 @@
           throw new Error(msg);
         }
         system = await sResp.json();
+        // Parsing is lenient: bad lines become line-referenced issues instead of a
+        // hard failure. Surface them, but never block — the user still gets a model.
+        const structIssues = system.issues || [];
+        if ((system.assumptions || []).length) system._assumptions = system.assumptions;
+        delete system.assumptions;
+        delete system.issues;
+        delete system.boundary_inference_mode;
+        const structErrors = structIssues.filter(i => i.level === 'error');
+        if (structIssues.length) {
+          const lvl = structErrors.length ? 'warning' : 'info';
+          UI.toast(`Parsed with ${structIssues.length} note${structIssues.length === 1 ? '' : 's'} — see Model health after analysis.`, lvl, 6000);
+          if (structErrors.length) {
+            structError.innerHTML = structErrors.map(i => esc(i.message)).join('<br>');
+            structError.classList.remove('hidden');
+          }
+        }
         if (!system.name) system.name = fd.get('name');
         system._source_text = fd.get('structured_text');
       } else if (selectedTemplate) {
@@ -575,6 +591,8 @@
         // Stash the inference mode + source text for later display
         system._boundary_inference_mode = system.boundary_inference_mode || 'heuristic';
         system._source_text = fd.get('system_text');
+        if ((system.assumptions || []).length) system._assumptions = system.assumptions;
+        delete system.assumptions;
         delete system.boundary_inference_mode;
       }
 
@@ -812,6 +830,63 @@
     return L.join('\n');
   }
 
+  // Model-health banner: shows exactly what normalization repaired or flagged
+  // (missing/duplicate ids, dangling flow references turned into placeholders,
+  // unrecognized types, components outside a boundary). Nothing is ever dropped
+  // silently — this is where the user sees the truth about their input.
+  function modelIssuesHTML(analysis) {
+    const items = (analysis && analysis.model_issues) || [];
+    // Only surface the banner when normalization actually repaired or flagged
+    // something (error/warning). Purely informational notes stay out of the UI so
+    // a well-formed model shows no banner at all; reports still list everything.
+    if (!items.some(i => i.level === 'error' || i.level === 'warning')) return '';
+    const order = { error: 0, warning: 1, info: 2 };
+    const meta = {
+      error:   { bg: '#fef2f2', bd: '#fecaca', fg: '#b91c1c', icon: '⛔', word: 'need attention' },
+      warning: { bg: '#fffbeb', bd: '#fde68a', fg: '#92400e', icon: '⚠', word: 'auto-resolved' },
+      info:    { bg: '#f8fafc', bd: '#e2e8f0', fg: '#475569', icon: 'ℹ', word: 'noted' },
+    };
+    const counts = { error: 0, warning: 0, info: 0 };
+    items.forEach(i => { counts[i.level] = (counts[i.level] || 0) + 1; });
+    const sorted = [...items].sort((a, b) => (order[a.level] ?? 3) - (order[b.level] ?? 3));
+    const top = counts.error ? meta.error : counts.warning ? meta.warning : meta.info;
+    const summary = [
+      counts.error ? `${counts.error} need attention` : '',
+      counts.warning ? `${counts.warning} auto-resolved` : '',
+      counts.info ? `${counts.info} noted` : '',
+    ].filter(Boolean).join(' · ');
+    const rows = sorted.map(i => {
+      const m = meta[i.level] || meta.info;
+      return `<li style="display:flex;gap:.5rem;align-items:flex-start;margin:.25rem 0;">
+        <span style="color:${m.fg};flex-shrink:0;">${m.icon}</span>
+        <span class="text-sm" style="line-height:1.45;">${esc(i.message)}</span></li>`;
+    }).join('');
+    return `
+      <div class="card mb-6" style="padding:.85rem 1.1rem;background:${top.bg};border:1px solid ${top.bd};">
+        <div class="text-xs font-semibold" style="color:${top.fg};text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;">
+          🩺 Model health — ${esc(summary)}
+        </div>
+        <ul style="margin:0;padding-left:.1rem;list-style:none;">${rows}</ul>
+        ${counts.error ? `<div class="text-xs text-light" style="margin-top:.45rem;">Resolve the flagged items in the Data Flow Diagram tab, then re-run analysis.</div>` : ''}
+      </div>`;
+  }
+
+  // Assumptions made when the model was seeded from text (inferred flows, defaulted
+  // protocol/auth/encryption, auto-added actor). Shown so "stated" and "assumed" are
+  // never confused. Collapsible — it's context, not an alarm.
+  function assumptionsHTML(analysis) {
+    const items = (analysis && analysis.assumptions) || [];
+    if (!items.length) return '';
+    const rows = items.map(a => `<li style="margin:.2rem 0;line-height:1.45">${esc(a)}</li>`).join('');
+    return `
+      <details class="card mb-6" style="padding:.7rem 1.1rem;background:#f8fafc;border:1px solid #e2e8f0;">
+        <summary style="cursor:pointer;font-size:.72rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.05em;">
+          💡 Assumptions (${items.length}) — what was inferred, not stated
+        </summary>
+        <ul style="margin:.5rem 0 0;padding-left:1.1rem;font-size:.85rem;color:#334155;">${rows}</ul>
+      </details>`;
+  }
+
   function renderDetail() {
     const tm = currentTM;
     const featureName = (allFeatures.find(f => f.id === tm.feature_id) || {}).name || `#${tm.feature_id}`;
@@ -851,6 +926,8 @@
         </div>
       </div>
 
+      ${modelIssuesHTML(analysis)}
+      ${assumptionsHTML(analysis)}
       ${dataFlowOverviewHTML(analysis)}
 
       <!-- Tabs -->
@@ -896,7 +973,7 @@
       <!-- DFD panel -->
       <div id="tab-dfd" class="tab-panel hidden">
         <div class="flex items-center justify-between mb-3 gap-2" style="flex-wrap: wrap;">
-          <div class="text-xs text-light">🔒 Solid = encrypted · ⚠ Dashed red = unencrypted/cross-boundary · drag components, click to edit</div>
+          <div class="text-xs text-light">Numbered badges = flows (red = unencrypted/cross-boundary) · click a badge to inspect · drag components to arrange</div>
           <button id="btn-save-dfd" class="btn btn-sm btn-primary hidden">Save layout & changes</button>
         </div>
         <div id="dfd-container" class="dfd-container" style="height: 600px;">

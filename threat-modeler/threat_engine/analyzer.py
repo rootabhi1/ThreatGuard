@@ -171,7 +171,8 @@ def extract_components_from_text(text: str) -> dict:
                 break
 
     # Always include a "user" if nothing user-facing detected
-    if not any(c["type"] == "user" for c in components):
+    _added_default_user = not any(c["type"] == "user" for c in components)
+    if _added_default_user:
         components.insert(0, {
             "id": "c_user", "name": "User", "type": "user",
             "description": "Default end user (auto-added)",
@@ -210,10 +211,26 @@ def extract_components_from_text(text: str) -> dict:
                 "auth": "credentials", "encrypted": False,
             })
 
+    # Free-text extraction is a best-effort guess, so be explicit about everything it
+    # inferred rather than read. These assumptions ride with the model and are shown
+    # to the user (UI + reports) so they know exactly what to verify.
+    assumptions: list[str] = [
+        "Components were detected by keyword; components of the same type are collapsed "
+        "into one. Use structured input or the diagram editor for an exact inventory.",
+    ]
+    if _added_default_user:
+        assumptions.insert(0, "Added a default 'User' actor — none was described in the text.")
+    if data_flows:
+        assumptions.append(
+            f"Inferred {len(data_flows)} data flow(s) from component types — the topology, "
+            f"protocols, authentication and encryption were not stated and are assumed "
+            f"(e.g. app→datastore links are assumed unencrypted). Verify each in the diagram.")
+
     return {
         "components": components,
         "data_flows": data_flows,
         "trust_boundaries": _infer_boundaries_for_extracted(components, text),
+        "assumptions": assumptions,
     }
 
 
@@ -233,18 +250,26 @@ def _slug(name: str) -> str:
 
 
 def parse_structured_system(text: str) -> dict:
-    """Parse a structured system description into a system model.
+    """Parse a structured system description into a system model — leniently.
 
     Format (lines; '#' and blank lines ignored):
         Name : type                       -> a component
         From -> To : proto, auth, enc?    -> a data flow (attrs optional)
 
-    Raises ValueError with a clear, line-referenced message on any problem so the
-    UI can show the user exactly what to fix."""
+    Never raises: every line that can be parsed is kept, and every line that can't
+    is recorded as a line-referenced entry in the returned ``issues`` list. A flow
+    to an undeclared component keeps a visible placeholder so it still appears in the
+    diagram. The caller always gets a usable, editable model plus an honest account
+    of what needs attention — instead of one bad line rejecting the whole input."""
     components: list[dict] = []
     by_name: dict[str, dict] = {}       # lowercased name -> component
     flow_lines: list[tuple[int, str]] = []
     valid_types = set(VALID_COMPONENT_TYPES)
+    issues: list[dict] = []
+
+    def _issue(level, message):
+        issues.append({"level": level, "code": "structured_parse",
+                       "message": message, "autofixed": level != "error"})
 
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.strip()
@@ -254,36 +279,53 @@ def parse_structured_system(text: str) -> dict:
             flow_lines.append((lineno, line))
             continue
         if ":" not in line:
-            raise ValueError(f"Line {lineno}: \"{line}\" — expected 'Name : type' (a component) "
-                             f"or 'A -> B' (a flow).")
+            _issue("error", f"Line {lineno}: \"{line}\" — expected 'Name : type' (a component) "
+                            f"or 'A -> B' (a flow). Skipped.")
+            continue
         name, _, ctype = line.partition(":")
         name, ctype = name.strip(), ctype.strip().lower().replace(" ", "_")
         if not name:
-            raise ValueError(f"Line {lineno}: missing a component name before ':'.")
+            _issue("error", f"Line {lineno}: missing a component name before ':'. Skipped.")
+            continue
         if ctype not in valid_types:
-            raise ValueError(f"Line {lineno}: unknown type '{ctype}' for '{name}'. "
-                             f"Valid types: {', '.join(sorted(valid_types))}.")
+            _issue("warning", f"Line {lineno}: unrecognized type '{ctype}' for '{name}'. Kept as-is; "
+                              f"it will only attract generic threats. Valid types include: "
+                              f"{', '.join(sorted(valid_types)[:8])}, …")
         if name.lower() in by_name:
-            raise ValueError(f"Line {lineno}: duplicate component name '{name}'.")
+            _issue("warning", f"Line {lineno}: duplicate component name '{name}'. Kept the first; "
+                              f"this line was skipped.")
+            continue
         comp = {"id": f"c_{_slug(name)}_{len(components)}", "name": name, "type": ctype,
                 "description": f"Declared component ({ctype})"}
         components.append(comp)
         by_name[name.lower()] = comp
 
     if not components:
-        raise ValueError("No components found. Add at least one line like 'API : api'.")
+        _issue("error", "No components found. Add at least one line like 'API : api'.")
 
     data_flows: list[dict] = []
+    n_default_attrs = 0
     for lineno, line in flow_lines:
         endpoints, _, attrs = line.partition(":")
         src_name, _, dst_name = endpoints.partition("->")
         src_name, dst_name = src_name.strip(), dst_name.strip()
+        if not src_name or not dst_name:
+            _issue("error", f"Line {lineno}: a flow needs both a source and a target ('A -> B'). Skipped.")
+            continue
+        if not attrs.strip():
+            n_default_attrs += 1
         src = by_name.get(src_name.lower())
         dst = by_name.get(dst_name.lower())
+        # An undeclared endpoint is NOT repaired here: the flow keeps a reference to
+        # the raw name so downstream normalization creates a single, visible placeholder
+        # node and discloses it every time analysis runs — which also means the warning
+        # self-clears the moment the user declares the component or fixes the name.
         if not src:
-            raise ValueError(f"Line {lineno}: flow source '{src_name}' is not a declared component.")
+            _issue("warning", f"Line {lineno}: flow source '{src_name}' is not declared yet; it will show "
+                              f"as an unresolved placeholder until you add it or fix the name.")
         if not dst:
-            raise ValueError(f"Line {lineno}: flow target '{dst_name}' is not a declared component.")
+            _issue("warning", f"Line {lineno}: flow target '{dst_name}' is not declared yet; it will show "
+                              f"as an unresolved placeholder until you add it or fix the name.")
         protocol, auth, encrypted = "HTTPS", "none", True
         for tok in (t.strip().lower() for t in attrs.split(",") if t.strip()):
             if tok in _PROTOCOLS:
@@ -295,15 +337,30 @@ def parse_structured_system(text: str) -> dict:
             elif tok in ("plaintext", "unencrypted", "cleartext", "insecure", "no", "none_enc"):
                 encrypted = False
         data_flows.append({
-            "id": f"f_{len(data_flows)}", "from": src["id"], "to": dst["id"],
-            "label": f"{src['name']} → {dst['name']}", "protocol": protocol,
+            "id": f"f_{len(data_flows)}",
+            "from": src["id"] if src else src_name,
+            "to": dst["id"] if dst else dst_name,
+            "label": f"{src_name} → {dst_name}", "protocol": protocol,
             "auth": auth, "encrypted": encrypted,
         })
+
+    # Structured input is exact for what you write, but unspecified flow attributes
+    # fall back to defaults — disclose that so those defaults aren't mistaken for facts.
+    assumptions: list[str] = []
+    if n_default_attrs:
+        assumptions.append(
+            f"{n_default_attrs} flow(s) had no protocol/auth/encryption specified — assumed "
+            f"HTTPS, no authentication, and encrypted. Add attributes after the flow "
+            f"(e.g. 'A -> B : TCP, mtls, encrypted') to make these explicit.")
+    if not any(b.get("contains") for b in _infer_boundaries_for_extracted(components, text)):
+        assumptions.append("Trust boundaries were inferred heuristically from component types.")
 
     return {
         "components": components,
         "data_flows": data_flows,
         "trust_boundaries": _infer_boundaries_for_extracted(components, text),
+        "issues": issues,
+        "assumptions": assumptions,
     }
 
 
@@ -1041,6 +1098,14 @@ def analyze_system(
     ['stride','dread','linddun','pasta']."""
     from .scoring import enrich_threat_with_scoring
     from .detail import enrich_threat_with_detail
+    from .model_health import normalize_system
+
+    # Repair the model up front: assign missing ids, rename duplicate ids, and turn
+    # every dangling flow reference into a visible placeholder node. This is the one
+    # place that guarantees the rule engine, the DFD and the reports all see the same
+    # self-consistent model — so nothing is ever silently dropped or crashes on
+    # malformed input. `model_issues` records exactly what was repaired.
+    system, model_issues = normalize_system(system)
 
     # If the model doesn't define trust boundaries, infer them heuristically so
     # the cross-boundary rules, the DFD, and the report all reflect real zones
@@ -1157,6 +1222,14 @@ def analyze_system(
         "summary": summary,
         "dataflow_summary": build_dataflow_summary(system, all_threats, summary, _untrusted),
         "untrusted_crossings": _untrusted,
+        # What model normalization repaired or flagged (missing/duplicate ids,
+        # dangling flow references turned into placeholders, invalid types, …).
+        # Surfaced in the UI and reports so no auto-repair is ever hidden.
+        "model_issues": model_issues,
+        # Assumptions made when the model was seeded from text (inferred topology,
+        # defaulted protocol/auth/encryption, auto-added actor). Captured at creation
+        # and carried on the system so the reader knows what is stated vs. assumed.
+        "assumptions": (system.get("_assumptions") or system.get("assumptions") or []),
         # Only real methodologies belong in this list — reports render it as
         # "Methodologies:". DREAD (scoring) and OWASP (reference) are excluded even
         # if a caller passes them, so they can never be presented as methodologies.

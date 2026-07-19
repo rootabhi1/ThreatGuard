@@ -49,6 +49,11 @@ def _category(component_type: str) -> str:
 _COL_GAP = 300
 _ROW_GAP = 150
 _MARGIN = 90
+# Within a single band/boundary, a large group wraps into this many rows before
+# starting a new sub-column, so one crowded boundary can't make the whole diagram
+# absurdly tall. Sub-columns sit inside the same boundary box.
+_MAX_ROWS = 6
+_SUB_COL_GAP = 190
 
 
 def _auto_layout(components: list[dict], data_flows: list[dict],
@@ -109,18 +114,59 @@ def _auto_layout(components: list[dict], data_flows: list[dict],
         if not columns:
             columns = [components]
 
-    # Place columns left→right with fixed, generous spacing (natural coordinates;
-    # render_dfd_svg sizes the viewBox to fit).
+    # Reduce edge crossings: order nodes within each column by the barycenter of their
+    # connected neighbours (the classic layered-layout heuristic). A few left↔right
+    # sweeps pull connected nodes into vertical alignment across columns, so far fewer
+    # flow lines cross. Deterministic — stable sort, fixed sweep count.
+    if len(columns) > 1 and data_flows:
+        col_of = {c["id"]: ci for ci, col in enumerate(columns) for c in col}
+        neighbors: dict[str, list[str]] = {}
+        for f in data_flows:
+            a, b = f.get("from"), f.get("to")
+            if a in col_of and b in col_of:
+                neighbors.setdefault(a, []).append(b)
+                neighbors.setdefault(b, []).append(a)
+        row_of = {c["id"]: i for col in columns for i, c in enumerate(col)}
+
+        def _bary(c: dict) -> float:
+            rs = [row_of[n] for n in neighbors.get(c["id"], []) if n in row_of]
+            return sum(rs) / len(rs) if rs else float(row_of[c["id"]])
+
+        def _sweep(order) -> None:
+            for ci in order:
+                columns[ci].sort(key=_bary)
+                for i, c in enumerate(columns[ci]):
+                    row_of[c["id"]] = i
+
+        for _ in range(3):
+            _sweep(range(1, len(columns)))            # left → right
+            _sweep(range(len(columns) - 2, -1, -1))   # right → left
+
+    # Place bands left→right. A band with more than _MAX_ROWS members wraps into a
+    # compact grid (multiple sub-columns) rather than one very tall column, so a
+    # single crowded boundary can't blow the whole diagram out to thousands of
+    # pixels tall. Bands have variable widths, so x is accumulated. Natural
+    # coordinates; render_dfd_svg sizes the viewBox to fit.
+    def _grid_dims(n: int) -> tuple[int, int]:
+        rows = min(max(1, n), _MAX_ROWS)
+        sub_cols = max(1, math.ceil(n / _MAX_ROWS))
+        return rows, sub_cols
+
     positions: dict[str, dict] = {}
-    tallest = max((len(col) for col in columns), default=1)
-    band_h = max(1, tallest - 1) * _ROW_GAP
-    for ci, col in enumerate(columns):
-        x = _MARGIN + ci * _COL_GAP
+    tallest_rows = max((_grid_dims(len(col))[0] for col in columns), default=1)
+    band_h = max(1, tallest_rows - 1) * _ROW_GAP
+    cur_x = _MARGIN
+    for col in columns:
         n = len(col)
-        # centre each column vertically within the tallest band
-        y0 = _MARGIN + (band_h - max(0, n - 1) * _ROW_GAP) / 2
-        for ri, c in enumerate(col):
-            positions[c["id"]] = {"x": x, "y": y0 + ri * _ROW_GAP}
+        rows, sub_cols = _grid_dims(n)
+        col_h = max(0, rows - 1) * _ROW_GAP
+        y0 = _MARGIN + (band_h - col_h) / 2  # centre the grid vertically
+        for i, c in enumerate(col):
+            si, ri = divmod(i, rows)          # sub-column, row (fill top→bottom)
+            positions[c["id"]] = {"x": cur_x + si * _SUB_COL_GAP,
+                                  "y": y0 + ri * _ROW_GAP}
+        band_w = max(0, sub_cols - 1) * _SUB_COL_GAP
+        cur_x += band_w + _COL_GAP
     return positions
 
 
@@ -195,7 +241,7 @@ def _intersect_node_edge(pos_a: dict, pos_b: dict, w: int, h: int) -> tuple[floa
 
 
 def _draw_flow(flow: dict, comp_by_id: dict, positions: dict,
-               crosses_boundary: bool, anim: bool = False) -> str:
+               crosses_boundary: bool, anim: bool = False, number: int | None = None) -> str:
     src = comp_by_id.get(flow["from"])
     dst = comp_by_id.get(flow["to"])
     if not src or not dst: return ""
@@ -210,12 +256,7 @@ def _draw_flow(flow: dict, comp_by_id: dict, positions: dict,
     dash = "5,4" if not encrypted else "none"
     width = 2.2 if crosses_boundary else 1.6
 
-    label = flow.get("label", "")
-    proto = flow.get("protocol", "")
-    auth  = flow.get("auth") or "none"
-    full_label = f"{label}" + (f" [{proto}]" if proto else "")
     mx, my = (x1 + x2) / 2, (y1 + y2) / 2
-
     # Slight curve perpendicular to the line for clarity
     dx, dy = x2 - x1, y2 - y1
     length = max(1.0, math.hypot(dx, dy))
@@ -224,7 +265,15 @@ def _draw_flow(flow: dict, comp_by_id: dict, positions: dict,
     cx, cy = mx + nx * curve, my + ny * curve
 
     path_id = f"path_{flow['id']}"
+    # Group the flow so a native hover tooltip (<title>) can describe it without any
+    # inline text on the diagram — hover the line or its badge to inspect the flow.
+    proto = flow.get("protocol") or "—"
+    auth = flow.get("auth") or "none"
+    sec = ("encrypted" if encrypted else "plaintext") + (", crosses boundary" if crosses_boundary else "")
+    num_prefix = f"[{number}] " if number is not None else ""
+    tip = xml_escape(f"{num_prefix}{src['name']} → {dst['name']} · {proto} · auth: {auth} · {sec}")
     parts = []
+    parts.append(f'<g><title>{tip}</title>')
     parts.append(
         f'<path id="{path_id}" d="M {x1:.1f},{y1:.1f} Q {cx:.1f},{cy:.1f} {x2:.1f},{y2:.1f}" '
         f'fill="none" stroke="{color}" stroke-width="{width}" stroke-dasharray="{dash}" marker-end="url(#arrow)"/>'
@@ -237,31 +286,53 @@ def _draw_flow(flow: dict, comp_by_id: dict, positions: dict,
             f'<animate attributeName="stroke-dashoffset" from="0" to="-36" dur="1.6s" repeatCount="indefinite"/>'
             f'</path>'
         )
-    if full_label:
-        # A <textPath> follows its path's direction, so a right-to-left flow would
-        # render the label upside-down. Bind the label to a dedicated invisible
-        # path that always runs left-to-right (endpoints swapped when needed).
-        if (x1, y1) <= (x2, y2):
-            lx1, ly1, lx2, ly2 = x1, y1, x2, y2
-        else:
-            lx1, ly1, lx2, ly2 = x2, y2, x1, y1
-        label_path_id = f"lp_{flow['id']}"
+    # Numbered badge on the edge instead of a text label along the line. Printing
+    # "A -> B [proto]" on every edge turns a large diagram into unreadable overlapping
+    # text; a small number keyed to the flow legend stays legible. The badge is
+    # staggered along the edge (by flow number) rather than fixed at the midpoint, so
+    # many flows converging on the same region don't pile their badges on top of each
+    # other. Colour still encodes risk; the legend carries protocol / auth / encryption.
+    if number is not None:
+        t = 0.30 + ((number - 1) % 4) * 0.12   # 0.30, 0.42, 0.54, 0.66 along the curve
+        omt = 1.0 - t
+        bx = omt * omt * x1 + 2 * omt * t * cx + t * t * x2
+        by = omt * omt * y1 + 2 * omt * t * cy + t * t * y2
         parts.append(
-            f'<path id="{label_path_id}" d="M {lx1:.1f},{ly1:.1f} Q {cx:.1f},{cy:.1f} {lx2:.1f},{ly2:.1f}" '
-            f'fill="none" stroke="none"/>'
+            f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="9.5" fill="{color}" '
+            f'stroke="#ffffff" stroke-width="1.5"/>'
         )
         parts.append(
-            f'<text font-size="10" fill="#475569" font-family="system-ui,sans-serif">'
-            f'<textPath href="#{label_path_id}" startOffset="50%" text-anchor="middle">{xml_escape(full_label)}</textPath>'
-            f'</text>'
+            f'<text x="{bx:.1f}" y="{by + 3.3:.1f}" text-anchor="middle" font-size="10.5" '
+            f'font-weight="700" fill="#ffffff" font-family="system-ui,sans-serif">{number}</text>'
         )
-
-    # Lock icon (encryption status) at midpoint
-    icon = "🔒" if encrypted else "⚠"
-    parts.append(
-        f'<text x="{cx:.1f}" y="{cy + 4:.1f}" text-anchor="middle" font-size="11" fill="{color}">{icon}</text>'
-    )
+    parts.append('</g>')
     return "".join(parts)
+
+
+def build_flow_legend(system: dict) -> list[dict]:
+    """Numbered legend for the DFD, matching the badge numbers on the rendered SVG.
+
+    Normalizes with the same pass the renderer uses and numbers flows in the same
+    order, so legend entry N always corresponds to badge N on the diagram."""
+    from .model_health import normalize_system
+    system, _ = normalize_system(system)
+    comps = {c["id"]: c for c in system.get("components", []) or []}
+    bmap = {cid: b.get("id") for b in (system.get("trust_boundaries") or [])
+            for cid in (b.get("contains") or [])}
+    legend = []
+    for i, f in enumerate(system.get("data_flows", []) or [], 1):
+        s = comps.get(f.get("from"), {})
+        d = comps.get(f.get("to"), {})
+        legend.append({
+            "n": i,
+            "from": s.get("name", f.get("from", "?")),
+            "to": d.get("name", f.get("to", "?")),
+            "protocol": f.get("protocol", "") or "",
+            "auth": f.get("auth") or "none",
+            "encrypted": bool(f.get("encrypted", True)),
+            "crosses": bmap.get(f.get("from")) != bmap.get(f.get("to")),
+        })
+    return legend
 
 
 def _draw_boundary(boundary: dict, positions: dict, palette: dict,
@@ -299,6 +370,12 @@ def render_dfd_svg(system: dict, *, animated: bool = False,
                    width: int = 1000, height: int = 600,
                    positions: dict | None = None) -> str:
     """Return a complete SVG string for the DFD."""
+    # Repair the model first so a missing id or a dangling flow reference can never
+    # crash the renderer or make a flow silently disappear: normalization assigns
+    # ids and substitutes a visible placeholder node for any undeclared reference.
+    # Idempotent — analysed models arrive already normalized, so this is a no-op there.
+    from .model_health import normalize_system
+    system, _ = normalize_system(system)
     components = system.get("components", []) or []
     flows = system.get("data_flows", []) or []
     boundaries = system.get("trust_boundaries", []) or []
@@ -364,9 +441,10 @@ def render_dfd_svg(system: dict, *, animated: bool = False,
         palette = _BOUNDARY_PALETTE[i % len(_BOUNDARY_PALETTE)]
         parts.append(_draw_boundary(b, pos, palette, anim=animated))
 
-    # Flows (under nodes)
-    for f in flows:
-        parts.append(_draw_flow(f, comp_by_id, pos, crosses(f), anim=animated))
+    # Flows (under nodes). Numbered 1..N in the same order as build_flow_legend,
+    # so each badge keys to a legend row rather than a text label on the line.
+    for i, f in enumerate(flows, 1):
+        parts.append(_draw_flow(f, comp_by_id, pos, crosses(f), anim=animated, number=i))
 
     # Nodes on top
     for c in components:
@@ -378,7 +456,12 @@ def render_dfd_svg(system: dict, *, animated: bool = False,
 
 
 def auto_layout_for_frontend(system: dict, width: int = 1000, height: int = 600) -> dict:
-    """Helper exposed to the frontend so initial layout matches what the report uses."""
+    """Helper exposed to the frontend so initial layout matches what the report uses.
+
+    Normalizes first so an editor model with a missing/duplicate id can never crash
+    the layout endpoint (matches render_dfd_svg's guarantee)."""
+    from .model_health import normalize_system
+    system, _ = normalize_system(system)
     return _auto_layout(
         system.get("components", []) or [],
         system.get("data_flows", []) or [],

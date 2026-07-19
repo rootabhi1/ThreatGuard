@@ -551,6 +551,56 @@
     return L.join('\n');
   }
 
+  // Read-only mirror of the dashboard's model-health banner: shows what
+  // normalization repaired or flagged so management sees the same honest account.
+  function modelIssuesHTML(analysis) {
+    const items = (analysis && analysis.model_issues) || [];
+    // Only surface the banner for real repairs/problems (error/warning); purely
+    // informational notes stay out of the read-only UI (reports still list them).
+    if (!items.some(i => i.level === 'error' || i.level === 'warning')) return '';
+    const order = { error: 0, warning: 1, info: 2 };
+    const meta = {
+      error:   { bg: '#fef2f2', bd: '#fecaca', fg: '#b91c1c', icon: '⛔' },
+      warning: { bg: '#fffbeb', bd: '#fde68a', fg: '#92400e', icon: '⚠' },
+      info:    { bg: '#f8fafc', bd: '#e2e8f0', fg: '#475569', icon: 'ℹ' },
+    };
+    const counts = { error: 0, warning: 0, info: 0 };
+    items.forEach(i => { counts[i.level] = (counts[i.level] || 0) + 1; });
+    const sorted = [...items].sort((a, b) => (order[a.level] ?? 3) - (order[b.level] ?? 3));
+    const top = counts.error ? meta.error : counts.warning ? meta.warning : meta.info;
+    const summary = [
+      counts.error ? `${counts.error} need attention` : '',
+      counts.warning ? `${counts.warning} auto-resolved` : '',
+      counts.info ? `${counts.info} noted` : '',
+    ].filter(Boolean).join(' · ');
+    const rows = sorted.map(i => {
+      const m = meta[i.level] || meta.info;
+      return `<li style="display:flex;gap:.5rem;align-items:flex-start;margin:.25rem 0;">
+        <span style="color:${m.fg};flex-shrink:0;">${m.icon}</span>
+        <span class="text-sm" style="line-height:1.45;">${esc(i.message)}</span></li>`;
+    }).join('');
+    return `
+      <div class="card mb-6" style="padding:.85rem 1.1rem;background:${top.bg};border:1px solid ${top.bd};">
+        <div class="text-xs font-semibold" style="color:${top.fg};text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;">
+          🩺 Model health — ${esc(summary)}
+        </div>
+        <ul style="margin:0;padding-left:.1rem;list-style:none;">${rows}</ul>
+      </div>`;
+  }
+
+  function assumptionsHTML(analysis) {
+    const items = (analysis && analysis.assumptions) || [];
+    if (!items.length) return '';
+    const rows = items.map(a => `<li style="margin:.2rem 0;line-height:1.45">${esc(a)}</li>`).join('');
+    return `
+      <details class="card mb-6" style="padding:.7rem 1.1rem;background:#f8fafc;border:1px solid #e2e8f0;">
+        <summary style="cursor:pointer;font-size:.72rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.05em;">
+          💡 Assumptions (${items.length}) — what was inferred, not stated
+        </summary>
+        <ul style="margin:.5rem 0 0;padding-left:1.1rem;font-size:.85rem;color:#334155;">${rows}</ul>
+      </details>`;
+  }
+
   function renderDetail() {
     const tm = currentTM;
     const featureName = (allFeatures.find(f => f.id === tm.feature_id) || {}).name || `#${tm.feature_id}`;
@@ -589,6 +639,8 @@
         </div>
       </div>
 
+      ${modelIssuesHTML(analysis)}
+      ${assumptionsHTML(analysis)}
       ${dataFlowOverviewHTML(analysis)}
 
       <div class="tabs" style="margin-bottom: 1rem;">
@@ -622,7 +674,7 @@
 
       <div id="detail-tab-dfd" class="detail-tab-panel hidden">
         <div class="card mb-4" style="padding: 1rem;">
-          <p class="text-xs text-light mb-2">🔒 Solid lines = encrypted · ⚠ Dashed red = unencrypted/cross-boundary</p>
+          <p class="text-xs text-light mb-2">Numbered badges = flows (red = unencrypted/cross-boundary) · click a badge to inspect</p>
           <div id="dfd-container" style="background: white; border-radius: 6px; padding: 0.75rem; overflow: auto; max-height: 70vh;">
             <div class="text-center" style="padding: 3rem 0;">
               <div class="dots-loader" style="color: var(--c-brand);"><span></span><span></span><span></span></div>

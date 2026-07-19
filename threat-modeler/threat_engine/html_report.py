@@ -16,7 +16,7 @@ import json
 import html as html_lib
 from datetime import datetime
 
-from .dfd import render_dfd_svg
+from .dfd import render_dfd_svg, build_flow_legend
 from .analyzer import summarize_llm_status
 
 
@@ -27,6 +27,92 @@ def _esc(s):
 def _sev_class(sev):
     return {"Critical": "sev-crit", "High": "sev-high", "Medium": "sev-med",
             "Low": "sev-low", "Info": "sev-info"}.get(sev, "sev-med")
+
+
+def _render_model_health(issues, esc):
+    """'Model health' card: what normalization repaired or flagged. Rendered only
+    when there is something to disclose, so clean models show nothing."""
+    if not issues:
+        return ""
+    meta = {
+        "error":   ("#fef2f2", "#fecaca", "#b91c1c", "⛔"),
+        "warning": ("#fffbeb", "#fde68a", "#92400e", "⚠"),
+        "info":    ("#f8fafc", "#e2e8f0", "#475569", "ℹ"),
+    }
+    counts = {"error": 0, "warning": 0, "info": 0}
+    for i in issues:
+        counts[i.get("level", "info")] = counts.get(i.get("level", "info"), 0) + 1
+    order = {"error": 0, "warning": 1, "info": 2}
+    rows = ""
+    for i in sorted(issues, key=lambda x: order.get(x.get("level"), 3)):
+        _, _, fg, icon = meta.get(i.get("level"), meta["info"])
+        rows += (f'<li style="margin:4px 0;line-height:1.45">'
+                 f'<span style="color:{fg}">{icon}</span> {esc(i.get("message", ""))}</li>')
+    summary = " · ".join(s for s in [
+        f'{counts["error"]} need attention' if counts["error"] else "",
+        f'{counts["warning"]} auto-resolved' if counts["warning"] else "",
+        f'{counts["info"]} noted' if counts["info"] else "",
+    ] if s)
+    top_bg, top_bd, top_fg, _ = (meta["error"] if counts["error"]
+                                 else meta["warning"] if counts["warning"] else meta["info"])
+    return (
+        f'<section class="card" style="background:{top_bg};border:1px solid {top_bd}">'
+        f'<h2 style="color:{top_fg}">🩺 Model health — {esc(summary)}</h2>'
+        f'<ul style="margin:6px 0 0;padding-left:18px;font-size:0.88rem">{rows}</ul></section>'
+    )
+
+
+def _render_assumptions(items, esc):
+    """Collapsible 'Assumptions' card — what was inferred when the model was seeded
+    from text (topology, defaulted protocol/auth/encryption, auto-added actor)."""
+    if not items:
+        return ""
+    rows = "".join(f'<li style="margin:3px 0;line-height:1.45">{esc(a)}</li>' for a in items)
+    return (
+        f'<details class="card" style="background:#f8fafc;border:1px solid #e2e8f0">'
+        f'<summary style="cursor:pointer;font-weight:600;color:#334155">'
+        f'💡 Assumptions ({len(items)}) — what was inferred, not stated</summary>'
+        f'<ul style="margin:8px 0 0;padding-left:18px;font-size:0.9rem">{rows}</ul></details>'
+    )
+
+
+def _render_flow_legend(legend, esc):
+    """Numbered flow legend keyed to the badges on the DFD, so the diagram itself
+    stays free of overlapping text labels while every flow's detail stays available."""
+    if not legend:
+        return ""
+    rows = ""
+    for f in legend:
+        risky = (not f["encrypted"]) or f["crosses"]
+        badge_bg = "#ef4444" if risky else "#64748b"
+        enc = ("<span style='color:#b91c1c;font-weight:600'>plaintext</span>"
+               if not f["encrypted"] else "encrypted")
+        cross = " · <span style='color:#b91c1c'>crosses boundary</span>" if f["crosses"] else ""
+        rows += (
+            f'<tr>'
+            f'<td style="padding:3px 8px"><span style="display:inline-block;min-width:20px;height:20px;'
+            f'line-height:20px;text-align:center;border-radius:50%;background:{badge_bg};color:#fff;'
+            f'font-size:0.72rem;font-weight:700">{f["n"]}</span></td>'
+            f'<td style="padding:3px 8px"><strong>{esc(f["from"])}</strong> → <strong>{esc(f["to"])}</strong></td>'
+            f'<td style="padding:3px 8px;color:#475569">{esc(f["protocol"] or "—")}</td>'
+            f'<td style="padding:3px 8px;color:#475569">{esc(f["auth"])}</td>'
+            f'<td style="padding:3px 8px;color:#475569">{enc}{cross}</td>'
+            f'</tr>')
+    table = (
+        f'<table style="width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:10px">'
+        f'<thead><tr style="text-align:left;color:#64748b;font-size:0.72rem;text-transform:uppercase">'
+        f'<th style="padding:3px 8px">#</th><th style="padding:3px 8px">Flow</th>'
+        f'<th style="padding:3px 8px">Protocol</th><th style="padding:3px 8px">Auth</th>'
+        f'<th style="padding:3px 8px">Security</th></tr></thead><tbody>{rows}</tbody></table>'
+    )
+    # Collapse a long legend by default so the diagram isn't buried under a wall of
+    # rows; small ones stay open. Native <details> — no JS, works in the static report.
+    open_attr = " open" if len(legend) <= 8 else ""
+    return (
+        f'<details{open_attr} style="margin-top:8px">'
+        f'<summary style="cursor:pointer;font-size:0.82rem;color:#334155;font-weight:600">'
+        f'Flow legend ({len(legend)} flows)</summary>{table}</details>'
+    )
 
 
 def _render_dataflow_overview(dfs, esc):
@@ -95,6 +181,7 @@ def to_html(analysis: dict) -> str:
         system, animated=True,
         positions=system.get("layout") or analysis.get("layout"),
     )
+    flow_legend = build_flow_legend(system)
 
     # Build comp_to_boundary map for the boundary section
     comp_to_b: dict[str, dict] = {}
@@ -487,6 +574,10 @@ def to_html(analysis: dict) -> str:
     </div>
   </section>
 
+  {_render_model_health(analysis.get("model_issues"), _esc)}
+
+  {_render_assumptions(analysis.get("assumptions"), _esc)}
+
   {_render_dataflow_overview(analysis.get("dataflow_summary"), _esc)}
 
   <section class="card">
@@ -495,8 +586,9 @@ def to_html(analysis: dict) -> str:
       {dfd_svg}
     </div>
     <div style="font-size:0.78rem;color:#64748b;margin-top:6px">
-      Solid lines = encrypted flows · Dashed red lines = unencrypted or boundary-crossing · 🔒 / ⚠ indicate encryption status. Dashes drift to indicate active flows.
+      Numbered badges key to the flow legend below · Solid lines = encrypted flows · Dashed red lines / red badges = unencrypted or boundary-crossing.
     </div>
+    {_render_flow_legend(flow_legend, _esc)}
   </section>
 
   <section class="card">

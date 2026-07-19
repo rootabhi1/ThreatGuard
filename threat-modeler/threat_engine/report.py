@@ -4,7 +4,7 @@ from __future__ import annotations
 import io
 from datetime import datetime
 
-from .dfd import render_dfd_svg
+from .dfd import render_dfd_svg, build_flow_legend
 from .analyzer import summarize_llm_status
 
 
@@ -29,6 +29,30 @@ def to_markdown(analysis: dict) -> str:
         lines.append("## System Description")
         lines.append("")
         lines.append(system["description"])
+        lines.append("")
+
+    # ---- Model health (what normalization repaired or flagged) ----
+    model_issues = analysis.get("model_issues") or []
+    if model_issues:
+        _icons = {"error": "⛔", "warning": "⚠", "info": "ℹ"}
+        _rank = {"error": 0, "warning": 1, "info": 2}
+        lines.append("## Model health")
+        lines.append("")
+        lines.append("The following items were auto-resolved or flagged during analysis:")
+        lines.append("")
+        for i in sorted(model_issues, key=lambda x: _rank.get(x.get("level"), 3)):
+            lines.append(f"- {_icons.get(i.get('level'), 'ℹ')} {i.get('message', '')}")
+        lines.append("")
+
+    # ---- Assumptions (what was inferred, not stated) ----
+    assumptions = analysis.get("assumptions") or []
+    if assumptions:
+        lines.append("## Assumptions")
+        lines.append("")
+        lines.append("_What was inferred when the model was seeded from text, not explicitly stated:_")
+        lines.append("")
+        for a in assumptions:
+            lines.append(f"- {a}")
         lines.append("")
 
     # ---- Data-flow overview (plain language, before the diagram) ----
@@ -82,8 +106,31 @@ def to_markdown(analysis: dict) -> str:
         svg_inline = svg_inline.split("?>", 1)[-1].lstrip()
     lines.append(svg_inline)
     lines.append("")
-    lines.append("*Solid lines = encrypted flows · Dashed red lines = unencrypted or boundary-crossing · 🔒 / ⚠ indicate encryption status.*")
+    lines.append("*Numbered badges key to the flow legend below · Solid lines = encrypted · "
+                 "Dashed red lines / red badges = unencrypted or boundary-crossing.*")
     lines.append("")
+    legend = build_flow_legend(system)
+    if legend:
+        # Collapse a long legend so it doesn't bury the diagram (GitHub/most viewers
+        # render <details>); short ones stay open.
+        collapse = len(legend) > 8
+        if collapse:
+            lines.append(f"<details><summary>Flow legend ({len(legend)} flows)</summary>")
+            lines.append("")
+        else:
+            lines.append("### Flow legend")
+            lines.append("")
+        lines.append("| # | Flow | Protocol | Auth | Security |")
+        lines.append("|---|---|---|---|---|")
+        for f in legend:
+            sec = ("plaintext" if not f["encrypted"] else "encrypted") + \
+                  (" · crosses boundary" if f["crosses"] else "")
+            lines.append(f"| {f['n']} | {f['from']} → {f['to']} | "
+                         f"{f['protocol'] or '—'} | {f['auth']} | {sec} |")
+        lines.append("")
+        if collapse:
+            lines.append("</details>")
+            lines.append("")
     # Also list trust boundaries explicitly so even non-SVG-rendering tools see them
     boundaries = system.get("trust_boundaries", []) or []
     if boundaries:
@@ -359,12 +406,36 @@ def to_pdf(analysis: dict) -> bytes:
         story.append(Paragraph(system["description"].replace("\n", "<br/>"), body))
         story.append(Spacer(1, 0.12 * inch))
 
+    def _e(s):
+        return (str(s if s is not None else "")
+                .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+    # ---- Model health (what normalization repaired or flagged) ----
+    model_issues = analysis.get("model_issues") or []
+    if model_issues:
+        _icons = {"error": "!", "warning": "!", "info": "i"}
+        _rank = {"error": 0, "warning": 1, "info": 2}
+        story.append(Paragraph("Model health", h2))
+        story.append(Paragraph(
+            "The following items were auto-resolved or flagged during analysis:", small))
+        for i in sorted(model_issues, key=lambda x: _rank.get(x.get("level"), 3)):
+            story.append(Paragraph(
+                f"[{_icons.get(i.get('level'), 'i')}] {_e(i.get('message', ''))}", small))
+        story.append(Spacer(1, 0.14 * inch))
+
+    # ---- Assumptions (what was inferred, not stated) ----
+    assumptions = analysis.get("assumptions") or []
+    if assumptions:
+        story.append(Paragraph("Assumptions", h2))
+        story.append(Paragraph(
+            "What was inferred when the model was seeded from text, not explicitly stated:", small))
+        for a in assumptions:
+            story.append(Paragraph(f"- {_e(a)}", small))
+        story.append(Spacer(1, 0.14 * inch))
+
     # ---- Data-flow overview (plain-language, before the diagram) ----
     dfs = analysis.get("dataflow_summary")
     if dfs:
-        def _e(s):
-            return (str(s if s is not None else "")
-                    .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
         story.append(Paragraph("Data-flow overview", h2))
         story.append(Paragraph(_e(dfs.get("narrative", "")), body))
         st = dfs.get("stats", {})
@@ -410,6 +481,36 @@ def to_pdf(analysis: dict) -> bytes:
             "<i>(DFD rendering requires the optional <code>svglib</code> package. "
             "Install with <code>pip install svglib</code> to embed the diagram in PDFs.)</i>",
             body))
+    story.append(Spacer(1, 0.08 * inch))
+
+    # Flow legend — the diagram carries numbered badges only, so the detail lives here.
+    legend = build_flow_legend(system)
+    if legend:
+        story.append(Paragraph(
+            "Numbered badges on the diagram key to this legend "
+            "(red badge = unencrypted or boundary-crossing).", small))
+        leg_data = [["#", "Flow", "Protocol", "Auth", "Security"]]
+        for f in legend:
+            sec = ("plaintext" if not f["encrypted"] else "encrypted") + \
+                  (" · crosses" if f["crosses"] else "")
+            leg_data.append([
+                str(f["n"]),
+                Paragraph(f"{_e(f['from'])} &#8594; {_e(f['to'])}", small),
+                _e(f["protocol"] or "-"), _e(f["auth"]), sec,
+            ])
+        lt = Table(leg_data, colWidths=[0.3 * inch, 3.1 * inch, 0.9 * inch, 0.9 * inch, 1.3 * inch],
+                   repeatRows=1)
+        lt.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 7.5),
+            ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#cbd5e1")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
+        ]))
+        story.append(Spacer(1, 0.04 * inch))
+        story.append(lt)
     story.append(Spacer(1, 0.18 * inch))
 
     # Summary table

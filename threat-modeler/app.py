@@ -926,6 +926,9 @@ async def create_threat_model_from_diagram(
 
     result = None
     if analyze:
+        # analyze_system normalizes the model and reports any repairs in model_issues
+        # (dangling vision references → visible placeholder nodes, etc.), so nothing
+        # the extractor produced is dropped silently.
         result = analyze_system(tm["system"], mkeys, use_llm=False)
         domain.update_threat_model(tm["id"], methodologies=mkeys, analysis=result)
 

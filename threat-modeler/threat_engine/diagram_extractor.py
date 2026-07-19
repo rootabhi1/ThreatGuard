@@ -68,26 +68,15 @@ Rules:
             return _stub_result(description)
         text = strip_fences(text)
         result = json.loads(text)
-        
-        # Validate and clean up
-        comp_ids = {c["id"] for c in result.get("components", [])}
-        from .analyzer import VALID_COMPONENT_TYPES
-        valid_types = set(VALID_COMPONENT_TYPES)
-        # Fix invalid types
-        for c in result.get("components", []):
-            if c.get("type") not in valid_types:
-                c["type"] = "api"  # safe default
-        
-        # Remove flows referencing unknown components
-        result["data_flows"] = [
-            f for f in result.get("data_flows", [])
-            if f.get("from") in comp_ids and f.get("to") in comp_ids
-        ]
-        # Remove boundaries with unknown components
-        for b in result.get("trust_boundaries", []):
-            b["contains"] = [cid for cid in b.get("contains", []) if cid in comp_ids]
-        result["trust_boundaries"] = [b for b in result.get("trust_boundaries", []) if b.get("contains")]
-        
+        if not isinstance(result, dict):
+            return _stub_result(description)
+        # Return the model as extracted — do NOT silently drop dangling flows or
+        # coerce invalid types here. Downstream normalization (at analyze/render time)
+        # turns any undeclared reference into a visible placeholder and discloses it in
+        # "Model health", so nothing vanishes and the account is always current.
+        result.setdefault("components", [])
+        result.setdefault("data_flows", [])
+        result.setdefault("trust_boundaries", [])
         result["extraction_method"] = "llm_vision"
         return result
     except Exception as e:
