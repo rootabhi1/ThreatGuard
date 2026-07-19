@@ -64,6 +64,14 @@
     notification_service:{ icon: '🔔', color: '#9333ea' },
     // Second wave — modern services & infra
     llm:                 { icon: '🤖', color: '#a855f7' },
+    ai_agent:            { icon: '🦾', color: '#7c3aed' },
+    agent_orchestrator:  { icon: '🎛', color: '#7c3aed' },
+    llm_tool:            { icon: '🔧', color: '#7c3aed' },
+    mcp_server:          { icon: '🔌', color: '#7c3aed' },
+    agent_memory:        { icon: '💭', color: '#7c3aed' },
+    retriever:           { icon: '🧲', color: '#7c3aed' },
+    guardrail:           { icon: '🚧', color: '#7c3aed' },
+    knowledge_base:      { icon: '📚', color: '#7c3aed' },
     identity_provider:   { icon: '🆔', color: '#f59e0b' },
     email_service:       { icon: '✉️', color: '#0ea5e9' },
     sms_gateway:         { icon: '📲', color: '#0ea5e9' },
@@ -112,17 +120,61 @@
     secure_error_handling: { label: 'Safe error handling', opts: YN },
     replay_protection:    { label: 'Replay protection (nonce/timestamp)', opts: YN },
     validates_certificates: { label: 'Validates TLS certificates', opts: YN },
+    // Agentic AI properties (shown on agent / LLM / tool / memory / RAG components)
+    autonomy_level:       { label: 'Autonomy level', opts: ['', 'suggest', 'act_with_approval', 'autonomous'] },
+    tool_access:          { label: 'Tool access', opts: ['', 'none', 'read', 'write', 'exec'] },
+    human_in_the_loop:    { label: 'Human-in-the-loop review', opts: YN },
+    prompt_injection_defense: { label: 'Prompt-injection defense', opts: YN },
+    output_validated:     { label: 'Validates model output before use', opts: YN },
+    sandboxed:            { label: 'Runs sandboxed/isolated', opts: YN },
+    can_spawn_agents:     { label: 'Can spawn other agents', opts: YN },
+    ingests_untrusted_content: { label: 'Ingests untrusted content into context', opts: YN },
+    memory_scope:         { label: 'Memory scope', opts: ['', 'session', 'per_user', 'cross_user', 'cross_tenant'] },
+    content_source_trust: { label: 'Content/grounding source', opts: ['', 'curated', 'user_uploaded', 'web_scraped'] },
   };
-  const STORE_TYPES = ['database', 'datastore', 'cache', 'queue', 'filesystem', 'object_storage', 'data_warehouse', 'vector_db', 'secrets_manager', 'search_service'];
-  const PROCESS_TYPES = ['api', 'webapp', 'mobile_app', 'service', 'worker', 'serverless', 'auth_service', 'admin_panel', 'api_gateway', 'container', 'kubernetes', 'llm', 'identity_provider', 'data_pipeline', 'scheduler', 'service_mesh', 'bastion'];
+  const STORE_TYPES = ['database', 'datastore', 'cache', 'queue', 'filesystem', 'object_storage', 'data_warehouse', 'vector_db', 'secrets_manager', 'search_service', 'agent_memory', 'knowledge_base'];
+  const PROCESS_TYPES = ['api', 'webapp', 'mobile_app', 'service', 'worker', 'serverless', 'auth_service', 'admin_panel', 'api_gateway', 'container', 'kubernetes', 'llm', 'identity_provider', 'data_pipeline', 'scheduler', 'service_mesh', 'bastion', 'ai_agent', 'agent_orchestrator', 'llm_tool', 'mcp_server', 'retriever', 'guardrail'];
   const DEPLOYABLE_TYPES = ['serverless', 'container', 'kubernetes', 'service', 'worker'];
+  // Which agentic attributes to show on which agentic component types.
+  const AGENTIC_ATTRS = {
+    ai_agent:           ['autonomy_level', 'tool_access', 'human_in_the_loop', 'prompt_injection_defense', 'output_validated', 'sandboxed', 'can_spawn_agents', 'ingests_untrusted_content'],
+    agent_orchestrator: ['autonomy_level', 'human_in_the_loop', 'can_spawn_agents', 'output_validated'],
+    llm:                ['ingests_untrusted_content', 'prompt_injection_defense', 'output_validated'],
+    llm_tool:           ['tool_access', 'sandboxed', 'output_validated'],
+    mcp_server:         ['tool_access', 'sandboxed'],
+    retriever:          ['content_source_trust', 'ingests_untrusted_content'],
+    knowledge_base:     ['content_source_trust'],
+    agent_memory:       ['memory_scope'],
+    vector_db:          ['memory_scope'],
+    guardrail:          ['output_validated'],
+  };
+
+  // Flow protocol/auth are multi-value (defence-in-depth); authorization is single.
+  const PROTOCOL_OPTIONS = ['HTTPS', 'HTTP', 'TCP', 'UDP', 'gRPC', 'WSS', 'WS', 'AMQP', 'MQTT', 'TLS', 'SSH'];
+  const AUTH_OPTIONS = ['none', 'session', 'bearer', 'jwt', 'mtls', 'api_key', 'oauth', 'basic', 'iam', 'sso', 'credentials'];
+  const AUTHZ_OPTIONS = ['', 'none', 'rbac', 'abac', 'rebac', 'acl', 'oauth_scopes', 'policy_engine'];
+
+  function toArr(v) { return Array.isArray(v) ? v.slice() : (v ? [v] : []); }
+
+  // Chip-toggle multi-select: click chips to add/remove values from an array field.
+  function multiChips(field, options, selected) {
+    const sel = toArr(selected).map(x => String(x).toLowerCase());
+    return `<div class="dfd-multi" data-multi="${field}" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px;">` +
+      options.map(o => {
+        const on = sel.includes(String(o).toLowerCase());
+        return `<button type="button" data-multi-val="${o}" style="font-size:11px;padding:2px 9px;border-radius:999px;` +
+          `border:1px solid ${on ? '#6366f1' : '#cbd5e1'};background:${on ? '#eef2ff' : '#fff'};` +
+          `color:${on ? '#3730a3' : '#475569'};cursor:pointer;">${o}</button>`;
+      }).join('') + `</div>`;
+  }
 
   function componentAttrFields(type) {
     // PII/PHI/PCI data-handling questions apply to almost everything that touches data.
     const compliance = ['handles_pii', 'handles_phi', 'handles_pci'];
     const common = ['sensitivity', 'internet_facing', 'logs_security_events', ...compliance];
+    const agentic = AGENTIC_ATTRS[type] || [];   // agent/LLM/tool/memory/RAG properties
     if (STORE_TYPES.includes(type)) {
-      return [...common, 'stores_credentials', 'encrypted_at_rest', 'has_backup', 'removable_media'];
+      return [...common, 'stores_credentials', 'encrypted_at_rest', 'has_backup', 'removable_media', ...agentic];
     }
     if (PROCESS_TYPES.includes(type)) {
       const f = [...common, 'authenticates_users', 'enforces_authorization', 'validates_input',
@@ -131,9 +183,9 @@
       if (type === 'api' || type === 'api_gateway') f.push('csrf_protection');
       if (type === 'auth_service' || type === 'identity_provider' || type === 'admin_panel') f.push('mfa');
       if (DEPLOYABLE_TYPES.includes(type)) f.push('verifies_code_integrity');
-      return f;
+      return [...f, ...agentic];
     }
-    return common;
+    return [...common, ...agentic];
   }
 
   function attrSelectsHtml(obj, fields) {
@@ -409,9 +461,12 @@
         // Native hover tooltip: inspect a flow (endpoints, protocol, auth, encryption)
         // without clicking — the numbered badge and line both carry it.
         const sec = (isEncrypted ? 'encrypted' : 'plaintext') + (crossesBoundary ? ', crosses boundary' : '');
+        const protoStr = toArr(f.protocol).join('+') || '—';
+        const authStr = toArr(f.auth).join('+') || 'none';
+        const authzStr = f.authorization ? ` · authz: ${f.authorization}` : '';
         const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
         title.textContent = `[${flowNum}] ${compName[f.from] || f.from} → ${compName[f.to] || f.to}`
-          + ` · ${f.protocol || '—'} · auth: ${f.auth || 'none'} · ${sec}`;
+          + ` · ${protoStr} · auth: ${authStr}${authzStr} · ${sec}`;
         g.appendChild(title);
 
         // Hit area (transparent thick line)
@@ -767,13 +822,19 @@
             <span>Label</span>
             <input type="text" data-field="label" value="${escapeAttr(f.label || '')}" class="input"/>
           </label>
+          <div class="dfd-field">
+            <span>Protocol(s)</span>
+            ${multiChips('protocol', PROTOCOL_OPTIONS, f.protocol)}
+          </div>
+          <div class="dfd-field">
+            <span>Authentication (select all that apply)</span>
+            ${multiChips('auth', AUTH_OPTIONS, f.auth)}
+          </div>
           <label class="dfd-field">
-            <span>Protocol</span>
-            <input type="text" data-field="protocol" value="${escapeAttr(f.protocol || '')}" class="input" placeholder="HTTPS / TCP / WSS / etc."/>
-          </label>
-          <label class="dfd-field">
-            <span>Auth</span>
-            <input type="text" data-field="auth" value="${escapeAttr(f.auth || '')}" class="input" placeholder="bearer / mtls / none"/>
+            <span>Authorization model</span>
+            <select data-field="authorization" class="select">
+              ${AUTHZ_OPTIONS.map(o => `<option value="${o}" ${(f.authorization || '') === o ? 'selected' : ''}>${o || '— unspecified —'}</option>`).join('')}
+            </select>
           </label>
           <label class="dfd-field-checkbox">
             <input type="checkbox" data-field="encrypted" ${f.encrypted !== false ? 'checked' : ''}>
@@ -848,6 +909,23 @@
             // refresh the panel so the contextual fields update.
             if (kind === 'component' && field === 'type') showComponentPanel(id);
           }
+        });
+      });
+      // Multi-value chip toggles (flow protocol / auth arrays)
+      sidePanel.querySelectorAll('.dfd-multi [data-multi-val]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const group = btn.closest('.dfd-multi');
+          const field = group.dataset.multi;
+          const target = kind === 'flow' ? system.data_flows.find(x => x.id === id) : null;
+          if (!target) return;
+          const arr = toArr(target[field]);
+          const v = btn.dataset.multiVal;
+          const i = arr.findIndex(x => String(x).toLowerCase() === v.toLowerCase());
+          if (i >= 0) arr.splice(i, 1); else arr.push(v);
+          target[field] = arr;
+          showFlowPanel(id);              // refresh chip states
+          render();
+          opts.onChange(getSystem());
         });
       });
       // Boundary "contains" checkbox list

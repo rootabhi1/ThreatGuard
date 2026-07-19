@@ -25,6 +25,12 @@ import re as _re2
 from typing import Any
 
 from .methodologies import METHODOLOGIES
+from .model_health import (
+    is_weak_auth as _is_weak_auth,
+    auth_display as _auth_display,
+    protocol_display as _protocol_display,
+    flow_auths as _flow_auths,
+)
 
 
 _SEV_RANK = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1, "Info": 0}
@@ -83,6 +89,23 @@ _TYPE_KEYWORDS = {
                         "generative ai", "vertex ai"],
     "vector_db":       ["vector database", "vector db", "pinecone", "weaviate", "qdrant", "milvus",
                         "chroma", "embedding store"],
+    # Agentic AI — autonomous agents, tools, orchestration, memory, and guardrails.
+    "ai_agent":        ["ai agent", "autonomous agent", "llm agent", "agent", "react agent",
+                        "langchain agent", "autogpt", "babyagi", "copilot agent", "assistant agent"],
+    "agent_orchestrator": ["agent orchestrator", "orchestrator", "multi-agent", "multi agent",
+                        "agent supervisor", "crew", "crewai", "langgraph", "autogen", "agent router",
+                        "planner agent", "agent framework"],
+    "llm_tool":        ["llm tool", "agent tool", "tool call", "function call", "function calling",
+                        "tool use", "tool-use", "code interpreter", "plugin"],
+    "mcp_server":      ["mcp server", "mcp", "model context protocol", "tool server"],
+    "agent_memory":    ["agent memory", "conversation memory", "long-term memory", "short-term memory",
+                        "scratchpad", "episodic memory", "memory store"],
+    "retriever":       ["retriever", "rag", "retrieval augmented", "retrieval-augmented",
+                        "retrieval pipeline", "context retrieval", "document retriever"],
+    "guardrail":       ["guardrail", "guardrails", "llm firewall", "prompt firewall", "content filter",
+                        "safety filter", "input sanitizer for llm", "output validator"],
+    "knowledge_base":  ["knowledge base", "knowledgebase", "kb", "document store for rag",
+                        "grounding data", "corpus"],
     # Data
     "database":        ["database", "db", "postgres", "mysql", "mongodb", "dynamodb", "rds", "cassandra",
                         "cockroach", "mariadb", "sqlite", "mssql", "sql server", "oracle", "spanner",
@@ -239,9 +262,11 @@ def extract_components_from_text(text: str) -> dict:
 # The user lists components ("Name : type") and flows ("A -> B : attrs"), so
 # extraction is exact: no keyword guessing, no same-type collapse, real topology.
 # ---------------------------------------------------------------------------
-_PROTOCOLS = {"https", "http", "tcp", "udp", "grpc", "wss", "ws", "amqp", "mqtt", "sql", "tls", "ssh"}
+_PROTOCOLS = {"https", "http", "tcp", "udp", "grpc", "wss", "ws", "amqp", "mqtt", "tls", "ssh"}
 _AUTHS = {"none", "session", "bearer", "jwt", "mtls", "api_key", "apikey", "credentials",
           "password", "oauth", "basic", "iam", "sso"}
+# Authorization models (distinct from authentication) — for structured-input flows.
+_AUTHZ_MODELS = {"rbac", "abac", "rebac", "acl", "oauth_scopes", "policy_engine", "none"}
 
 
 def _slug(name: str) -> str:
@@ -326,12 +351,18 @@ def parse_structured_system(text: str) -> dict:
         if not dst:
             _issue("warning", f"Line {lineno}: flow target '{dst_name}' is not declared yet; it will show "
                               f"as an unresolved placeholder until you add it or fix the name.")
-        protocol, auth, encrypted = "HTTPS", "none", True
+        # Protocol / auth are multi-value: accumulate every matching token (previously
+        # only the last was kept — a silent drop). Authorization is single.
+        protocols: list[str] = []
+        auths: list[str] = []
+        authorization, encrypted = "", True
         for tok in (t.strip().lower() for t in attrs.split(",") if t.strip()):
             if tok in _PROTOCOLS:
-                protocol = "HTTPS" if tok == "https" else tok.upper()
+                protocols.append("HTTPS" if tok == "https" else tok.upper())
             elif tok in _AUTHS:
-                auth = tok
+                auths.append(tok)
+            elif tok in _AUTHZ_MODELS:
+                authorization = tok
             elif tok in ("encrypted", "tls", "encrypt", "secure"):
                 encrypted = True
             elif tok in ("plaintext", "unencrypted", "cleartext", "insecure", "no", "none_enc"):
@@ -340,8 +371,10 @@ def parse_structured_system(text: str) -> dict:
             "id": f"f_{len(data_flows)}",
             "from": src["id"] if src else src_name,
             "to": dst["id"] if dst else dst_name,
-            "label": f"{src_name} → {dst_name}", "protocol": protocol,
-            "auth": auth, "encrypted": encrypted,
+            "label": f"{src_name} → {dst_name}",
+            "protocol": protocols or ["HTTPS"],
+            "auth": auths or ["none"],
+            "authorization": authorization, "encrypted": encrypted,
         })
 
     # Structured input is exact for what you write, but unspecified flow attributes
@@ -466,10 +499,9 @@ def _score_dread(threat: dict, component: dict, flow: dict | None, cross_boundar
     base = {"Critical": 9, "High": 7, "Medium": 5, "Low": 3, "Info": 2}.get(threat.get("severity"), 5)
     ctype = component.get("type", "")
     title_cat = f"{threat.get('title', '')} {threat.get('category', '')}".lower()
-    auth = (flow.get("auth") if flow else "") or ""
-    auth_low = auth.strip().lower()
-    unauthenticated = auth_low in ("", "none", "n/a")
-    strong_auth = auth_low in ("mtls", "mutual-tls", "client-cert")
+    auths = _flow_auths(flow) if flow else []
+    unauthenticated = not any(a not in ("", "none", "n/a", "basic", "anonymous") for a in auths)
+    strong_auth = any(a in ("mtls", "mutual-tls", "client-cert") for a in auths)
     unencrypted = bool(flow) and not flow.get("encrypted", True)
 
     # Damage — what's at stake if it's exploited
@@ -655,6 +687,18 @@ COMPONENT_ATTRIBUTES = {
     "verifies_code_integrity": ("Verifies code/artifact integrity", "yn", None),
     "removable_media":     ("On removable media", "yn", None),
     "secure_error_handling": ("Safe error handling", "yn", None),
+    # Agentic AI — properties of agents, tools, memory and RAG that drive
+    # OWASP LLM / Agentic threats. Only answered properties generate threats.
+    "autonomy_level":      ("Autonomy level", "choice", ["", "suggest", "act_with_approval", "autonomous"]),
+    "tool_access":         ("Tool access", "choice", ["", "none", "read", "write", "exec"]),
+    "human_in_the_loop":   ("Human-in-the-loop review", "yn", None),
+    "prompt_injection_defense": ("Prompt-injection defense", "yn", None),
+    "output_validated":    ("Validates model output before use", "yn", None),
+    "sandboxed":           ("Runs sandboxed/isolated", "yn", None),
+    "can_spawn_agents":    ("Can spawn other agents", "yn", None),
+    "ingests_untrusted_content": ("Ingests untrusted content into context", "yn", None),
+    "memory_scope":        ("Memory scope", "choice", ["", "session", "per_user", "cross_user", "cross_tenant"]),
+    "content_source_trust": ("Content/grounding source", "choice", ["", "curated", "user_uploaded", "web_scraped"]),
 }
 FLOW_ATTRIBUTES = {
     "provides_integrity":  ("Provides integrity (signing/HMAC)", "yn", None),
@@ -662,7 +706,16 @@ FLOW_ATTRIBUTES = {
     # Second wave
     "replay_protection":   ("Replay protection (nonce/timestamp)", "yn", None),
     "validates_certificates": ("Validates TLS certificates", "yn", None),
+    # Authorization model on this call (distinct from authentication). "none" or a
+    # coarse model crossing a tenant boundary drives Broken Access Control / BOLA.
+    "authorization":       ("Authorization model", "choice",
+                            ["", "none", "rbac", "abac", "rebac", "acl", "oauth_scopes", "policy_engine"]),
 }
+
+
+# Component types that participate in agentic / LLM data-plane threats.
+_AI_TYPES = {"llm", "ai_agent", "agent_orchestrator", "llm_tool", "retriever",
+             "guardrail", "mcp_server", "agent_memory", "knowledge_base", "vector_db"}
 
 
 def _yn_no(d: dict, k: str) -> bool:
@@ -779,6 +832,58 @@ def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> 
                  "Unsafe error handling can expose stack traces, queries, or secrets to callers, aiding attackers.",
                  "Low", c, None, ["Return generic errors to clients", "Log details server-side only", "Disable debug modes in production"])
 
+        # ---- Agentic AI (OWASP LLM / Agentic) ----
+        autonomy = str(c.get("autonomy_level", "")).strip().lower()
+        tool_acc = str(c.get("tool_access", "")).strip().lower()
+        mem_scope = str(c.get("memory_scope", "")).strip().lower()
+        src_trust = str(c.get("content_source_trust", "")).strip().lower()
+        if autonomy == "autonomous" and tool_acc in ("write", "exec") and _yn_no(c, "human_in_the_loop"):
+            emit("Elevation of Privilege",
+                 f"Excessive agency — autonomous agent, {tool_acc} tools, no human review: {c['name']}",
+                 "A fully autonomous agent that can take write/exec actions with no human-in-the-loop can perform "
+                 "unintended or attacker-induced actions at scale (OWASP LLM Excessive Agency / Agentic).",
+                 "Critical", c, None, ["Require human approval for high-impact actions",
+                 "Scope tools to least privilege (read-only where possible)",
+                 "Add allow-lists, spend/rate caps, and make actions reversible"])
+        if tool_acc == "exec" and _yn_no(c, "sandboxed"):
+            emit("Elevation of Privilege", f"Unsandboxed tool/code execution: {c['name']}",
+                 "An agent that executes code or tools without a sandbox risks remote code execution and host "
+                 "compromise if the model is manipulated (OWASP LLM / Agentic).",
+                 "Critical", c, None, ["Run tools/code in an isolated sandbox",
+                 "Drop privileges; restrict network and filesystem", "Validate and allow-list tool calls"])
+        if _yn_yes(c, "ingests_untrusted_content") and _yn_no(c, "prompt_injection_defense"):
+            emit("Tampering", f"Prompt injection — untrusted content, no defense: {c['name']}",
+                 "This element ingests untrusted content into the model context with no prompt-injection defenses, so "
+                 "attacker-controlled text can override instructions (OWASP LLM01 Prompt Injection).",
+                 "High", c, None, ["Separate trusted instructions from untrusted data",
+                 "Add input filtering / guardrails and constrain outputs",
+                 "Never let raw model output trigger privileged actions"])
+        if _yn_no(c, "output_validated") and c.get("type") in _AI_TYPES:
+            emit("Tampering", f"Model output used without validation: {c['name']}",
+                 "Model output is consumed downstream without validation or encoding, enabling insecure output "
+                 "handling — injection into tools, code, SQL, or the browser (OWASP LLM Insecure Output Handling).",
+                 "High", c, None, ["Treat model output as untrusted",
+                 "Validate/encode before use in tools, queries, or HTML", "Constrain output format; reject anomalies"])
+        if mem_scope in ("cross_user", "cross_tenant"):
+            who = "tenants" if mem_scope == "cross_tenant" else "users"
+            emit("Information Disclosure", f"Agent memory shared across {who}: {c['name']}",
+                 f"Memory shared across {who} enables cross-{who[:-1]} data leakage and memory poisoning, where one "
+                 "party's injected content influences another's session (OWASP LLM / Agentic).",
+                 "High", c, None, [f"Scope memory per user/session/{'tenant' if mem_scope == 'cross_tenant' else 'user'}",
+                 "Sanitize and validate what is written to memory", "Isolate and access-control memory reads"])
+        if src_trust in ("web_scraped", "user_uploaded"):
+            emit("Tampering", f"Untrusted grounding source ({src_trust}): {c['name']}",
+                 "Grounding/RAG content from untrusted sources can carry indirect prompt injection and poisoned data "
+                 "that the model treats as instructions (OWASP LLM01 / Data Poisoning).",
+                 "High", c, None, ["Vet and sanitize ingested content",
+                 "Isolate retrieved content from instructions", "Track provenance; filter content"])
+        if _yn_yes(c, "can_spawn_agents") and autonomy == "autonomous":
+            emit("Denial of Service", f"Autonomous agent can spawn agents — unbounded consumption: {c['name']}",
+                 "An autonomous agent that spawns other agents without limits risks runaway loops and cost/resource "
+                 "exhaustion (OWASP LLM Unbounded Consumption / Agentic).",
+                 "Medium", c, None, ["Cap recursion depth and concurrent agents",
+                 "Enforce budgets and timeouts", "Monitor and kill runaway chains"])
+
     for f in system.get("data_flows", []):
         dst = comp_by_id.get(f.get("to"))
         src = comp_by_id.get(f.get("from"))
@@ -800,6 +905,21 @@ def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> 
             emit("Spoofing", f"TLS certificates not validated: {src['name']} → {dst['name']}",
                  "Skipping certificate validation lets an attacker present a forged certificate and man-in-the-middle this flow.",
                  "High", dst, f, ["Validate the full certificate chain", "Pin certificates/public keys where practical", "Never disable verification in production"])
+        # Authorization (distinct from authentication) — absence is Broken Access Control.
+        authz = str(f.get("authorization", "")).strip().lower()
+        if authz == "none":
+            emit("Elevation of Privilege", f"No authorization on flow: {src['name']} → {dst['name']}",
+                 "This call may authenticate the caller but enforces no authorization, so any authenticated caller can "
+                 "invoke it — Broken Access Control / BOLA (OWASP A01 / API1).",
+                 "High", dst, f, ["Enforce per-request, object-level authorization",
+                 "Deny by default; check ownership and scope", "Test for BOLA / BFLA / IDOR"])
+        # Agent → tool/exec call with no authorization: excessive-agency amplifier.
+        if authz == "none" and dst.get("type") in ("llm_tool", "mcp_server") and src.get("type") in ("ai_agent", "agent_orchestrator"):
+            emit("Elevation of Privilege", f"Agent invokes tool without authorization: {src['name']} → {dst['name']}",
+                 "An agent can call this tool with no authorization check, so a manipulated agent can trigger "
+                 "unauthorized actions — excessive agency via unscoped tool access (OWASP LLM / Agentic).",
+                 "High", dst, f, ["Scope and authorize each tool call to the acting user",
+                 "Least-privilege tool permissions", "Require approval for high-impact tools"])
 
     return out
 
@@ -851,7 +971,7 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "methodology": methodology["name"],
                 "category": "Information Disclosure" if methodology_key == "stride" else "Disclosure of information",
                 "title": f"Unencrypted flow: {src['name']} → {dst['name']}",
-                "description": f"Data flow '{flow.get('label','')}' uses {flow.get('protocol','unknown')} without encryption.",
+                "description": f"Data flow '{flow.get('label','')}' uses {_protocol_display(flow)} without encryption.",
                 "severity": "High",
                 "component_id": dst["id"],
                 "component_name": dst["name"],
@@ -863,8 +983,7 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "dread": _score_dread({"severity": "High"}, dst, flow),
             })
 
-        auth_val = (flow.get("auth") or "").strip().lower()
-        if auth_val in ("", "none", "n/a"):
+        if _is_weak_auth(flow):
             src = comp_by_id.get(flow["from"])
             dst = comp_by_id.get(flow["to"])
             if not src or not dst:
@@ -1335,8 +1454,8 @@ def _untrusted_input_crossings(system: dict, all_threats: list[dict]) -> list[di
             "source_zone": src_b["name"] if src_b else "External (untrusted)",
             "destination_zone": dst_b["name"],
             "label": f.get("label", ""),
-            "protocol": f.get("protocol", ""),
-            "auth": f.get("auth") or "none",
+            "protocol": _protocol_display(f),
+            "auth": _auth_display(f),
             "encrypted": bool(f.get("encrypted")),
             "threat_count": len(flow_threats),
             "highest_severity": (
@@ -1372,6 +1491,6 @@ def _input_validation_requirements(dst: dict, flow: dict) -> list[str]:
         ]
     if not flow.get("encrypted"):
         reqs.append("Enable TLS on this flow before any of the above controls — without encryption, on-path attackers can substitute payloads after validation.")
-    if (flow.get("auth") or "none") == "none":
+    if _is_weak_auth(flow):
         reqs.append("Add authentication on this flow — input validation alone does not establish caller identity.")
     return reqs

@@ -8,6 +8,9 @@ the external dependencies — without having to decode a large diagram.
 """
 from __future__ import annotations
 
+from .model_health import is_weak_auth as _is_weak_auth, auth_display as _auth_display, \
+    protocol_display as _protocol_display
+
 # Component types that hold data at rest (the "where does data live" answer).
 _STORE_TYPES = {
     "database", "datastore", "cache", "object_storage", "data_warehouse",
@@ -130,13 +133,13 @@ def build_dataflow_summary(system: dict, threats: list[dict] | None = None,
             reasons.append("unencrypted")
         if cross_boundary(f):
             reasons.append("crosses a trust boundary")
-        if (f.get("auth") or "").lower() in _WEAK_AUTH:
+        if _is_weak_auth(f):
             reasons.append("no/weak authentication")
         if not reasons:
             continue
         risky.append({
             "from": name(f.get("from")), "to": name(f.get("to")),
-            "protocol": f.get("protocol") or "", "auth": f.get("auth") or "none",
+            "protocol": _protocol_display(f), "auth": _auth_display(f),
             "encrypted": bool(f.get("encrypted")),
             "cross_boundary": cross_boundary(f),
             "reasons": reasons,
@@ -163,7 +166,7 @@ def build_dataflow_summary(system: dict, threats: list[dict] | None = None,
         top_path = f"{r['from']} → {r['to']} ({via}){sev}"
 
     # --- Assumptions / unknowns -----------------------------------------------
-    no_auth = sum(1 for f in flows if (f.get("auth") or "").lower() in _WEAK_AUTH)
+    no_auth = sum(1 for f in flows if _is_weak_auth(f))
     assumptions = None
     if no_auth or unencrypted:
         parts = []

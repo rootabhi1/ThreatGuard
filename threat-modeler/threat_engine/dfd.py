@@ -16,8 +16,12 @@ from xml.sax.saxutils import escape as xml_escape
 
 
 # DFD shape category for each component type
-_PROCESS = {"webapp", "mobile_app", "api", "auth_service", "admin_panel", "payment_service"}
-_STORE   = {"database", "datastore", "cache", "filesystem", "queue", "config"}
+_PROCESS = {"webapp", "mobile_app", "api", "auth_service", "admin_panel", "payment_service",
+            # Agentic AI processes
+            "ai_agent", "agent_orchestrator", "llm_tool", "mcp_server", "retriever", "guardrail"}
+_STORE   = {"database", "datastore", "cache", "filesystem", "queue", "config",
+            # Agentic AI / vector data stores
+            "vector_db", "agent_memory", "knowledge_base"}
 _EXTERN  = {"user", "external_entity"}
 
 # Color per category (matches frontend palette)
@@ -267,11 +271,14 @@ def _draw_flow(flow: dict, comp_by_id: dict, positions: dict,
     path_id = f"path_{flow['id']}"
     # Group the flow so a native hover tooltip (<title>) can describe it without any
     # inline text on the diagram — hover the line or its badge to inspect the flow.
-    proto = flow.get("protocol") or "—"
-    auth = flow.get("auth") or "none"
+    from .model_health import protocol_display as _pd, auth_display as _ad
+    proto = _pd(flow)
+    auth = _ad(flow)
+    authz = flow.get("authorization")
+    authz_str = f" · authz: {authz}" if authz else ""
     sec = ("encrypted" if encrypted else "plaintext") + (", crosses boundary" if crosses_boundary else "")
     num_prefix = f"[{number}] " if number is not None else ""
-    tip = xml_escape(f"{num_prefix}{src['name']} → {dst['name']} · {proto} · auth: {auth} · {sec}")
+    tip = xml_escape(f"{num_prefix}{src['name']} → {dst['name']} · {proto} · auth: {auth}{authz_str} · {sec}")
     parts = []
     parts.append(f'<g><title>{tip}</title>')
     parts.append(
@@ -314,7 +321,7 @@ def build_flow_legend(system: dict) -> list[dict]:
 
     Normalizes with the same pass the renderer uses and numbers flows in the same
     order, so legend entry N always corresponds to badge N on the diagram."""
-    from .model_health import normalize_system
+    from .model_health import normalize_system, protocol_display as _pd, auth_display as _ad
     system, _ = normalize_system(system)
     comps = {c["id"]: c for c in system.get("components", []) or []}
     bmap = {cid: b.get("id") for b in (system.get("trust_boundaries") or [])
@@ -327,8 +334,9 @@ def build_flow_legend(system: dict) -> list[dict]:
             "n": i,
             "from": s.get("name", f.get("from", "?")),
             "to": d.get("name", f.get("to", "?")),
-            "protocol": f.get("protocol", "") or "",
-            "auth": f.get("auth") or "none",
+            "protocol": _pd(f),
+            "auth": _ad(f),
+            "authorization": f.get("authorization") or "",
             "encrypted": bool(f.get("encrypted", True)),
             "crosses": bmap.get(f.get("from")) != bmap.get(f.get("to")),
         })
