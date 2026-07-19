@@ -158,6 +158,20 @@ def to_markdown(analysis: dict) -> str:
         lines.append(f"| {sev} | {summary['by_severity'].get(sev, 0)} |")
     lines.append("")
 
+    # Framework coverage (OWASP Web/API/Mobile/LLM/Agentic).
+    _fw_counts: dict[str, int] = {}
+    for t in threats:
+        for fr in t.get("frameworks", []):
+            _fw_counts[fr["framework"]] = _fw_counts.get(fr["framework"], 0) + 1
+    if _fw_counts:
+        _fw_names = {"WEB": "OWASP Web", "API": "OWASP API", "MOBILE": "OWASP Mobile",
+                     "LLM": "OWASP LLM", "AGENTIC": "OWASP Agentic"}
+        lines.append("### Framework coverage")
+        lines.append("")
+        lines.append(" · ".join(f"**{_fw_names[k]}:** {_fw_counts[k]}"
+                                 for k in ["WEB", "API", "MOBILE", "LLM", "AGENTIC"] if k in _fw_counts))
+        lines.append("")
+
     # Components
     lines.append("## System Components")
     lines.append("")

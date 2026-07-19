@@ -122,8 +122,34 @@ _TYPE_FRAMEWORK = {
     "api": "API", "api_gateway": "API", "graphql": "API",
     "mobile_app": "MOBILE",
 }
+_API_TYPES = {"api", "api_gateway", "graphql"}
 _AI_TYPES = {"llm", "ai_agent", "agent_orchestrator", "llm_tool", "retriever",
              "guardrail", "mcp_server", "agent_memory", "knowledge_base", "vector_db"}
+
+# Mobile lens. A threat touching a mobile component maps to the OWASP Mobile Top 10
+# by keyword first (precise), then STRIDE category (baseline) if no keyword matched —
+# mirroring how the Web lens works, so a mobile app never comes back with zero mobile
+# coverage. Keyword picks win to keep an in-transit disclosure on M5 (not storage M9).
+_MOBILE_KEYWORDS: list[tuple[str, str]] = [
+    ("unencrypted", "M5"), ("cleartext", "M5"), ("in transit", "M5"),
+    ("transport", "M5"), ("communication", "M5"), ("intercept", "M5"),
+    ("at rest", "M9"), ("data storage", "M9"), ("stored", "M9"), ("local storage", "M9"),
+    ("cryptograph", "M10"), ("weak cipher", "M10"), ("weak encryption", "M10"),
+    ("credential", "M1"), ("api key", "M1"), ("hardcoded", "M1"), ("secret", "M1"),
+    ("no authentication", "M3"), ("unauthenticated", "M3"), ("authorization", "M3"),
+    ("session token", "M3"), ("privilege", "M3"),
+    ("injection", "M4"), ("not validated", "M4"), ("input validation", "M4"),
+    ("xss", "M4"), ("output handling", "M4"),
+    ("supply", "M2"), ("outdated", "M2"),
+    ("misconfig", "M8"), ("logging", "M8"), ("privacy", "M6"),
+    ("reverse engineer", "M7"), ("binary protection", "M7"),
+]
+_MOBILE_BY_CATEGORY = {
+    "spoofing": "M3", "elevation": "M3", "privilege": "M3",
+    "tampering": "M4",
+    "repudiation": "M8", "denial of service": "M8", "denial": "M8",
+    "information disclosure": "M9", "disclosure": "M9",
+}
 
 
 def _ref(framework: str, item_id: str) -> dict | None:
@@ -134,14 +160,25 @@ def _ref(framework: str, item_id: str) -> dict | None:
     return {"framework": framework, "id": item_id, "label": catalog[item_id], "url": url}
 
 
-def map_threat(threat: dict, component: dict | None = None) -> list[dict]:
-    """Return the OWASP/agentic framework references for a threat (deduped)."""
+def map_threat(threat: dict, component: dict | None = None,
+               involved_types: set[str] | list[str] | None = None) -> list[dict]:
+    """Return the OWASP/agentic framework references for a threat (deduped).
+
+    `involved_types` are all component types this threat touches — its own component
+    plus both endpoints of its data flow. Flow threats attach to the *destination*
+    component, so without the flow endpoints a mobile/API source is invisible and its
+    lens never fires. Callers that have the flow context should pass it; when omitted
+    the set falls back to the single `component` (legacy behaviour).
+    """
     text = f"{threat.get('title', '')} {threat.get('category', '')}".lower()
+    cat = (threat.get("category") or "").lower()
+    types = {t for t in (involved_types or []) if t}
     ctype = (component or {}).get("type", "")
+    if ctype:
+        types.add(ctype)
     picks: list[tuple[str, str]] = []
 
     # 1) Baseline Web mapping by STRIDE/LINDDUN category.
-    cat = (threat.get("category") or "").lower()
     for key, item in _WEB_BY_CATEGORY.items():
         if key in cat:
             picks.append(("WEB", item))
@@ -152,17 +189,20 @@ def map_threat(threat: dict, component: dict | None = None) -> list[dict]:
         if kw in text:
             picks.extend(refs)
 
-    # 3) Component-type lens (API / Mobile), and LLM baseline for AI components.
-    if ctype in _TYPE_FRAMEWORK:
-        # map the web pick's spirit into the API/Mobile equivalent where obvious
-        fw = _TYPE_FRAMEWORK[ctype]
-        if fw == "API" and ("WEB", "A01") in picks:
-            picks.append(("API", "API1"))
-        if fw == "MOBILE" and ("WEB", "A02") in picks:
-            picks.append(("MOBILE", "M10"))
-    if ctype in _AI_TYPES and not any(f == "LLM" for f, _ in picks):
-        # ensure AI-component threats at least surface the LLM lens
-        pass
+    # 3) API lens — access-control threats on any API-typed endpoint of the flow.
+    if types & _API_TYPES and ("WEB", "A01") in picks:
+        picks.append(("API", "API1"))
+
+    # 4) Mobile lens — a threat touching a mobile component maps to Mobile Top 10:
+    #    keyword picks first (precise), STRIDE category as the baseline fallback.
+    if "mobile_app" in types:
+        mob = [m for kw, m in _MOBILE_KEYWORDS if kw in text]
+        if not mob:
+            for key, m in _MOBILE_BY_CATEGORY.items():
+                if key in cat:
+                    mob.append(m)
+                    break
+        picks.extend(("MOBILE", m) for m in mob)
 
     out: list[dict] = []
     seen: set[tuple[str, str]] = set()

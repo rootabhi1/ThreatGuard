@@ -408,8 +408,21 @@ def enrich_threat_with_detail(threat: dict, component: dict, flow: dict | None,
     threat["specific_mitigations"] = _specific_mitigations(threat, component or {}, flow)
 
     # References + multi-framework OWASP mapping (Web/API/Mobile/LLM/Agentic).
+    # Collect every component type the threat touches — its own component plus both
+    # endpoints of its flow — so a flow's mobile/API source (a flow threat attaches to
+    # the destination) still activates its lens.
     from .owasp import map_threat
-    frameworks = map_threat(threat, component or {})
+    involved = {(component or {}).get("type", "")}
+    fid = threat.get("flow_id")
+    if fid:
+        _by_id = {c["id"]: c for c in components}
+        _fl = next((f for f in flows if f.get("id") == fid), None)
+        if _fl:
+            for _end in (_fl.get("from"), _fl.get("to")):
+                _c = _by_id.get(_end)
+                if _c:
+                    involved.add(_c.get("type", ""))
+    frameworks = map_threat(threat, component or {}, involved)
     threat["frameworks"] = frameworks   # structured, for badges + coverage view
     refs = [{"label": fr["label"], "url": fr["url"]} for fr in frameworks]
     methodology = (threat.get("methodology") or "").upper()

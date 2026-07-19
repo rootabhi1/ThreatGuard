@@ -406,6 +406,7 @@ def management_overview() -> list[dict]:
             severity_counts = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Info": 0}
             status_counts = {s: 0 for s in VALID_THREAT_STATUSES}
             owasp_counts: dict[str, int] = {}
+            framework_counts: dict[str, int] = {}   # Web/API/Mobile/LLM/Agentic
             total_threats = 0
             critical_titles: list[str] = []
             ttc_seconds: list[int] = []  # closures we've measured
@@ -421,10 +422,15 @@ def management_overview() -> list[dict]:
                     total_threats += 1
                     if sev == "Critical" and len(critical_titles) < 5:
                         critical_titles.append(t.get("title", "—"))
-                    # OWASP distribution
+                    # OWASP distribution (Web-only label, kept for the existing grid)
                     owasp = _extract_owasp_label(t.get("references", []))
                     if owasp:
                         owasp_counts[owasp] = owasp_counts.get(owasp, 0) + 1
+                    # Multi-framework coverage (Web/API/Mobile/LLM/Agentic)
+                    for fr in t.get("frameworks", []):
+                        fw = fr.get("framework")
+                        if fw:
+                            framework_counts[fw] = framework_counts.get(fw, 0) + 1
 
                 # Statuses + TTC for this threat model
                 statuses = c.execute(
@@ -450,6 +456,7 @@ def management_overview() -> list[dict]:
                 "by_severity": severity_counts,
                 "by_status": status_counts,
                 "by_owasp": owasp_counts,            # NEW
+                "by_framework": framework_counts,    # Web/API/Mobile/LLM/Agentic
                 "top_critical_titles": critical_titles,
                 "avg_time_to_closure_seconds": avg_ttc,   # NEW
                 "closures_count": len(ttc_seconds),        # NEW

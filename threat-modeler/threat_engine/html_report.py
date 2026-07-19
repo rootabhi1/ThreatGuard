@@ -604,6 +604,8 @@ def to_html(analysis: dict) -> str:
     {_render_boundaries_section(boundaries, components, flows, threats, comp_to_b, comp_by_id)}
   </section>
 
+  {_render_framework_coverage(threats, _esc)}
+
   <section class="card">
     <h2>Threats ({summary['total']})</h2>
     <p style="color:#64748b;font-size:0.85rem;margin:-6px 0 10px">Showing <strong>{summary['by_tier']['evidenced']} evidenced</strong> threats (proven by your model). <strong>{summary['by_tier']['baseline']} baseline</strong> type-based checks are hidden — reveal them with the “Baseline checks” toggle.</p>
@@ -871,10 +873,56 @@ def _render_threat_card(t: dict, idx: int) -> str:
       <h4><span class="icon">🛡</span>How to mitigate</h4>
       <div class="mitigations-list">{mitigations_html}</div>
     </div>
+    {_render_framework_badges(t.get("frameworks"))}
     {f'<div class="detail-section references"><h4><span class="icon">🔗</span>References</h4>{refs_html}</div>' if refs_html else ''}
   </div>
 </div>
 """
+
+
+_FW_COLORS = {
+    "WEB": ("#f1f5f9", "#334155"), "API": ("#ecfeff", "#0e7490"),
+    "MOBILE": ("#ecfdf5", "#047857"), "LLM": ("#f5f3ff", "#6d28d9"),
+    "AGENTIC": ("#fdf4ff", "#a21caf"),
+}
+
+
+def _render_framework_badges(frameworks) -> str:
+    if not frameworks:
+        return ""
+    chips = ""
+    for fr in frameworks:
+        bg, fg = _FW_COLORS.get(fr.get("framework"), _FW_COLORS["WEB"])
+        chips += (f'<a href="{_esc(fr.get("url","#"))}" target="_blank" rel="noopener" '
+                  f'style="display:inline-block;font-size:0.72rem;font-weight:600;padding:2px 9px;'
+                  f'border-radius:999px;background:{bg};color:{fg};text-decoration:none;margin:2px 4px 2px 0">'
+                  f'{_esc(fr.get("id",""))}</a>')
+    return (f'<div class="detail-section"><h4><span class="icon">🗺</span>Framework mapping</h4>'
+            f'<div>{chips}</div></div>')
+
+
+def _render_framework_coverage(threats, esc) -> str:
+    """Compact coverage roll-up: how many threats map to each OWASP/agentic framework."""
+    counts: dict[str, int] = {}
+    for t in threats:
+        for fr in t.get("frameworks", []):
+            counts[fr["framework"]] = counts.get(fr["framework"], 0) + 1
+    if not counts:
+        return ""
+    names = {"WEB": "OWASP Web", "API": "OWASP API", "MOBILE": "OWASP Mobile",
+             "LLM": "OWASP LLM", "AGENTIC": "OWASP Agentic"}
+    order = ["WEB", "API", "MOBILE", "LLM", "AGENTIC"]
+    chips = ""
+    for fw in order:
+        if fw not in counts:
+            continue
+        bg, fg = _FW_COLORS[fw]
+        chips += (f'<span style="display:inline-block;font-size:0.85rem;padding:4px 12px;border-radius:999px;'
+                  f'background:{bg};color:{fg};font-weight:600;margin:3px 6px 3px 0">'
+                  f'{esc(names[fw])}: {counts[fw]}</span>')
+    return (f'<section class="card"><h2>Framework coverage</h2>'
+            f'<p style="font-size:0.9rem;color:#475569;margin-bottom:8px">Threats cross-linked to each '
+            f'OWASP / agentic framework (a threat can map to several).</p><div>{chips}</div></section>')
 
 
 def _backticks_to_code(s: str) -> str:

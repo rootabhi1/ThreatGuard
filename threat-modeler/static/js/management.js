@@ -279,6 +279,28 @@
     });
   }
 
+  // Colour + name per OWASP/agentic framework for the multi-framework coverage strip.
+  const FW_META = {
+    WEB:     { name: 'OWASP Web', bg: '#f1f5f9', fg: '#334155' },
+    API:     { name: 'OWASP API', bg: '#ecfeff', fg: '#0e7490' },
+    MOBILE:  { name: 'OWASP Mobile', bg: '#ecfdf5', fg: '#047857' },
+    LLM:     { name: 'OWASP LLM', bg: '#f5f3ff', fg: '#6d28d9' },
+    AGENTIC: { name: 'OWASP Agentic', bg: '#fdf4ff', fg: '#a21caf' },
+  };
+  function frameworkStrip() {
+    const agg = {};
+    overview.forEach(f => Object.entries(f.by_framework || {}).forEach(([fw, n]) => { agg[fw] = (agg[fw] || 0) + n; }));
+    const order = ['WEB', 'API', 'MOBILE', 'LLM', 'AGENTIC'].filter(fw => agg[fw]);
+    if (!order.length) return '';
+    const chips = order.map(fw => {
+      const m = FW_META[fw];
+      return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:.9rem;font-weight:600;padding:5px 14px;border-radius:999px;background:${m.bg};color:${m.fg};margin:3px 8px 3px 0;">${m.name}<span style="opacity:.7;font-variant-numeric:tabular-nums;">${agg[fw]}</span></span>`;
+    }).join('');
+    return `<div class="card" style="grid-column:1 / -1;padding:1rem 1.25rem;">
+      <div class="text-xs font-semibold text-light" style="text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">🗺 Framework coverage — threats mapped per framework</div>
+      <div>${chips}</div></div>`;
+  }
+
   function renderOwasp() {
     const grid = document.getElementById('owasp-grid');
     // Aggregate across all features
@@ -291,15 +313,15 @@
       });
     });
 
+    const fwStrip = frameworkStrip();
     if (totalOwasp === 0) {
-      grid.innerHTML = `
+      grid.innerHTML = fwStrip + `
         <div class="card text-center" style="padding: 3rem; grid-column: 1 / -1;">
-          <p class="text-sm text-light">No OWASP-mapped threats yet. Run analysis on threat models to populate this view.</p>
+          <p class="text-sm text-light">No OWASP Web-mapped threats yet. The framework strip above covers API/Mobile/LLM/Agentic; run analysis to populate the Web grid.</p>
         </div>`;
       return;
     }
-
-    grid.innerHTML = Object.entries(OWASP_2021).map(([code, title]) => {
+    grid.innerHTML = fwStrip + Object.entries(OWASP_2021).map(([code, title]) => {
       const label = `${code} — ${title}`;
       const count = aggregate[label] || 0;
       const pct = totalOwasp > 0 ? (count / totalOwasp * 100).toFixed(1) : 0;

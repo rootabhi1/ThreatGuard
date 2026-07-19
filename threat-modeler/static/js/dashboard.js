@@ -596,12 +596,23 @@
         delete system.boundary_inference_mode;
       }
 
-      // If the user left the optional Notes field blank, seed the description
-      // from what they typed (system text) so the card/header isn't "No description".
+      // If the user left the optional Notes field blank, seed a clean description.
+      // For free text the prose itself reads well; for a structured/precise spec the
+      // raw "Name : type" lines are NOT a description — summarize the model instead so
+      // the card shows something meaningful rather than the spec dump.
       let description = (fd.get('description') || '').trim();
       if (!description) {
-        const src = (fd.get('system_text') || fd.get('structured_text') || (system && system._source_text) || '').trim();
-        if (src) description = src.length > 160 ? src.slice(0, 157).trimEnd() + '…' : src;
+        if (inputMode === 'structured') {
+          const nc = (system.components || []).length, nf = (system.data_flows || []).length,
+                nb = (system.trust_boundaries || []).length;
+          const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+          if (nc) description = [plural(nc, 'component'), plural(nf, 'flow')]
+            .concat(nb ? [plural(nb, 'trust zone')] : []).join(' · ');
+        } else {
+          const src = (fd.get('system_text') || (system && system._source_text) || '')
+            .split('\n').filter(l => !l.trim().startsWith('#')).join(' ').trim();
+          if (src) description = src.length > 160 ? src.slice(0, 157).trimEnd() + '…' : src;
+        }
       }
 
       setProgress('Creating threat model...');
@@ -1075,6 +1086,27 @@
       return;
     }
 
+    // Colour per OWASP/agentic framework so mappings read at a glance.
+    const FW_COLORS = {
+      WEB:     { bg: '#f1f5f9', fg: '#334155', bd: '#cbd5e1' },
+      API:     { bg: '#ecfeff', fg: '#0e7490', bd: '#a5f3fc' },
+      MOBILE:  { bg: '#ecfdf5', fg: '#047857', bd: '#a7f3d0' },
+      LLM:     { bg: '#f5f3ff', fg: '#6d28d9', bd: '#ddd6fe' },
+      AGENTIC: { bg: '#fdf4ff', fg: '#a21caf', bd: '#f5d0fe' },
+    };
+    const frameworkBadges = (t) => {
+      if (!t.frameworks || !t.frameworks.length) return '';
+      return `<div class="detail-section">
+        <div class="detail-section-title">Framework mapping</div>
+        <div class="flex gap-2" style="flex-wrap:wrap;">
+          ${t.frameworks.map(fr => {
+            const c = FW_COLORS[fr.framework] || FW_COLORS.WEB;
+            return `<a href="${esc(fr.url || '#')}" target="_blank" title="${esc(fr.label)}"
+              style="display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;padding:2px 9px;border-radius:999px;background:${c.bg};color:${c.fg};border:1px solid ${c.bd};text-decoration:none;">
+              <span style="font-size:.6rem;opacity:.75;letter-spacing:.03em;">${fr.framework}</span>${esc(fr.id)}</a>`;
+          }).join('')}
+        </div></div>`;
+    };
     list.innerHTML = `
       <div class="text-xs text-light mb-2">Showing ${threats.length} of ${total} threats</div>
       ${threats.slice(0, 100).map((t, i) => {
@@ -1182,14 +1214,19 @@
                 ` : ''}
               </div>
 
-              ${t.references && t.references.length > 0 ? `
+              ${frameworkBadges(t)}
+              ${(() => {
+                const fwLabels = new Set((t.frameworks || []).map(f => f.label));
+                const otherRefs = (t.references || []).filter(r => !fwLabels.has(r.label));
+                if (!otherRefs.length) return '';
+                return `
                 <div class="detail-section">
                   <div class="detail-section-title">References</div>
                   <div class="flex gap-2" style="flex-wrap: wrap;">
-                    ${t.references.map(r => `<a href="${esc(r.url || '#')}" target="_blank" class="ref-badge">${esc(r.label || r.url || 'Ref')}</a>`).join('')}
+                    ${otherRefs.map(r => `<a href="${esc(r.url || '#')}" target="_blank" class="ref-badge">${esc(r.label || r.url || 'Ref')}</a>`).join('')}
                   </div>
-                </div>
-              ` : ''}
+                </div>`;
+              })()}
 
               <div class="mt-3 flex items-center gap-2" style="padding-top: 0.75rem; border-top: 1px solid var(--c-border); flex-wrap: wrap;">
                 <button class="show-history btn btn-sm btn-ghost" data-threat-id="${esc(t.id)}">View status history →</button>
