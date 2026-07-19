@@ -206,7 +206,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;align-ite
   <div class="flow">
     <div class="flow-step"><div class="flow-n">01 · DESCRIBE</div><div class="flow-t">Text, structured, or diagram</div><div class="flow-d">Type a plain-English description, enter a precise structured spec, or upload a PNG/JPEG/WebP architecture diagram. Components, flows, and trust boundaries are extracted automatically.</div></div>
     <div class="flow-step"><div class="flow-n">02 · ANALYZE</div><div class="flow-t">Rules + optional AI</div><div class="flow-d">STRIDE / PASTA / LINDDUN run deterministically with DREAD scoring and CVSS / CWE / ATT&amp;CK / OWASP / compliance mapping. A configured LLM can add context-specific threats on top.</div></div>
-    <div class="flow-step"><div class="flow-n">03 · REFINE</div><div class="flow-t">DFD editor + security attributes</div><div class="flow-d">Drag the data-flow diagram, edit components and flows, and answer Microsoft-TMT-style security properties. Re-run to fold your answers into a sharper threat list.</div></div>
+    <div class="flow-step"><div class="flow-n">03 · REFINE</div><div class="flow-t">DFD editor + security attributes</div><div class="flow-d">Arrange the diagram (fit-to-screen, pan, zoom), drag a handle to connect flows, edit components, and answer Microsoft-TMT-style security properties. Re-run to fold your answers into a sharper threat list.</div></div>
     <div class="flow-step"><div class="flow-n">04 · TRACK &amp; SHARE</div><div class="flow-t">Reports, status, diffs</div><div class="flow-d">Track per-threat remediation status, diff releases, export HTML / PDF / Markdown / CSV / executive reports, share read-only links, and file Jira tickets.</div></div>
   </div>
 </section>
@@ -235,7 +235,15 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;align-ite
     <div class="feat-card hl">
       <div class="feat-icon">🕸</div>
       <div class="feat-title">Interactive DFD editor</div>
-      <div class="feat-desc">Drag-and-drop data-flow diagram with automatic trust-boundary inference, cross-boundary flow flagging, encryption indicators, add/edit/delete, and touch support. The same diagram renders in every report.</div>
+      <div class="feat-desc">A readable data-flow diagram at any size: numbered flow badges keyed to a legend (no overlapping labels), crossing-reduced layout, hover-to-inspect, fit-to-screen, pan &amp; zoom, and drag-a-handle to connect flows — with a built-in notation guide. Automatic trust-boundary inference, cross-boundary flagging, and touch support. The same diagram renders in every report.</div>
+      <span class="feat-new">NEW</span>
+    </div>
+    <div class="feat-card hl">
+      <div class="feat-icon">🩺</div>
+      <div class="feat-title">Honest models — no silent failures</div>
+      <div class="feat-desc">Malformed input is never dropped quietly. A deterministic normalization pass repairs missing or duplicate IDs and turns a dangling flow reference into a visible placeholder that still draws and is still analyzed — surfaced in a “Model health” panel. Text-built models also disclose their assumptions, so you always know what was inferred versus stated.</div>
+      <div class="chips"><span class="chip">model health</span><span class="chip">visible placeholders</span><span class="chip">assumptions</span><span class="chip">lenient parser</span></div>
+      <span class="feat-new">NEW</span>
     </div>
     <div class="feat-card">
       <div class="feat-icon">✍️</div>
