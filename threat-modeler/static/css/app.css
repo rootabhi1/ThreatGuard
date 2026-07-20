@@ -1647,3 +1647,15 @@ button, a, input, select { transition: all 0.15s ease; }
   font-size: var(--fs-xs); padding: 3px 8px; border-radius: var(--r-sm);
   border: 1px solid var(--c-border-strong); background: var(--c-surface); color: var(--c-text-dim); cursor: pointer;
 }
+
+/* ==========================================================================
+   DFD focus mode — quiet a dense diagram: hovering a component fades every
+   flow except the ones touching it, so a large graph reads as "trace one
+   node at a time" instead of a static mesh (0.2 #8).
+   ========================================================================== */
+.dfd-flows-layer .dfd-flow { transition: opacity .12s ease; }
+.dfd-flows-layer.dfd-focusing .dfd-flow { opacity: 0.08; }
+.dfd-flows-layer.dfd-focusing .dfd-flow.dfd-flow-focus { opacity: 1; }
+.dfd-component { transition: opacity .12s ease; }
+.dfd-components-layer.dfd-focusing .dfd-component { opacity: 0.55; }
+.dfd-components-layer.dfd-focusing .dfd-component.dfd-node-focus { opacity: 1; }

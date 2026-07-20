@@ -169,6 +169,68 @@ def _display_name(kw: str) -> str:
     return _DISPLAY_NAME.get(kw.lower(), kw.title())
 
 
+# Data-handling / exposure signals detectable in a free-text description. Each maps
+# a set of phrases to a security attribute the accuracy engine understands, plus the
+# component types it should attach to and a human phrase for the disclosure list.
+# This is what stops a free-text model from being a blank slate of generic "standard
+# checks": if the prose says "public API storing customer PII", the API is tagged
+# internet_facing + handles_pii and produces evidenced findings, not guesses.
+_DATA_PROCESSORS = ("database", "datastore", "object_storage", "data_warehouse",
+                    "cache", "vector_db", "search_service", "api", "webapp", "mobile_app")
+_STORE_ONLY = ("database", "datastore", "object_storage", "data_warehouse", "cache",
+               "filesystem", "secrets_manager", "vector_db")
+_EXPOSED = ("webapp", "api", "api_gateway", "mobile_app", "load_balancer", "cdn")
+_TEXT_SIGNALS: list[tuple[list[str], str, str, tuple, str]] = [
+    (["pii", "personal data", "personal information", "personally identifiable",
+      "customer data", "user data", "gdpr", "ccpa"], "handles_pii", "yes", _DATA_PROCESSORS, "handles PII"),
+    (["payment", "credit card", "debit card", "cardholder", "pci-dss", "pci dss",
+      " pci ", "card number", "card data"], "handles_pci", "yes", _DATA_PROCESSORS, "handles cardholder data"),
+    (["phi", "health record", "medical record", "patient data", "hipaa", "health data"],
+     "handles_phi", "yes", _DATA_PROCESSORS, "handles PHI (health data)"),
+    (["password", "credential", "secret", "api key", "private key", "access token"],
+     "stores_credentials", "yes", _STORE_ONLY, "stores credentials/secrets"),
+    (["public-facing", "internet-facing", "publicly accessible", "exposed to the internet",
+      "public api", "public endpoint", "on the internet"], "internet_facing", "yes", _EXPOSED, "is internet-facing"),
+    (["multi-tenant", "multitenant", "multi tenant"], "multi_tenant", "yes",
+     ("api", "webapp", "database", "datastore"), "is multi-tenant"),
+    (["encrypted at rest", "encryption at rest"], "encrypted_at_rest", "yes", _STORE_ONLY, "is encrypted at rest"),
+]
+
+
+def _detect_attributes_from_text(text: str, components: list[dict]) -> list[str]:
+    """Infer security attributes from the prose and attach them to the most relevant
+    component (first of a preferred type). Returns human-readable notes of what was
+    inferred, so every guess is disclosed to the user, never silently applied."""
+    t = f" {text.lower()} "
+    notes: list[str] = []
+    for phrases, attr, value, types, human in _TEXT_SIGNALS:
+        if not any(pz in t for pz in phrases):
+            continue
+        # Prefer a store for data-handling signals, else the first applicable component.
+        target = next((c for c in components if c.get("type") in types and c.get("type") in _STORE_ONLY), None) \
+            or next((c for c in components if c.get("type") in types), None)
+        if target and not str(target.get(attr, "")).strip():
+            target[attr] = value
+            notes.append(f"Inferred **{human}** on '{target['name']}' from the description — verify it's correct.")
+    return notes
+
+
+def _name_from_text(original: str, kw: str, fallback: str) -> str:
+    """Capture a proper name for a detected component — 1-2 capitalised words
+    immediately before the keyword (e.g. 'Orders API', 'Postgres Users') — falling
+    back to the keyword's display name when no clear name precedes it."""
+    # Capture is case-sensitive (real capitals = a proper noun); only the keyword
+    # itself is matched case-insensitively via an inline (?i:) group.
+    m = re.search(r"\b([A-Z][\w-]+(?:\s+[A-Z][\w-]+)?)\s+(?i:" + re.escape(kw) + r")\b", original)
+    if m:
+        phrase = m.group(1).strip()
+        _stop = {"The", "A", "An", "And", "Or", "Of", "To", "In", "On", "Our", "My", "Their"}
+        if phrase.split()[0] not in _stop and phrase.lower() != kw:
+            disp = _display_name(kw)
+            return phrase if disp.lower() in phrase.lower() else f"{phrase} {disp}"
+    return fallback
+
+
 def extract_components_from_text(text: str) -> dict:
     """Best-effort extraction. Always good enough for a starting draft —
     user can edit in the UI before running analysis."""
@@ -186,7 +248,7 @@ def extract_components_from_text(text: str) -> dict:
                 if ctype not in seen_types:
                     components.append({
                         "id": f"c_{ctype}",
-                        "name": _display_name(kw),
+                        "name": _name_from_text(text, kw, _display_name(kw)),
                         "type": ctype,
                         "description": f"Detected from description (keyword: '{kw}')",
                     })
@@ -248,6 +310,12 @@ def extract_components_from_text(text: str) -> dict:
             f"Inferred {len(data_flows)} data flow(s) from component types — the topology, "
             f"protocols, authentication and encryption were not stated and are assumed "
             f"(e.g. app→datastore links are assumed unencrypted). Verify each in the diagram.")
+
+    # Infer security attributes (PII/PCI/PHI handling, internet exposure, secrets,
+    # multi-tenancy, at-rest encryption) from the prose so free text produces evidenced
+    # findings instead of a wall of generic checks. Every inference is disclosed.
+    attr_notes = _detect_attributes_from_text(text, components)
+    assumptions.extend(attr_notes)
 
     return {
         "components": components,

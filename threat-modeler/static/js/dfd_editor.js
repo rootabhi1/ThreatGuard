@@ -197,7 +197,39 @@
     }).join('');
   }
 
-  // Default layout: simple grid arrangement when components have no positions
+  // Auto layout. Each trust boundary becomes a left→right "band"; a band with more
+  // than MAX_ROWS members wraps into a compact grid (several sub-columns) instead of
+  // one very tall column, so a crowded boundary in a large system stays readable
+  // rather than stacking 20+ nodes vertically. Mirrors the server's _auto_layout.
+  const LAYOUT_MAX_ROWS = 6;
+  function _gridDims(n) {
+    return { rows: Math.min(Math.max(1, n), LAYOUT_MAX_ROWS), sub: Math.max(1, Math.ceil(n / LAYOUT_MAX_ROWS)) };
+  }
+
+  // Order nodes within each band by the barycenter (mean row) of their connected
+  // neighbours, so flows connect nodes at similar heights and cross far less — the
+  // classic layered-layout heuristic. Reorders the band arrays in place.
+  function _barycenterOrder(bands, flows) {
+    if (bands.length < 2 || !flows.length) return;
+    const bandOf = {};
+    bands.forEach((m, bi) => m.forEach(c => { bandOf[c.id] = bi; }));
+    const nbr = {};
+    flows.forEach(f => {
+      if (bandOf[f.from] != null && bandOf[f.to] != null) {
+        (nbr[f.from] = nbr[f.from] || []).push(f.to);
+        (nbr[f.to] = nbr[f.to] || []).push(f.from);
+      }
+    });
+    const rowOf = {};
+    bands.forEach(m => m.forEach((c, i) => { rowOf[c.id] = i; }));
+    const bary = c => {
+      const rs = (nbr[c.id] || []).map(n => rowOf[n]).filter(r => r != null);
+      return rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : rowOf[c.id];
+    };
+    for (let it = 0; it < 4; it++) {
+      bands.forEach(m => { m.sort((a, b) => bary(a) - bary(b)); m.forEach((c, i) => { rowOf[c.id] = i; }); });
+    }
+  }
   function autoLayout(system, layers) {
     const components = system.components || [];
     const boundaries = system.trust_boundaries || [];
@@ -205,38 +237,41 @@
     const need = components.filter(c => !layout[c.id]);
     if (need.length === 0) return layout;
 
+    const ROW_GAP = COMP_H + 30;      // vertical spacing between rows
+    const SUB_COL_GAP = COMP_W + 70;  // horizontal spacing between sub-columns
+    const BAND_GAP = 80;              // gap between adjacent boundaries
+    const MARGIN = 50;
+
+    const placeBand = (members, x0, top, tallestRows) => {
+      const { rows, sub } = _gridDims(members.length);
+      const y0 = top + (tallestRows - rows) * ROW_GAP / 2;   // vertically centre the grid
+      members.forEach((c, i) => {
+        const si = Math.floor(i / rows), ri = i % rows;      // fill top→bottom, then next sub-column
+        layout[c.id] = { x: snap(x0 + si * SUB_COL_GAP), y: snap(y0 + ri * ROW_GAP) };
+      });
+      return sub * SUB_COL_GAP;                              // band width consumed
+    };
+
     if (boundaries.length > 0 && layers.boundaries !== false) {
-      // Place each boundary in a horizontal row, components stacked inside
-      const cols = Math.min(boundaries.length, 4);
-      const rows = Math.ceil(boundaries.length / cols);
-      const colW = CANVAS_W / cols;
-      const rowH = CANVAS_H / rows;
-      boundaries.forEach((b, bi) => {
-        const col = bi % cols;
-        const row = Math.floor(bi / cols);
-        const cx = col * colW + colW / 2;
-        const cy = row * rowH + rowH / 2;
-        const inside = (b.contains || []).filter(cid => need.find(c => c.id === cid));
-        inside.forEach((cid, i) => {
-          const offset = (i - (inside.length - 1) / 2) * (COMP_H + 16);
-          layout[cid] = {
-            x: snap(cx - COMP_W / 2),
-            y: snap(cy + offset - COMP_H / 2),
-          };
-        });
+      const assigned = new Set();
+      const bands = [];
+      boundaries.forEach(b => {
+        const inside = (b.contains || []).map(cid => need.find(c => c.id === cid)).filter(Boolean);
+        if (inside.length) { bands.push(inside); inside.forEach(c => assigned.add(c.id)); }
       });
-      // Anything still unplaced
-      need.forEach((c, i) => {
-        if (!layout[c.id]) {
-          layout[c.id] = { x: snap(40 + (i % 6) * (COMP_W + 30)), y: snap(40 + Math.floor(i / 6) * (COMP_H + 30)) };
-        }
-      });
+      const unbounded = need.filter(c => !assigned.has(c.id));
+      if (unbounded.length) bands.push(unbounded);           // stray nodes → trailing band
+      _barycenterOrder(bands, system.data_flows || []);      // reduce edge crossings
+      const tallest = Math.max(1, ...bands.map(m => _gridDims(m.length).rows));
+      const top = MARGIN + 44;                               // room for the boundary label
+      let x = MARGIN;
+      bands.forEach(members => { x += placeBand(members, x, top, tallest) + BAND_GAP; });
     } else {
+      // No boundaries — one compact grid, wrapping every MAX_ROWS+2 down a column.
+      const perCol = LAYOUT_MAX_ROWS + 2;
       need.forEach((c, i) => {
-        layout[c.id] = {
-          x: snap(40 + (i % 6) * (COMP_W + 30)),
-          y: snap(40 + Math.floor(i / 6) * (COMP_H + 30)),
-        };
+        layout[c.id] = { x: snap(MARGIN + Math.floor(i / perCol) * SUB_COL_GAP),
+                         y: snap(MARGIN + (i % perCol) * ROW_GAP) };
       });
     }
     return layout;
@@ -361,6 +396,39 @@
     const svg = container.querySelector('svg.dfd-canvas');
     const sidePanel = container.querySelector('#dfd-side-panel');
 
+    // ---- Focus mode: dim unrelated flows when hovering a component -----------
+    // Only engages on a busy diagram (a handful of flows is already clear) and
+    // never while dragging/connecting, so it helps at scale without nagging.
+    const FOCUS_MIN_FLOWS = 8;
+    function focusNode(id) {
+      if (dragging || flowDrawing) return;
+      const fl = svg.querySelector('.dfd-flows-layer');
+      const cl = svg.querySelector('.dfd-components-layer');
+      if (!fl || !cl) return;
+      const flows = [...fl.querySelectorAll('.dfd-flow')];
+      if (flows.length < FOCUS_MIN_FLOWS) return;
+      const neighbours = new Set([id]);
+      flows.forEach(gf => {
+        const on = gf.dataset.from === id || gf.dataset.to === id;
+        gf.classList.toggle('dfd-flow-focus', on);
+        if (on) { neighbours.add(gf.dataset.from); neighbours.add(gf.dataset.to); }
+      });
+      cl.querySelectorAll('.dfd-component').forEach(n =>
+        n.classList.toggle('dfd-node-focus', neighbours.has(n.dataset.componentId)));
+      fl.classList.add('dfd-focusing');
+      cl.classList.add('dfd-focusing');
+    }
+    function clearFocus() {
+      const fl = svg.querySelector('.dfd-flows-layer');
+      const cl = svg.querySelector('.dfd-components-layer');
+      [fl, cl].forEach(layer => {
+        if (!layer) return;
+        layer.classList.remove('dfd-focusing');
+        layer.querySelectorAll('.dfd-flow-focus, .dfd-node-focus')
+          .forEach(e => e.classList.remove('dfd-flow-focus', 'dfd-node-focus'));
+      });
+    }
+
     // Auto-layout for any components without positions
     system.layout = autoLayout(system, layers);
 
@@ -457,6 +525,8 @@
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.setAttribute('class', 'dfd-flow');
         g.setAttribute('data-flow-id', f.id);
+        g.setAttribute('data-from', f.from);
+        g.setAttribute('data-to', f.to);
 
         // Native hover tooltip: inspect a flow (endpoints, protocol, auth, encryption)
         // without clicking — the numbered badge and line both carry it.
@@ -469,24 +539,33 @@
           + ` · ${protoStr} · auth: ${authStr}${authzStr} · ${sec}`;
         g.appendChild(title);
 
-        // Hit area (transparent thick line)
-        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        hit.setAttribute('x1', adjX1);
-        hit.setAttribute('y1', adjY1);
-        hit.setAttribute('x2', adjX2);
-        hit.setAttribute('y2', adjY2);
+        // Curved edge: bow the line along its dominant axis so overlapping flows
+        // fan out and separate visually instead of stacking into a straight-line mesh.
+        const _horiz = Math.abs(dx) >= Math.abs(dy);
+        const _off = 0.42;
+        const c1x = _horiz ? adjX1 + (adjX2 - adjX1) * _off : adjX1;
+        const c1y = _horiz ? adjY1 : adjY1 + (adjY2 - adjY1) * _off;
+        const c2x = _horiz ? adjX2 - (adjX2 - adjX1) * _off : adjX2;
+        const c2y = _horiz ? adjY2 : adjY2 - (adjY2 - adjY1) * _off;
+        const pathD = `M ${adjX1} ${adjY1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${adjX2} ${adjY2}`;
+        const bez = (t, p0, p1, p2, p3) => { const m = 1 - t; return m * m * m * p0 + 3 * m * m * t * p1 + 3 * m * t * t * p2 + t * t * t * p3; };
+
+        // Hit area (transparent thick path following the curve)
+        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        hit.setAttribute('d', pathD);
+        hit.setAttribute('fill', 'none');
         hit.setAttribute('stroke', 'transparent');
         hit.setAttribute('stroke-width', 14);
         hit.style.cursor = 'pointer';
         g.appendChild(hit);
 
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', adjX1);
-        line.setAttribute('y1', adjY1);
-        line.setAttribute('x2', adjX2);
-        line.setAttribute('y2', adjY2);
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        line.setAttribute('d', pathD);
+        line.setAttribute('fill', 'none');
         line.setAttribute('stroke', stroke);
-        line.setAttribute('stroke-width', isSelected ? 2.5 : 1.8);
+        line.setAttribute('stroke-width', isSelected ? 2.6 : 1.6);
+        // Semi-transparent so a dense diagram reads as layered depth, not a hard web.
+        line.setAttribute('stroke-opacity', isEncrypted ? (isSelected ? 0.95 : 0.5) : 0.72);
         if (dash) line.setAttribute('stroke-dasharray', dash);
         line.setAttribute('marker-end', arrow);
         g.appendChild(line);
@@ -495,11 +574,12 @@
         // Red = unencrypted or boundary-crossing (only when the Encryption layer is
         // on); otherwise slate. Keeps the canvas legible no matter how dense it gets.
         {
-          // Stagger the badge along the edge (by flow number) so converging flows
-          // don't stack their badges at a single point.
-          const bt = 0.30 + ((flowNum - 1) % 4) * 0.12;
-          const mx = adjX1 + (adjX2 - adjX1) * bt;
-          const my = adjY1 + (adjY2 - adjY1) * bt;
+          // Stagger the badge along the curve (by flow number) so converging flows
+          // don't stack their badges at a single point. Evaluated on the bezier so
+          // the badge sits exactly on the drawn line.
+          const bt = 0.34 + ((flowNum - 1) % 3) * 0.13;
+          const mx = bez(bt, adjX1, c1x, c2x, adjX2);
+          const my = bez(bt, adjY1, c1y, c2y, adjY2);
           const risky = (!isEncrypted || crossesBoundary);
           const badgeFill = (layers.encryption && risky) ? '#ef4444' : '#64748b';
           const badgeBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -588,6 +668,11 @@
                     style="cursor:crosshair;"><title>Drag to another component to connect a flow</title></circle>`}
         `;
         componentsLayer.appendChild(g);
+
+        // Focus mode: hovering a component fades every unrelated flow so a dense
+        // diagram becomes "trace one node at a time". Works in read-only view too.
+        g.addEventListener('mouseenter', () => focusNode(c.id));
+        g.addEventListener('mouseleave', clearFocus);
 
         if (!opts.readOnly) {
           g.style.touchAction = 'none';
