@@ -1508,7 +1508,9 @@ def analyze_system(
     }
 
     from .dataflow_summary import build_dataflow_summary
+    from .readiness import compute_readiness
     _untrusted = _untrusted_input_crossings(system, all_threats)
+    _readiness = compute_readiness(system)
 
     return {
         "system": system,
@@ -1520,6 +1522,10 @@ def analyze_system(
         "summary": summary,
         "dataflow_summary": build_dataflow_summary(system, all_threats, summary, _untrusted),
         "untrusted_crossings": _untrusted,
+        # Model completeness: which security questions are still unanswered, and a
+        # score. Answering a question turns a generic "standard check" into a precise
+        # finding or clears it — so this checklist shrinks the noise as it's filled in.
+        "readiness": _readiness,
         # What model normalization repaired or flagged (missing/duplicate ids,
         # dangling flow references turned into placeholders, invalid types, …).
         # Surfaced in the UI and reports so no auto-repair is ever hidden.

@@ -902,6 +902,77 @@
       </details>`;
   }
 
+  // Readiness checklist: keep the disclosure open across the re-render that each
+  // answer triggers, so the user can answer several in a row without it collapsing.
+  let readinessOpen = false;
+
+  function readinessHTML(analysis) {
+    const rd = analysis && analysis.readiness;
+    if (!rd || !rd.applicable) return '';
+    const canEdit = (currentTM.owner_id === me.user.id || me.user.role === 'admin');
+    const pct = rd.score;
+    const barColor = pct >= 75 ? 'var(--c-success)' : pct >= 40 ? 'var(--ink-medium)' : 'var(--c-high)';
+    const openN = rd.open_count;
+
+    const answerCtl = (q) => {
+      if (!canEdit) return '';
+      const d = `data-rq-answer data-scope="${q.scope}" data-target="${esc(q.target_id)}" data-attr="${esc(q.attr)}"`;
+      if (q.kind === 'yn') {
+        return `<span class="rq-yn"><button class="rq-btn" ${d} data-value="yes">Yes</button><button class="rq-btn" ${d} data-value="no">No</button></span>`;
+      }
+      return `<select class="rq-select" ${d}>${q.options.map(o => `<option value="${esc(o)}">${o === '' ? '— pick —' : esc(o)}</option>`).join('')}</select>`;
+    };
+
+    const groups = {};
+    (rd.questions || []).forEach(q => {
+      (groups[q.target_id] = groups[q.target_id] || { name: q.target_name, type: q.target_type, scope: q.scope, items: [] }).items.push(q);
+    });
+    const groupHTML = Object.values(groups).map(g => `
+      <div class="rq-group">
+        <div class="rq-group-head">${g.scope === 'flow' ? '⇄' : '▪'} ${esc(g.name)} <span class="tg-muted">${esc(g.type)}</span></div>
+        ${g.items.map(q => `<div class="rq-row"><span class="rq-label">${esc(q.label)}</span>${answerCtl(q)}</div>`).join('')}
+      </div>`).join('');
+
+    return `
+      <div class="card mb-6 rq-card">
+        <div class="rq-meter-head">
+          <div><div class="rq-title">Model completeness</div>
+            <div class="rq-sub">${rd.answered} of ${rd.applicable} security questions answered${openN ? ` · ${openN} open` : ' · complete'}</div></div>
+          <div class="rq-score" style="color:${barColor};">${pct}%</div>
+        </div>
+        <div class="rq-track"><div class="rq-fill" style="width:${pct}%;background:${barColor};"></div></div>
+        ${openN ? `
+        <details class="tg-disclosure rq-disclosure" ${readinessOpen ? 'open' : ''}>
+          <summary>Answer ${openN} question${openN > 1 ? 's' : ''} to sharpen generic checks into findings — or clear them</summary>
+          <div class="tg-disclosure-body rq-list">${groupHTML}</div>
+        </details>` : `<div class="rq-done">✓ Every applicable security question is answered — findings reflect your model.</div>`}
+      </div>`;
+  }
+
+  async function answerReadiness(scope, targetId, attr, value) {
+    if (!value) return;
+    const sys = JSON.parse(JSON.stringify(currentTM.system || {}));
+    const list = scope === 'flow' ? (sys.data_flows || []) : (sys.components || []);
+    const t = list.find(x => x.id === targetId);
+    if (!t) return;
+    t[attr] = value;
+    try {
+      const put = await Auth.fetch('/api/threat-models/' + currentTM.id, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ system: sys }),
+      });
+      if (!put.ok) throw new Error('Save failed');
+      const an = await Auth.fetch('/api/threat-models/' + currentTM.id + '/analyze', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ methodologies: currentTM.methodologies, use_llm: false }),
+      });
+      if (!an.ok) throw new Error('Analysis failed');
+      const r2 = await Auth.fetch('/api/threat-models/' + currentTM.id);
+      if (r2.ok) { currentTM = await r2.json(); renderDetail(); }
+    } catch (e) {
+      UI.toast(e.message || 'Failed to save answer', 'error');
+    }
+  }
+
   function renderDetail() {
     const tm = currentTM;
     const featureName = (allFeatures.find(f => f.id === tm.feature_id) || {}).name || `#${tm.feature_id}`;
@@ -950,6 +1021,7 @@
         </div>
       </div>
 
+      ${readinessHTML(analysis)}
       ${modelIssuesHTML(analysis)}
       ${assumptionsHTML(analysis)}
       ${dataFlowOverviewHTML(analysis)}
@@ -1492,6 +1564,20 @@
 
     const runBtn = document.getElementById('btn-run-analysis');
     if (runBtn) runBtn.addEventListener('click', () => runAnalysis(runBtn));
+
+    // Readiness checklist — answering a question saves the attribute + re-analyses.
+    const rqDisc = document.querySelector('.rq-disclosure');
+    if (rqDisc) rqDisc.addEventListener('toggle', () => { readinessOpen = rqDisc.open; });
+    document.querySelectorAll('[data-rq-answer]').forEach(el => {
+      const isSelect = el.tagName === 'SELECT';
+      el.addEventListener(isSelect ? 'change' : 'click', () => {
+        const value = isSelect ? el.value : el.dataset.value;
+        if (!value) return;
+        readinessOpen = true;
+        el.closest('.rq-card')?.classList.add('rq-busy');
+        answerReadiness(el.dataset.scope, el.dataset.target, el.dataset.attr, value);
+      });
+    });
 
     const delBtn = document.getElementById('btn-delete-tm');
     if (delBtn) delBtn.addEventListener('click', () => {
