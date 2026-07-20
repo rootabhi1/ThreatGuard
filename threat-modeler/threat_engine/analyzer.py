@@ -656,6 +656,29 @@ def _component_evidence(rule: dict, component: dict, ctx: dict) -> str:
     return "evidenced" if check(component.get("id"), component.get("type", ""), ctx) else "baseline"
 
 
+# Human-readable phrasing for each evidence signal — the "why this fired" trace
+# surfaced on every threat so nothing looks arbitrary and false positives are visible.
+_EVIDENCE_TEXT = {
+    "unencrypted_flow": "a data flow touching this element is unencrypted",
+    "exposed":          "this element is reachable from a less-trusted / public zone",
+    "user_reachable":   "this element is reachable from an external user by following flows",
+    "is_store":         "this element is a data store",
+    "handles_sensitive_data": "this element is tagged as handling sensitive data",
+    "handles_pii":      "this element is tagged as handling PII",
+    "handles_phi":      "this element is tagged as handling PHI",
+    "handles_pci":      "this element is tagged as handling cardholder data",
+}
+
+
+def _catalog_evidence(rule: dict, component: dict, tier: str) -> str:
+    """The 'why this fired' trace for a catalog (type-template) threat."""
+    if tier == "evidenced":
+        phrase = _EVIDENCE_TEXT.get(rule.get("evidence"))
+        return ("Evidenced: " + phrase + ".") if phrase else "Evidenced by the model."
+    return (f"Baseline check for a '{component.get('type', '')}' element — the model "
+            "shows no specific evidence this applies here; kept for completeness, not dropped.")
+
+
 # ---------------------------------------------------------------------------
 # Attribute-driven threats — Microsoft Threat Modeling Tool style. Each element
 # can declare security properties (answered yes/no/unknown, or a level) in the
@@ -745,6 +768,10 @@ def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> 
             "mitigations": mitigations,
             "source": "rule-based",
             "tier": "evidenced",
+            # Attribute rules fire only on an explicitly-answered security property,
+            # so the answer itself is the evidence — this is never a generic template.
+            "evidence": "Evidenced: triggered by a security property you answered on "
+                        f"'{comp['name']}'" + (" for this flow" if flow else "") + ".",
             "dread": _score_dread({"severity": severity}, comp, flow),
         })
 
@@ -940,24 +967,37 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
     for category_name, category in methodology["categories"].items():
         applies = category["applies_to"]
         for component in components:
-            if "*" in applies or component["type"] in applies:
-                for rule in category["threats"]:
-                    threats.append({
-                        "id": f"t_{uuid.uuid4().hex[:8]}",
-                        "methodology": methodology["name"],
-                        "category": category_name,
-                        "title": rule["title"],
-                        "description": rule["description"],
-                        "severity": rule["severity"],
-                        "component_id": component["id"],
-                        "component_name": component["name"],
-                        "component_type": component["type"],
-                        "flow_id": None,
-                        "mitigations": rule["mitigations"],
-                        "source": "rule-based",
-                        "tier": _component_evidence(rule, component, ev_ctx),
-                        "dread": _score_dread(rule, component, None),
-                    })
+            ctype = component["type"]
+            category_applies = "*" in applies or ctype in applies
+            for rule in category["threats"]:
+                # A rule may declare its own component scope, which is authoritative:
+                # it both *narrows* (container escape won't land on a database) and
+                # *widens* (it fires on a container even though the category's list
+                # doesn't include one). Rules without their own scope use the category.
+                rule_types = rule.get("applies_to")
+                if rule_types is not None:
+                    if ctype not in rule_types:
+                        continue
+                elif not category_applies:
+                    continue
+                _tier = _component_evidence(rule, component, ev_ctx)
+                threats.append({
+                    "id": f"t_{uuid.uuid4().hex[:8]}",
+                    "methodology": methodology["name"],
+                    "category": category_name,
+                    "title": rule["title"],
+                    "description": rule["description"],
+                    "severity": rule["severity"],
+                    "component_id": component["id"],
+                    "component_name": component["name"],
+                    "component_type": component["type"],
+                    "flow_id": None,
+                    "mitigations": rule["mitigations"],
+                    "source": "rule-based",
+                    "tier": _tier,
+                    "evidence": _catalog_evidence(rule, component, _tier),
+                    "dread": _score_dread(rule, component, None),
+                })
 
     # Flow-level enrichment: unencrypted flows attract Tampering / Info-Disclosure
     for flow in flows:
@@ -980,6 +1020,8 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "mitigations": ["Enable TLS on this flow", "If internal, enforce mTLS", "Verify cert pinning where relevant"],
                 "source": "rule-based",
                 "tier": "evidenced",
+                "evidence": f"Evidenced: flow {src['name']} → {dst['name']} declares "
+                            f"encrypted=no (protocol {_protocol_display(flow) or 'unspecified'}).",
                 "dread": _score_dread({"severity": "High"}, dst, flow),
             })
 
@@ -1002,6 +1044,8 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "mitigations": ["Add token / mTLS auth on this flow", "Validate caller identity at the receiver"],
                 "source": "rule-based",
                 "tier": "evidenced",
+                "evidence": f"Evidenced: flow {src['name']} → {dst['name']} declares "
+                            f"auth={_auth_display(flow) or 'none'} — no strong caller authentication.",
                 "dread": _score_dread({"severity": "High"}, dst, flow),
             })
 
@@ -1099,6 +1143,8 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "mitigations": tmpl["mitigations"],
                 "source": "rule-based",
                 "tier": "evidenced",
+                "evidence": f"Evidenced: flow {src['name']} → {dst['name']} crosses the trust "
+                            f"boundary '{src_zone}' → '{dst_zone}'.",
                 "cross_boundary": True,
                 "src_zone": src_zone,
                 "dst_zone": dst_zone,
@@ -1200,6 +1246,8 @@ Respond with ONLY valid JSON — no prose, no markdown fences. Schema:
             "mitigations": t.get("mitigations", []),
             "source": "llm-enhanced",
             "tier": "evidenced",
+            "evidence": "Suggested by the configured LLM from this system's specific "
+                        "context (not a rule-engine template).",
             "dread": _score_dread({"severity": t.get("severity", "Medium")}, comp, None),
         })
     return out, None
@@ -1208,6 +1256,103 @@ Respond with ONLY valid JSON — no prose, no markdown fences. Schema:
 # ---------------------------------------------------------------------------
 # Public entrypoint
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Precision: suppress catalog threats an answered control positively negates.
+# ---------------------------------------------------------------------------
+# Each entry: (attribute answered "yes", [title fragments it contradicts], reason).
+# Applies ONLY to generic type-template catalog threats — attribute-driven threats
+# fire on a "no" answer (so they can't collide with a "yes" here) and evidenced
+# flow / boundary threats are excluded outright. Suppressed threats are DISCLOSED
+# with a reason, never dropped silently.
+_CONTROL_SUPPRESSIONS = [
+    ("enforces_authorization", ["broken access control", "missing authz",
+     "insecure direct object", "idor", "mass assignment"], "enforces authorization"),
+    ("validates_input", ["injection", "unbounded input"], "validates input"),
+    ("encrypted_at_rest", ["at rest"], "is encrypted at rest"),
+    ("logs_security_events", ["audit logging"], "logs security events"),
+    ("secure_error_handling", ["verbose error", "stack trace"], "uses safe error handling"),
+    ("rate_limited", ["ddos", "algorithmic complexity", "unbounded input"], "is rate limited"),
+    ("mfa", ["credential stuffing"], "enforces multi-factor authentication"),
+]
+
+
+def _apply_control_suppressions(threats: list[dict], comp_by_id: dict) -> tuple[list[dict], list[dict]]:
+    """Partition threats into (kept, suppressed).
+
+    A generic catalog threat is suppressed when the element it names has explicitly
+    answered a security control that negates it — the positive answer is evidence
+    the generic risk is already handled. Nothing vanishes silently: each suppressed
+    row carries `suppressed=True` + a reason and is returned for disclosure.
+    """
+    kept: list[dict] = []
+    suppressed: list[dict] = []
+    for t in threats:
+        # Only generic catalog component threats are candidates (no flow, not a
+        # boundary crossing, rule-engine origin).
+        if t.get("flow_id") or t.get("cross_boundary") or t.get("source") != "rule-based":
+            kept.append(t)
+            continue
+        comp = comp_by_id.get(t.get("component_id")) or {}
+        title = (t.get("title") or "").lower()
+        reason = None
+        for attr, frags, why in _CONTROL_SUPPRESSIONS:
+            if _yn_yes(comp, attr) and any(fr in title for fr in frags):
+                reason = f"{comp.get('name', 'This element')} {why} (you answered {attr}=yes)"
+                break
+        if reason:
+            kept_out = suppressed
+            t = {**t, "suppressed": True, "suppression_reason": reason}
+        else:
+            kept_out = kept
+        kept_out.append(t)
+    return kept, suppressed
+
+
+# ---------------------------------------------------------------------------
+# Severity calibration: nudge the displayed severity by at most one level to
+# reflect real exposure, so an internet-facing unauthenticated / sensitive path
+# outranks an internal encrypted call that shared the same static label. Bounded
+# to ±1 and always records the original label + rationale — auditable, not silent.
+# ---------------------------------------------------------------------------
+_SEV_ORDER = ["Info", "Low", "Medium", "High", "Critical"]
+
+
+def _sev_bump(sev: str, delta: int) -> str:
+    i = _SEV_ORDER.index(sev) if sev in _SEV_ORDER else 2
+    return _SEV_ORDER[max(0, min(len(_SEV_ORDER) - 1, i + delta))]
+
+
+def _calibrate_severity(threat: dict, component: dict, flow: dict | None,
+                        exposed: set, sensitive_ids: set) -> dict:
+    """Adjust threat['severity'] by at most one level from exposure context."""
+    sev = threat.get("severity", "Medium")
+    cid = threat.get("component_id")
+    is_exposed = cid in exposed
+    is_sensitive = cid in sensitive_ids or component.get("type") in _SENSITIVE_TYPES
+    auths = _flow_auths(flow) if flow else []
+    unauth = bool(flow) and not any(a not in ("", "none", "n/a", "basic", "anonymous") for a in auths)
+    strong = any(a in ("mtls", "mutual-tls", "client-cert") for a in auths)
+    encrypted = (not flow) or flow.get("encrypted", True)
+    cb = bool(threat.get("cross_boundary"))
+
+    delta, why = 0, None
+    if is_exposed and (is_sensitive or unauth) and sev != "Critical":
+        why = ("raised: exposed to a less-trusted zone with "
+               + ("sensitive data" if is_sensitive else "no caller authentication"))
+        delta = 1
+    elif (not is_exposed and not cb and encrypted and (strong or not flow)
+          and threat.get("tier") == "baseline" and not is_sensitive and sev in ("High", "Medium")):
+        why = ("lowered: internal, encrypted"
+               + (", strong-auth" if strong else "")
+               + " path with no model evidence of exposure")
+        delta = -1
+    if delta:
+        threat["severity_original"] = sev
+        threat["severity"] = _sev_bump(sev, delta)
+        threat["severity_rationale"] = why
+    return threat
+
+
 def analyze_system(
     system: dict[str, Any],
     methodology_keys: list[str],
@@ -1264,9 +1409,16 @@ def analyze_system(
             if err and llm_error is None:
                 llm_error = err
 
+    # Precision: cut false positives. When an element explicitly answers a control
+    # that negates a generic catalog threat, that threat is a false positive here —
+    # move it to a disclosed `suppressed_threats` list (with a reason) rather than
+    # letting it inflate the count. Nothing is dropped silently.
+    all_threats, suppressed_threats = _apply_control_suppressions(all_threats, comp_by_id)
+
     # Per-analysis context for DREAD's independent axes: which components are
     # exposed to a less-trusted zone, and each component's blast radius (flow degree).
     exposed_ids, blast_by_id = _dread_context(system)
+    sensitive_ids = _evidence_context(system).get("sensitive_ids", set())
 
     # Enrich each threat with CVSS, CWE, and per-threat detail
     for t in all_threats:
@@ -1283,6 +1435,8 @@ def analyze_system(
             system_name=system.get("name", ""),
             use_llm=use_llm,
         )
+        # Calibrate the displayed severity to real exposure (bounded ±1, audited).
+        _calibrate_severity(t, component or {}, flow, exposed_ids, sensitive_ids)
 
     # Summary stats
     summary = {
@@ -1294,13 +1448,34 @@ def analyze_system(
         "by_tier": {"evidenced": 0, "baseline": 0},
         "rule_based": 0,
         "llm_enhanced": 0,
+        # Threats a positively-answered control negated — cut from the active count
+        # but disclosed (never dropped silently). See `suppressed_threats`.
+        "suppressed": len(suppressed_threats),
+        # How many active threats had their severity nudged by exposure calibration.
+        "recalibrated": 0,
+        # Grounded findings (proven by the model) vs generic "standard checks" (baseline
+        # type-templates the model neither confirms nor rules out). The headline count a
+        # user sees is `findings`; standard checks are shown separately, not counted as
+        # findings, so generic items no longer read as false positives.
+        "findings": 0,
+        "standard_checks": 0,
+        # Severity breakdown of grounded findings only (drives the headline stats).
+        "findings_by_severity": {s: 0 for s in ["Critical", "High", "Medium", "Low", "Info"]},
     }
     for t in all_threats:
         summary["by_severity"][t["severity"]] = summary["by_severity"].get(t["severity"], 0) + 1
+        if t.get("tier") == "evidenced":
+            summary["findings"] += 1
+            summary["findings_by_severity"][t["severity"]] = \
+                summary["findings_by_severity"].get(t["severity"], 0) + 1
+        else:
+            summary["standard_checks"] += 1
         summary["by_category"][t["category"]] = summary["by_category"].get(t["category"], 0) + 1
         summary["by_component"][t["component_name"]] = summary["by_component"].get(t["component_name"], 0) + 1
         summary["by_methodology"][t["methodology"]] = summary["by_methodology"].get(t["methodology"], 0) + 1
         summary["by_tier"][t.get("tier", "baseline")] = summary["by_tier"].get(t.get("tier", "baseline"), 0) + 1
+        if t.get("severity_original"):
+            summary["recalibrated"] += 1
         if t["source"] == "rule-based":
             summary["rule_based"] += 1
         else:
@@ -1338,6 +1513,10 @@ def analyze_system(
     return {
         "system": system,
         "threats": all_threats,
+        # Generic catalog threats an answered control positively negated. Disclosed
+        # here (with a reason each) so suppression is visible and auditable, never
+        # a silent drop.
+        "suppressed_threats": suppressed_threats,
         "summary": summary,
         "dataflow_summary": build_dataflow_summary(system, all_threats, summary, _untrusted),
         "untrusted_crossings": _untrusted,

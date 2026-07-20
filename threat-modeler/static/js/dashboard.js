@@ -45,9 +45,12 @@
       );
       for (const tm of results) {
         if (!tm || !tm.analysis) continue;
-        threats += tm.analysis.summary.total || 0;
+        const sm = tm.analysis.summary || {};
+        // Headline counts reflect grounded findings, not generic standard checks.
+        threats += (sm.findings != null ? sm.findings : (sm.total || 0));
         const statuses = tm.threat_statuses || {};
         for (const t of tm.analysis.threats || []) {
+          if ((t.tier || 'baseline') !== 'evidenced') continue;  // findings only
           const s = (statuses[t.id] && statuses[t.id].status) || 'open';
           if (s === 'open') open++;
           else if (s === 'mitigated') mitigated++;
@@ -640,7 +643,7 @@
       const analysis = await analyzeResp.json();
 
       UI.hideModal('modal-new-tm');
-      UI.toast(`Created "${tm.name}" — ${analysis.summary.total} threats identified`, 'success');
+      UI.toast(`Created "${tm.name}" — ${analysis.summary.findings != null ? analysis.summary.findings : analysis.summary.total} findings identified`, 'success');
       // If AI enhancement was requested, tell the truth about what it did
       // instead of leaving the user to discover "LLM: No" in the report later.
       const st = analysis.llm_status;
@@ -916,13 +919,22 @@
       return;
     }
 
-    const sev = analysis.summary.by_severity || {};
     const total = analysis.summary.total || 0;
+    // Grounded findings (proven by the model) drive the headline numbers; generic
+    // "standard checks" (baseline) are shown separately so they don't read as false
+    // positives. Fall back to the old all-tiers counts for pre-split stored analyses.
+    const sev = analysis.summary.findings_by_severity || analysis.summary.by_severity || {};
+    const findings = analysis.summary.findings != null ? analysis.summary.findings : total;
+    const stdChecks = analysis.summary.standard_checks || 0;
 
     const body = `
       <p class="text-sm text-dim mb-6">${esc(tm.description || 'No description')}</p>
 
-      <!-- Severity breakdown -->
+      <!-- Severity breakdown (grounded findings) -->
+      <div class="flex items-baseline gap-3 mb-2" style="flex-wrap:wrap;">
+        <span class="text-xs font-semibold" style="text-transform:uppercase;letter-spacing:.06em;color:var(--c-text-light);">Findings — proven by your model</span>
+        ${stdChecks ? `<span class="text-xs text-light">·&nbsp; ${stdChecks} standard check${stdChecks>1?'s':''} to review (not counted)</span>` : ''}
+      </div>
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         <div class="card p-4 flex items-center justify-center" style="background: linear-gradient(135deg, #fafbff, #eef2ff);">
           <svg id="detail-ring"></svg>
@@ -943,7 +955,7 @@
 
       <!-- Tabs -->
       <div class="tabs">
-        <button data-tab="threats" class="tab active">Threats <span class="tab-badge">${total}</span></button>
+        <button data-tab="threats" class="tab active">Threats <span class="tab-badge">${findings}</span></button>
         <button data-tab="analysis" class="tab">Analysis</button>
         <button data-tab="dfd" class="tab">Data Flow Diagram</button>
         <button data-tab="system" class="tab">System Components</button>
@@ -1046,7 +1058,7 @@
     document.getElementById('detail-body').innerHTML = body;
 
     const ring = document.getElementById('detail-ring');
-    if (ring) UI.renderRingChart(ring, sev, total, { size: 160 });
+    if (ring) UI.renderRingChart(ring, sev, findings, { size: 160 });
 
     renderThreats();
     wireDetailActions();
@@ -1107,9 +1119,21 @@
           }).join('')}
         </div></div>`;
     };
-    list.innerHTML = `
-      <div class="text-xs text-light mb-2">Showing ${threats.length} of ${total} threats</div>
-      ${threats.slice(0, 100).map((t, i) => {
+    // Disclosed (not dropped): generic threats a positively-answered control negated.
+    const suppressed = currentTM.analysis.suppressed_threats || [];
+    const suppressedBanner = suppressed.length ? `
+      <details class="card" style="padding:.6rem .85rem;margin-bottom:.6rem;background:#f8fafc;">
+        <summary style="cursor:pointer;font-size:.8rem;font-weight:600;color:#475569;">
+          ${suppressed.length} generic threat${suppressed.length>1?'s':''} suppressed by controls you answered — click to review
+        </summary>
+        <div style="margin-top:.5rem;display:flex;flex-direction:column;gap:.35rem;">
+          ${suppressed.map(t => `<div class="text-xs" style="color:#64748b;">
+            <span style="text-decoration:line-through;">${esc(t.title)}</span>
+            <span style="color:#94a3b8;"> — ${esc(t.suppression_reason || '')}</span></div>`).join('')}
+        </div>
+      </details>` : '';
+
+    const cardHTML = (t, i) => {
         const status = (statuses[t.id] && statuses[t.id].status) || 'open';
         const cwe = t.cwe || {};
         const cvss31 = t.cvss31 || {};
@@ -1126,6 +1150,8 @@
                 <div class="threat-meta">
                   <span class="threat-meta-tag">${esc(t.methodology || '')}</span>
                   <span>${esc(t.category || '')}</span>
+                  ${t.tier === 'evidenced' ? `<span class="threat-meta-tag" title="The model proves this threat's precondition" style="background:#ecfdf5;color:#047857;">finding</span>` : (t.tier === 'baseline' ? `<span class="threat-meta-tag" title="Generic type-template — no model evidence proves it applies here; not counted as a finding" style="background:#f1f5f9;color:#64748b;">standard check</span>` : '')}
+                  ${t.severity_original ? `<span class="threat-meta-tag" title="${esc(t.severity_rationale || '')}" style="background:#fef3c7;color:#92400e;">${esc(t.severity_original)}→${esc(t.severity)}</span>` : ''}
                   ${cwe.id ? `<span class="threat-meta-tag threat-meta-tag-cwe">${esc(cwe.id)}</span>` : ''}
                   ${owasp ? `<span class="threat-meta-tag threat-meta-tag-owasp">${esc(owasp.label)}</span>` : ''}
                   ${cvss31.score !== undefined ? `<span class="threat-meta-tag threat-meta-tag-cvss">CVSS ${cvss31.score}</span>` : ''}
@@ -1156,6 +1182,13 @@
                   <p class="text-sm">${esc(t.location || '—')}</p>
                 </div>
               </div>
+
+              ${t.evidence ? `
+                <div class="detail-section" style="border-left:3px solid var(--c-border);padding-left:.75rem;">
+                  <div class="detail-section-title">Why this fired</div>
+                  <p class="text-sm text-dim">${esc(t.evidence)}${t.severity_original ? ` <span style="color:#92400e;">· severity ${esc(t.severity_rationale || '')}</span>` : ''}</p>
+                </div>
+              ` : ''}
 
               ${t.attack_scenario && t.attack_scenario.length > 0 ? `
                 <div class="detail-section">
@@ -1238,8 +1271,30 @@
             </div>
           </div>
         `;
-      }).join('')}
-      ${threats.length > 100 ? `<p class="text-xs text-center text-light mt-3">Showing first 100 of ${threats.length}. Download a report for the full list.</p>` : ''}
+    };
+
+    // Split grounded findings (proven by the model) from generic "standard checks"
+    // (baseline type-templates). Findings lead; standard checks live in a collapsed,
+    // muted section and are NOT counted as findings — so generic items stop reading
+    // as false positives. Nothing is dropped: every check is one click away.
+    const findings = threats.filter(t => (t.tier || 'baseline') === 'evidenced');
+    const checks = threats.filter(t => (t.tier || 'baseline') !== 'evidenced');
+    const checksSection = checks.length ? `
+      <details class="card" style="padding:.6rem .85rem;margin-top:.85rem;background:#f8fafc;">
+        <summary style="cursor:pointer;font-size:.82rem;font-weight:600;color:#475569;">
+          ${checks.length} standard check${checks.length>1?'s':''} — generic risks for these component types your model doesn't yet confirm or rule out <span style="font-weight:400;color:#94a3b8;">(not counted as findings)</span>
+        </summary>
+        <div style="margin-top:.6rem;opacity:.9;">${checks.slice(0, 100).map(cardHTML).join('')}</div>
+        ${checks.length > 100 ? `<p class="text-xs text-center text-light mt-2">Showing first 100 of ${checks.length} standard checks.</p>` : ''}
+      </details>` : '';
+
+    list.innerHTML = `
+      <div class="text-xs text-light mb-2">${findings.length} finding${findings.length!==1?'s':''}${checks.length?` · ${checks.length} standard check${checks.length>1?'s':''}`:''}${suppressed.length ? ` · ${suppressed.length} suppressed` : ''}</div>
+      ${suppressedBanner}
+      ${findings.slice(0, 100).map(cardHTML).join('')}
+      ${findings.length === 0 ? `<div class="card text-sm text-light" style="padding:1rem;">No grounded findings for this filter — your model didn't prove any threats here. Review the standard checks below, or answer more security properties on components to sharpen the model.</div>` : ''}
+      ${findings.length > 100 ? `<p class="text-xs text-center text-light mt-3">Showing first 100 of ${findings.length} findings. Download a report for the full list.</p>` : ''}
+      ${checksSection}
     `;
 
     list.querySelectorAll('.threat-header').forEach(h => {
@@ -1508,7 +1563,18 @@
     const sourceText = (currentTM.system && currentTM.system._source_text) || currentTM.description || '';
     const canEdit = (currentTM.owner_id === me.user.id || me.user.role === 'admin');
 
-    dfdEditor = window.DfdEditor.mount(container, currentTM.system || {}, {
+    // When the saved model defines no trust boundaries, analysis infers them (and the
+    // cross-boundary threats are based on those inferred zones). Seed the editor with
+    // the same inferred boundaries so the diagram matches the threats instead of
+    // showing a flat, zone-less system that contradicts the findings.
+    const baseSys = currentTM.system || {};
+    let sysForDfd = baseSys;
+    if (!((baseSys.trust_boundaries || []).length)) {
+      const inferred = ((currentTM.analysis && currentTM.analysis.system) || {}).trust_boundaries || [];
+      if (inferred.length) sysForDfd = { ...baseSys, trust_boundaries: inferred };
+    }
+
+    dfdEditor = window.DfdEditor.mount(container, sysForDfd, {
       readOnly: !canEdit,
       sourceText: sourceText,
       onChange: () => {

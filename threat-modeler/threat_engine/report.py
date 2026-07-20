@@ -146,16 +146,20 @@ def to_markdown(analysis: dict) -> str:
     # Summary
     lines.append("## Executive Summary")
     lines.append("")
-    lines.append(f"- **Total threats identified:** {summary['total']}")
+    _findings = summary.get("findings", summary["by_tier"]["evidenced"])
+    _checks = summary.get("standard_checks", summary["by_tier"]["baseline"])
+    _fsev = summary.get("findings_by_severity", summary["by_severity"])
+    lines.append(f"- **Findings (proven by your model):** {_findings}")
+    lines.append(f"- **Standard checks (generic, not counted):** {_checks}")
     lines.append(f"- **Rule-based:** {summary['rule_based']}  |  **LLM-enhanced:** {summary['llm_enhanced']}")
     lines.append(f"- **Cross-boundary threats:** {sum(1 for t in threats if t.get('cross_boundary'))}")
     lines.append("")
-    lines.append("### Threats by severity")
+    lines.append("### Findings by severity")
     lines.append("")
     lines.append("| Severity | Count |")
     lines.append("|---|---|")
     for sev in ["Critical", "High", "Medium", "Low", "Info"]:
-        lines.append(f"| {sev} | {summary['by_severity'].get(sev, 0)} |")
+        lines.append(f"| {sev} | {_fsev.get(sev, 0)} |")
     lines.append("")
 
     # Framework coverage (OWASP Web/API/Mobile/LLM/Agentic).
@@ -314,7 +318,12 @@ def to_markdown(analysis: dict) -> str:
                 lines.append(f"- **CVSS 4.0:** **{c40.get('score')}** ({c40.get('severity')}) — `{c40.get('vector')}`")
             if t.get("cross_boundary"):
                 lines.append(f"- **Boundary crossing:** {t.get('src_zone','?')} → {t.get('dst_zone','?')}")
-            lines.append(f"- **Source:** {t['source']}")
+            lines.append(f"- **Source:** {t['source']} · _{t.get('tier','baseline')}_")
+            if t.get("evidence"):
+                lines.append(f"- **Why this fired:** {t['evidence']}")
+            if t.get("severity_original"):
+                lines.append(f"- **Severity calibration:** {t['severity_original']} → {t['severity']} "
+                             f"({t.get('severity_rationale','')})")
             d = t.get("dread", {})
             if d:
                 lines.append(
@@ -351,6 +360,19 @@ def to_markdown(analysis: dict) -> str:
                 refs = " · ".join(f"[{r['label']}]({r['url']})" for r in t["references"])
                 lines.append(f"**🔗 References:** {refs}")
                 lines.append("")
+
+    # Suppressed threats — disclosed, not dropped: generic checks a positively-answered
+    # control negated. Kept out of the count above but shown here for transparency.
+    suppressed = analysis.get("suppressed_threats") or []
+    if suppressed:
+        lines.append(f"## Suppressed by answered controls ({len(suppressed)})")
+        lines.append("")
+        lines.append("These generic checks were negated by a security control you answered, "
+                     "so they are excluded from the active count above (shown for transparency, not dropped):")
+        lines.append("")
+        for t in suppressed:
+            lines.append(f"- ~~{t.get('title','')}~~ — {t.get('suppression_reason','')}")
+        lines.append("")
 
     return "\n".join(lines)
 
@@ -530,13 +552,18 @@ def to_pdf(analysis: dict) -> bytes:
     # Summary table
     story.append(Paragraph("Executive Summary", h2))
     cb_count = sum(1 for t in threats if t.get("cross_boundary"))
+    _findings = summary.get("findings", summary["by_tier"]["evidenced"])
+    _checks = summary.get("standard_checks", summary["by_tier"]["baseline"])
+    _fsev = summary.get("findings_by_severity", summary["by_severity"])
     story.append(Paragraph(
-        f"Total threats: <b>{summary['total']}</b> &nbsp; "
+        f"Findings (proven by your model): <b>{_findings}</b> &nbsp; "
         f"(rule-based: {summary['rule_based']}, LLM: {summary['llm_enhanced']}, "
-        f"cross-boundary: {cb_count})", body))
-    sev_data = [["Severity", "Count"]]
+        f"cross-boundary: {cb_count}). "
+        f"A further <b>{_checks}</b> standard checks — generic risks not confirmed by the "
+        f"model — are listed but not counted as findings.", body))
+    sev_data = [["Severity", "Findings"]]
     for sev in ["Critical", "High", "Medium", "Low", "Info"]:
-        sev_data.append([sev, str(summary["by_severity"].get(sev, 0))])
+        sev_data.append([sev, str(_fsev.get(sev, 0))])
     t = Table(sev_data, colWidths=[1.5 * inch, 1.0 * inch])
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
