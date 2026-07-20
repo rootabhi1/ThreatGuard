@@ -186,6 +186,11 @@ STRIDE = {
                     # Infrastructure/runtime concern — a data-flow model can't evidence it,
                     # so it stays a baseline check rather than a false 'evidenced'.
                     "evidence": "none",
+                    # Only meaningful for components that actually run as a container /
+                    # process/sandbox. Without this, it wrongly attaches to a plain
+                    # database or webapp that has no runtime to escape from.
+                    "applies_to": ["container", "kubernetes", "serverless", "service",
+                                   "worker", "service_mesh"],
                     "mitigations": ["Run as non-root", "Drop Linux capabilities", "Apply seccomp / AppArmor profiles"],
                 },
             ],

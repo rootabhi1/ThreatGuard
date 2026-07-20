@@ -191,6 +191,13 @@ def to_html(analysis: dict) -> str:
 
     cb_count = sum(1 for t in threats if t.get("cross_boundary"))
 
+    # Grounded findings drive the headline; generic "standard checks" (baseline) are
+    # shown separately and not counted. Fall back to all-tier counts for pre-split
+    # stored analyses so old reports still render.
+    _findings = summary.get("findings", summary.get("by_tier", {}).get("evidenced", summary["total"]))
+    _standard_checks = summary.get("standard_checks", summary.get("by_tier", {}).get("baseline", 0))
+    _fsev = summary.get("findings_by_severity", summary["by_severity"])
+
     # Pre-render threat data as JS (for filtering interactivity).
     # Escape <, >, & and JS line separators so attacker-controlled strings
     # (e.g. a component literally named "</script>...") cannot break out of the
@@ -547,30 +554,31 @@ def to_html(analysis: dict) -> str:
 
   <section class="card">
     <h2>Severity Overview</h2>
+    <p style="font-size:0.82rem;color:#64748b;margin:-4px 0 10px">Counts below are <strong>findings</strong> — threats proven by your model. Generic “standard checks” are listed lower down and not counted here.</p>
     <div class="sev-grid">
       <div class="sev-card sev-crit"  data-sev="Critical" onclick="filterBySev('Critical', this)">
-        <div class="count">{summary['by_severity'].get('Critical', 0)}</div>
+        <div class="count">{_fsev.get('Critical', 0)}</div>
         <div class="label">Critical</div>
       </div>
       <div class="sev-card sev-high"  data-sev="High" onclick="filterBySev('High', this)">
-        <div class="count">{summary['by_severity'].get('High', 0)}</div>
+        <div class="count">{_fsev.get('High', 0)}</div>
         <div class="label">High</div>
       </div>
       <div class="sev-card sev-med"   data-sev="Medium" onclick="filterBySev('Medium', this)">
-        <div class="count">{summary['by_severity'].get('Medium', 0)}</div>
+        <div class="count">{_fsev.get('Medium', 0)}</div>
         <div class="label">Medium</div>
       </div>
       <div class="sev-card sev-low"   data-sev="Low" onclick="filterBySev('Low', this)">
-        <div class="count">{summary['by_severity'].get('Low', 0)}</div>
+        <div class="count">{_fsev.get('Low', 0)}</div>
         <div class="label">Low</div>
       </div>
       <div class="sev-card sev-info"  data-sev="Info" onclick="filterBySev('Info', this)">
-        <div class="count">{summary['by_severity'].get('Info', 0)}</div>
+        <div class="count">{_fsev.get('Info', 0)}</div>
         <div class="label">Info</div>
       </div>
     </div>
     <div style="font-size:0.9rem;color:#475569">
-      <strong>{summary['total']}</strong> total threats — {summary['rule_based']} rule-based, {summary['llm_enhanced']} LLM-enhanced, <strong style="color:#b91c1c">{cb_count}</strong> cross-boundary.
+      <strong>{_findings}</strong> findings — {summary['rule_based']} rule-based, {summary['llm_enhanced']} LLM-enhanced, <strong style="color:#b91c1c">{cb_count}</strong> cross-boundary &nbsp;·&nbsp; <strong>{_standard_checks}</strong> standard checks (not counted).
     </div>
   </section>
 
@@ -604,9 +612,11 @@ def to_html(analysis: dict) -> str:
     {_render_boundaries_section(boundaries, components, flows, threats, comp_to_b, comp_by_id)}
   </section>
 
+  {_render_framework_coverage(threats, _esc)}
+
   <section class="card">
-    <h2>Threats ({summary['total']})</h2>
-    <p style="color:#64748b;font-size:0.85rem;margin:-6px 0 10px">Showing <strong>{summary['by_tier']['evidenced']} evidenced</strong> threats (proven by your model). <strong>{summary['by_tier']['baseline']} baseline</strong> type-based checks are hidden — reveal them with the “Baseline checks” toggle.</p>
+    <h2>Findings ({summary['by_tier']['evidenced']})</h2>
+    <p style="color:#64748b;font-size:0.85rem;margin:-6px 0 10px">These <strong>{summary['by_tier']['evidenced']} findings</strong> are proven by your model. A further <strong>{summary['by_tier']['baseline']} standard checks</strong> — generic risks for these component types your model doesn’t yet confirm or rule out — are not counted as findings and stay hidden until you flip the “Standard checks” toggle.</p>
     <input type="text" id="search" class="search-box" placeholder="Search threats by title, component, category, CWE, or CVSS vector…" oninput="applyFilters()"/>
     <div class="filter-bar">
       <label>Methodology:</label>
@@ -614,7 +624,7 @@ def to_html(analysis: dict) -> str:
       {meth_chips}
       <label style="margin-left:16px">Cross-boundary only:</label>
       <span class="chip cb" id="cb-toggle" onclick="toggleCb(this)">Off</span>
-      <label style="margin-left:16px" title="Baseline = generic type-based checks not evidenced by your model">Baseline checks:</label>
+      <label style="margin-left:16px" title="Standard checks = generic type-based risks your model doesn't confirm or rule out — not counted as findings">Standard checks:</label>
       <span class="chip" id="tier-toggle" onclick="toggleTier(this)">Hidden ({summary['by_tier']['baseline']})</span>
       <span style="flex-grow:1"></span>
       <button class="btn" onclick="resetFilters()">Reset filters</button>
@@ -624,6 +634,7 @@ def to_html(analysis: dict) -> str:
     <div id="threat-list">
       {''.join(_render_threat_card(t, i) for i, t in enumerate(threats))}
     </div>
+    {_render_suppressed(analysis.get("suppressed_threats"), _esc)}
   </section>
 
   <footer style="text-align:center;color:#94a3b8;font-size:0.85rem;margin-top:20px;padding:20px">
@@ -827,6 +838,8 @@ def _render_threat_card(t: dict, idx: int) -> str:
         <span style="color:#94a3b8">·</span>
         <span><strong>{_esc(t.get("component_name",""))}</strong> ({_esc(t.get("component_type",""))})</span>
         {f'<span class="badge badge-cwe" title="{_esc(cwe.get("name",""))}">{_esc(cwe.get("id",""))}</span>' if cwe else ''}
+        {'<span class="badge" style="background:#ecfdf5;color:#047857" title="The model proves this precondition">finding</span>' if t.get("tier") == "evidenced" else ('<span class="badge" style="background:#f1f5f9;color:#64748b" title="Generic type-template — no model evidence proves it here; not counted as a finding">standard check</span>' if t.get("tier") == "baseline" else '')}
+        {f'<span class="badge" style="background:#fef3c7;color:#92400e" title="{_esc(t.get("severity_rationale",""))}">{_esc(t.get("severity_original",""))}→{sev}</span>' if t.get("severity_original") else ''}
         {cb_badge}
         {src_label}
       </div>
@@ -863,6 +876,10 @@ def _render_threat_card(t: dict, idx: int) -> str:
       <h4><span class="icon">📝</span>Description</h4>
       <p>{_esc(t.get("description",""))}</p>
     </div>
+    {f'''<div class="detail-section">
+      <h4><span class="icon">🔎</span>Why this fired</h4>
+      <p style="color:#475569">{_esc(t.get("evidence",""))}{f' · severity {_esc(t.get("severity_rationale",""))}' if t.get("severity_original") else ''}</p>
+    </div>''' if t.get("evidence") else ''}
     <div class="detail-section">
       <h4><span class="icon">⚔️</span>Attack scenario</h4>
       <ol>{scenario_items}</ol>
@@ -871,10 +888,76 @@ def _render_threat_card(t: dict, idx: int) -> str:
       <h4><span class="icon">🛡</span>How to mitigate</h4>
       <div class="mitigations-list">{mitigations_html}</div>
     </div>
+    {_render_framework_badges(t.get("frameworks"))}
     {f'<div class="detail-section references"><h4><span class="icon">🔗</span>References</h4>{refs_html}</div>' if refs_html else ''}
   </div>
 </div>
 """
+
+
+_FW_COLORS = {
+    "WEB": ("#f1f5f9", "#334155"), "API": ("#ecfeff", "#0e7490"),
+    "MOBILE": ("#ecfdf5", "#047857"), "LLM": ("#f5f3ff", "#6d28d9"),
+    "AGENTIC": ("#fdf4ff", "#a21caf"),
+}
+
+
+def _render_suppressed(suppressed, esc) -> str:
+    """Disclose (never drop) the generic threats a positively-answered control negated."""
+    suppressed = suppressed or []
+    if not suppressed:
+        return ""
+    rows = "".join(
+        f'<div style="padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem">'
+        f'<span style="text-decoration:line-through;color:#94a3b8">{esc(t.get("title",""))}</span>'
+        f'<span style="color:#64748b"> — {esc(t.get("suppression_reason",""))}</span></div>'
+        for t in suppressed
+    )
+    return (
+        f'<details style="margin-top:14px;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;background:#f8fafc">'
+        f'<summary style="cursor:pointer;font-weight:600;color:#475569">'
+        f'{len(suppressed)} generic threat{"s" if len(suppressed) != 1 else ""} suppressed by controls you answered '
+        f'<span style="font-weight:400;color:#94a3b8">— shown for transparency, not counted</span></summary>'
+        f'<div style="margin-top:8px">{rows}</div></details>'
+    )
+
+
+def _render_framework_badges(frameworks) -> str:
+    if not frameworks:
+        return ""
+    chips = ""
+    for fr in frameworks:
+        bg, fg = _FW_COLORS.get(fr.get("framework"), _FW_COLORS["WEB"])
+        chips += (f'<a href="{_esc(fr.get("url","#"))}" target="_blank" rel="noopener" '
+                  f'style="display:inline-block;font-size:0.72rem;font-weight:600;padding:2px 9px;'
+                  f'border-radius:999px;background:{bg};color:{fg};text-decoration:none;margin:2px 4px 2px 0">'
+                  f'{_esc(fr.get("id",""))}</a>')
+    return (f'<div class="detail-section"><h4><span class="icon">🗺</span>Framework mapping</h4>'
+            f'<div>{chips}</div></div>')
+
+
+def _render_framework_coverage(threats, esc) -> str:
+    """Compact coverage roll-up: how many threats map to each OWASP/agentic framework."""
+    counts: dict[str, int] = {}
+    for t in threats:
+        for fr in t.get("frameworks", []):
+            counts[fr["framework"]] = counts.get(fr["framework"], 0) + 1
+    if not counts:
+        return ""
+    names = {"WEB": "OWASP Web", "API": "OWASP API", "MOBILE": "OWASP Mobile",
+             "LLM": "OWASP LLM", "AGENTIC": "OWASP Agentic"}
+    order = ["WEB", "API", "MOBILE", "LLM", "AGENTIC"]
+    chips = ""
+    for fw in order:
+        if fw not in counts:
+            continue
+        bg, fg = _FW_COLORS[fw]
+        chips += (f'<span style="display:inline-block;font-size:0.85rem;padding:4px 12px;border-radius:999px;'
+                  f'background:{bg};color:{fg};font-weight:600;margin:3px 6px 3px 0">'
+                  f'{esc(names[fw])}: {counts[fw]}</span>')
+    return (f'<section class="card"><h2>Framework coverage</h2>'
+            f'<p style="font-size:0.9rem;color:#475569;margin-bottom:8px">Threats cross-linked to each '
+            f'OWASP / agentic framework (a threat can map to several).</p><div>{chips}</div></section>')
 
 
 def _backticks_to_code(s: str) -> str:

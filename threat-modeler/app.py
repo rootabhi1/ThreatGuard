@@ -570,7 +570,7 @@ async def analyze_threat_model(
     domain.update_threat_model(tid, methodologies=req.methodologies, analysis=result)
     audit(user["id"], user["email"], "threat_model.analyze", "grant",
           "threat_model", tid, ip_address=user.get("_ip"),
-          detail=f"methodologies={req.methodologies} threats={result['summary']['total']}")
+          detail=f"methodologies={req.methodologies} findings={result['summary'].get('findings', result['summary']['total'])} standard_checks={result['summary'].get('standard_checks', 0)}")
     return result
 
 
@@ -682,11 +682,16 @@ def _risk_register_csv(threats: list, system_name: str = "System") -> bytes:
     import csv as _csv
     import io as _io
     buf = _io.StringIO(); writer = _csv.writer(buf)
-    writer.writerow(["ID", "Title", "Severity", "Methodology", "Component", "Category", "CVSS3.1",
+    # "Tier" distinguishes grounded findings from generic "standard checks" so the
+    # register carries every row but the reader can filter/sort by which are proven.
+    writer.writerow(["ID", "Title", "Tier", "Severity", "Methodology", "Component", "Category", "CVSS3.1",
                      "Cross-boundary", "ATT&CK ID", "ATT&CK Tactic", "SOC2", "ISO27001", "PCI-DSS", "Description"])
-    for i, t in enumerate(threats):
+    # Findings first, then standard checks — a natural risk-register ordering.
+    ordered = sorted(threats, key=lambda t: 0 if t.get("tier", "baseline") == "evidenced" else 1)
+    for i, t in enumerate(ordered):
         atk = t.get("attack") or {}; comp = t.get("compliance") or {}
-        writer.writerow([t.get("id", f"T{i+1:03d}"), t.get("title", ""), t.get("severity", ""), (t.get("methodology", "") or "").upper(),
+        tier = "Finding" if t.get("tier", "baseline") == "evidenced" else "Standard check"
+        writer.writerow([t.get("id", f"T{i+1:03d}"), t.get("title", ""), tier, t.get("severity", ""), (t.get("methodology", "") or "").upper(),
                          t.get("component_name", ""), t.get("category", ""), (t.get("cvss31", {}) or {}).get("score", ""),
                          "Yes" if t.get("cross_boundary") else "No", atk.get("id", ""), atk.get("tactic", ""),
                          " ".join(comp.get("soc2", [])), " ".join(comp.get("iso27001", [])), " ".join(comp.get("pci_dss", [])),
@@ -769,6 +774,7 @@ async def management_threats(
                 "title": t.get("title", ""),
                 "severity": t.get("severity", ""),
                 "category": t.get("category", ""),
+                "tier": t.get("tier", "baseline"),
                 "owasp": domain._extract_owasp_label(t.get("references") or []),
                 "cwe": (t.get("cwe") or {}).get("id", ""),
                 "status": st.get("status", "open"),
@@ -935,7 +941,7 @@ async def create_threat_model_from_diagram(
     audit(actor["id"], actor["email"], "threat_model.create_from_diagram", "grant",
           "threat_model", tm["id"], ip_address=actor.get("_ip"),
           detail=f"extraction={system.get('extraction_method')} "
-                 f"threats={result['summary']['total'] if result else 0}")
+                 f"findings={result['summary'].get('findings', result['summary']['total']) if result else 0}")
 
     return {
         "threat_model": domain.get_threat_model(tm["id"]),

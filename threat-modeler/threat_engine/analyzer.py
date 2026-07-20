@@ -25,6 +25,12 @@ import re as _re2
 from typing import Any
 
 from .methodologies import METHODOLOGIES
+from .model_health import (
+    is_weak_auth as _is_weak_auth,
+    auth_display as _auth_display,
+    protocol_display as _protocol_display,
+    flow_auths as _flow_auths,
+)
 
 
 _SEV_RANK = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1, "Info": 0}
@@ -83,6 +89,23 @@ _TYPE_KEYWORDS = {
                         "generative ai", "vertex ai"],
     "vector_db":       ["vector database", "vector db", "pinecone", "weaviate", "qdrant", "milvus",
                         "chroma", "embedding store"],
+    # Agentic AI — autonomous agents, tools, orchestration, memory, and guardrails.
+    "ai_agent":        ["ai agent", "autonomous agent", "llm agent", "agent", "react agent",
+                        "langchain agent", "autogpt", "babyagi", "copilot agent", "assistant agent"],
+    "agent_orchestrator": ["agent orchestrator", "orchestrator", "multi-agent", "multi agent",
+                        "agent supervisor", "crew", "crewai", "langgraph", "autogen", "agent router",
+                        "planner agent", "agent framework"],
+    "llm_tool":        ["llm tool", "agent tool", "tool call", "function call", "function calling",
+                        "tool use", "tool-use", "code interpreter", "plugin"],
+    "mcp_server":      ["mcp server", "mcp", "model context protocol", "tool server"],
+    "agent_memory":    ["agent memory", "conversation memory", "long-term memory", "short-term memory",
+                        "scratchpad", "episodic memory", "memory store"],
+    "retriever":       ["retriever", "rag", "retrieval augmented", "retrieval-augmented",
+                        "retrieval pipeline", "context retrieval", "document retriever"],
+    "guardrail":       ["guardrail", "guardrails", "llm firewall", "prompt firewall", "content filter",
+                        "safety filter", "input sanitizer for llm", "output validator"],
+    "knowledge_base":  ["knowledge base", "knowledgebase", "kb", "document store for rag",
+                        "grounding data", "corpus"],
     # Data
     "database":        ["database", "db", "postgres", "mysql", "mongodb", "dynamodb", "rds", "cassandra",
                         "cockroach", "mariadb", "sqlite", "mssql", "sql server", "oracle", "spanner",
@@ -146,6 +169,68 @@ def _display_name(kw: str) -> str:
     return _DISPLAY_NAME.get(kw.lower(), kw.title())
 
 
+# Data-handling / exposure signals detectable in a free-text description. Each maps
+# a set of phrases to a security attribute the accuracy engine understands, plus the
+# component types it should attach to and a human phrase for the disclosure list.
+# This is what stops a free-text model from being a blank slate of generic "standard
+# checks": if the prose says "public API storing customer PII", the API is tagged
+# internet_facing + handles_pii and produces evidenced findings, not guesses.
+_DATA_PROCESSORS = ("database", "datastore", "object_storage", "data_warehouse",
+                    "cache", "vector_db", "search_service", "api", "webapp", "mobile_app")
+_STORE_ONLY = ("database", "datastore", "object_storage", "data_warehouse", "cache",
+               "filesystem", "secrets_manager", "vector_db")
+_EXPOSED = ("webapp", "api", "api_gateway", "mobile_app", "load_balancer", "cdn")
+_TEXT_SIGNALS: list[tuple[list[str], str, str, tuple, str]] = [
+    (["pii", "personal data", "personal information", "personally identifiable",
+      "customer data", "user data", "gdpr", "ccpa"], "handles_pii", "yes", _DATA_PROCESSORS, "handles PII"),
+    (["payment", "credit card", "debit card", "cardholder", "pci-dss", "pci dss",
+      " pci ", "card number", "card data"], "handles_pci", "yes", _DATA_PROCESSORS, "handles cardholder data"),
+    (["phi", "health record", "medical record", "patient data", "hipaa", "health data"],
+     "handles_phi", "yes", _DATA_PROCESSORS, "handles PHI (health data)"),
+    (["password", "credential", "secret", "api key", "private key", "access token"],
+     "stores_credentials", "yes", _STORE_ONLY, "stores credentials/secrets"),
+    (["public-facing", "internet-facing", "publicly accessible", "exposed to the internet",
+      "public api", "public endpoint", "on the internet"], "internet_facing", "yes", _EXPOSED, "is internet-facing"),
+    (["multi-tenant", "multitenant", "multi tenant"], "multi_tenant", "yes",
+     ("api", "webapp", "database", "datastore"), "is multi-tenant"),
+    (["encrypted at rest", "encryption at rest"], "encrypted_at_rest", "yes", _STORE_ONLY, "is encrypted at rest"),
+]
+
+
+def _detect_attributes_from_text(text: str, components: list[dict]) -> list[str]:
+    """Infer security attributes from the prose and attach them to the most relevant
+    component (first of a preferred type). Returns human-readable notes of what was
+    inferred, so every guess is disclosed to the user, never silently applied."""
+    t = f" {text.lower()} "
+    notes: list[str] = []
+    for phrases, attr, value, types, human in _TEXT_SIGNALS:
+        if not any(pz in t for pz in phrases):
+            continue
+        # Prefer a store for data-handling signals, else the first applicable component.
+        target = next((c for c in components if c.get("type") in types and c.get("type") in _STORE_ONLY), None) \
+            or next((c for c in components if c.get("type") in types), None)
+        if target and not str(target.get(attr, "")).strip():
+            target[attr] = value
+            notes.append(f"Inferred **{human}** on '{target['name']}' from the description — verify it's correct.")
+    return notes
+
+
+def _name_from_text(original: str, kw: str, fallback: str) -> str:
+    """Capture a proper name for a detected component — 1-2 capitalised words
+    immediately before the keyword (e.g. 'Orders API', 'Postgres Users') — falling
+    back to the keyword's display name when no clear name precedes it."""
+    # Capture is case-sensitive (real capitals = a proper noun); only the keyword
+    # itself is matched case-insensitively via an inline (?i:) group.
+    m = re.search(r"\b([A-Z][\w-]+(?:\s+[A-Z][\w-]+)?)\s+(?i:" + re.escape(kw) + r")\b", original)
+    if m:
+        phrase = m.group(1).strip()
+        _stop = {"The", "A", "An", "And", "Or", "Of", "To", "In", "On", "Our", "My", "Their"}
+        if phrase.split()[0] not in _stop and phrase.lower() != kw:
+            disp = _display_name(kw)
+            return phrase if disp.lower() in phrase.lower() else f"{phrase} {disp}"
+    return fallback
+
+
 def extract_components_from_text(text: str) -> dict:
     """Best-effort extraction. Always good enough for a starting draft —
     user can edit in the UI before running analysis."""
@@ -163,7 +248,7 @@ def extract_components_from_text(text: str) -> dict:
                 if ctype not in seen_types:
                     components.append({
                         "id": f"c_{ctype}",
-                        "name": _display_name(kw),
+                        "name": _name_from_text(text, kw, _display_name(kw)),
                         "type": ctype,
                         "description": f"Detected from description (keyword: '{kw}')",
                     })
@@ -226,6 +311,12 @@ def extract_components_from_text(text: str) -> dict:
             f"protocols, authentication and encryption were not stated and are assumed "
             f"(e.g. app→datastore links are assumed unencrypted). Verify each in the diagram.")
 
+    # Infer security attributes (PII/PCI/PHI handling, internet exposure, secrets,
+    # multi-tenancy, at-rest encryption) from the prose so free text produces evidenced
+    # findings instead of a wall of generic checks. Every inference is disclosed.
+    attr_notes = _detect_attributes_from_text(text, components)
+    assumptions.extend(attr_notes)
+
     return {
         "components": components,
         "data_flows": data_flows,
@@ -239,9 +330,11 @@ def extract_components_from_text(text: str) -> dict:
 # The user lists components ("Name : type") and flows ("A -> B : attrs"), so
 # extraction is exact: no keyword guessing, no same-type collapse, real topology.
 # ---------------------------------------------------------------------------
-_PROTOCOLS = {"https", "http", "tcp", "udp", "grpc", "wss", "ws", "amqp", "mqtt", "sql", "tls", "ssh"}
+_PROTOCOLS = {"https", "http", "tcp", "udp", "grpc", "wss", "ws", "amqp", "mqtt", "tls", "ssh"}
 _AUTHS = {"none", "session", "bearer", "jwt", "mtls", "api_key", "apikey", "credentials",
           "password", "oauth", "basic", "iam", "sso"}
+# Authorization models (distinct from authentication) — for structured-input flows.
+_AUTHZ_MODELS = {"rbac", "abac", "rebac", "acl", "oauth_scopes", "policy_engine", "none"}
 
 
 def _slug(name: str) -> str:
@@ -326,12 +419,18 @@ def parse_structured_system(text: str) -> dict:
         if not dst:
             _issue("warning", f"Line {lineno}: flow target '{dst_name}' is not declared yet; it will show "
                               f"as an unresolved placeholder until you add it or fix the name.")
-        protocol, auth, encrypted = "HTTPS", "none", True
+        # Protocol / auth are multi-value: accumulate every matching token (previously
+        # only the last was kept — a silent drop). Authorization is single.
+        protocols: list[str] = []
+        auths: list[str] = []
+        authorization, encrypted = "", True
         for tok in (t.strip().lower() for t in attrs.split(",") if t.strip()):
             if tok in _PROTOCOLS:
-                protocol = "HTTPS" if tok == "https" else tok.upper()
+                protocols.append("HTTPS" if tok == "https" else tok.upper())
             elif tok in _AUTHS:
-                auth = tok
+                auths.append(tok)
+            elif tok in _AUTHZ_MODELS:
+                authorization = tok
             elif tok in ("encrypted", "tls", "encrypt", "secure"):
                 encrypted = True
             elif tok in ("plaintext", "unencrypted", "cleartext", "insecure", "no", "none_enc"):
@@ -340,8 +439,10 @@ def parse_structured_system(text: str) -> dict:
             "id": f"f_{len(data_flows)}",
             "from": src["id"] if src else src_name,
             "to": dst["id"] if dst else dst_name,
-            "label": f"{src_name} → {dst_name}", "protocol": protocol,
-            "auth": auth, "encrypted": encrypted,
+            "label": f"{src_name} → {dst_name}",
+            "protocol": protocols or ["HTTPS"],
+            "auth": auths or ["none"],
+            "authorization": authorization, "encrypted": encrypted,
         })
 
     # Structured input is exact for what you write, but unspecified flow attributes
@@ -466,10 +567,9 @@ def _score_dread(threat: dict, component: dict, flow: dict | None, cross_boundar
     base = {"Critical": 9, "High": 7, "Medium": 5, "Low": 3, "Info": 2}.get(threat.get("severity"), 5)
     ctype = component.get("type", "")
     title_cat = f"{threat.get('title', '')} {threat.get('category', '')}".lower()
-    auth = (flow.get("auth") if flow else "") or ""
-    auth_low = auth.strip().lower()
-    unauthenticated = auth_low in ("", "none", "n/a")
-    strong_auth = auth_low in ("mtls", "mutual-tls", "client-cert")
+    auths = _flow_auths(flow) if flow else []
+    unauthenticated = not any(a not in ("", "none", "n/a", "basic", "anonymous") for a in auths)
+    strong_auth = any(a in ("mtls", "mutual-tls", "client-cert") for a in auths)
     unencrypted = bool(flow) and not flow.get("encrypted", True)
 
     # Damage — what's at stake if it's exploited
@@ -624,6 +724,29 @@ def _component_evidence(rule: dict, component: dict, ctx: dict) -> str:
     return "evidenced" if check(component.get("id"), component.get("type", ""), ctx) else "baseline"
 
 
+# Human-readable phrasing for each evidence signal — the "why this fired" trace
+# surfaced on every threat so nothing looks arbitrary and false positives are visible.
+_EVIDENCE_TEXT = {
+    "unencrypted_flow": "a data flow touching this element is unencrypted",
+    "exposed":          "this element is reachable from a less-trusted / public zone",
+    "user_reachable":   "this element is reachable from an external user by following flows",
+    "is_store":         "this element is a data store",
+    "handles_sensitive_data": "this element is tagged as handling sensitive data",
+    "handles_pii":      "this element is tagged as handling PII",
+    "handles_phi":      "this element is tagged as handling PHI",
+    "handles_pci":      "this element is tagged as handling cardholder data",
+}
+
+
+def _catalog_evidence(rule: dict, component: dict, tier: str) -> str:
+    """The 'why this fired' trace for a catalog (type-template) threat."""
+    if tier == "evidenced":
+        phrase = _EVIDENCE_TEXT.get(rule.get("evidence"))
+        return ("Evidenced: " + phrase + ".") if phrase else "Evidenced by the model."
+    return (f"Baseline check for a '{component.get('type', '')}' element — the model "
+            "shows no specific evidence this applies here; kept for completeness, not dropped.")
+
+
 # ---------------------------------------------------------------------------
 # Attribute-driven threats — Microsoft Threat Modeling Tool style. Each element
 # can declare security properties (answered yes/no/unknown, or a level) in the
@@ -655,6 +778,18 @@ COMPONENT_ATTRIBUTES = {
     "verifies_code_integrity": ("Verifies code/artifact integrity", "yn", None),
     "removable_media":     ("On removable media", "yn", None),
     "secure_error_handling": ("Safe error handling", "yn", None),
+    # Agentic AI — properties of agents, tools, memory and RAG that drive
+    # OWASP LLM / Agentic threats. Only answered properties generate threats.
+    "autonomy_level":      ("Autonomy level", "choice", ["", "suggest", "act_with_approval", "autonomous"]),
+    "tool_access":         ("Tool access", "choice", ["", "none", "read", "write", "exec"]),
+    "human_in_the_loop":   ("Human-in-the-loop review", "yn", None),
+    "prompt_injection_defense": ("Prompt-injection defense", "yn", None),
+    "output_validated":    ("Validates model output before use", "yn", None),
+    "sandboxed":           ("Runs sandboxed/isolated", "yn", None),
+    "can_spawn_agents":    ("Can spawn other agents", "yn", None),
+    "ingests_untrusted_content": ("Ingests untrusted content into context", "yn", None),
+    "memory_scope":        ("Memory scope", "choice", ["", "session", "per_user", "cross_user", "cross_tenant"]),
+    "content_source_trust": ("Content/grounding source", "choice", ["", "curated", "user_uploaded", "web_scraped"]),
 }
 FLOW_ATTRIBUTES = {
     "provides_integrity":  ("Provides integrity (signing/HMAC)", "yn", None),
@@ -662,7 +797,16 @@ FLOW_ATTRIBUTES = {
     # Second wave
     "replay_protection":   ("Replay protection (nonce/timestamp)", "yn", None),
     "validates_certificates": ("Validates TLS certificates", "yn", None),
+    # Authorization model on this call (distinct from authentication). "none" or a
+    # coarse model crossing a tenant boundary drives Broken Access Control / BOLA.
+    "authorization":       ("Authorization model", "choice",
+                            ["", "none", "rbac", "abac", "rebac", "acl", "oauth_scopes", "policy_engine"]),
 }
+
+
+# Component types that participate in agentic / LLM data-plane threats.
+_AI_TYPES = {"llm", "ai_agent", "agent_orchestrator", "llm_tool", "retriever",
+             "guardrail", "mcp_server", "agent_memory", "knowledge_base", "vector_db"}
 
 
 def _yn_no(d: dict, k: str) -> bool:
@@ -692,6 +836,10 @@ def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> 
             "mitigations": mitigations,
             "source": "rule-based",
             "tier": "evidenced",
+            # Attribute rules fire only on an explicitly-answered security property,
+            # so the answer itself is the evidence — this is never a generic template.
+            "evidence": "Evidenced: triggered by a security property you answered on "
+                        f"'{comp['name']}'" + (" for this flow" if flow else "") + ".",
             "dread": _score_dread({"severity": severity}, comp, flow),
         })
 
@@ -779,6 +927,58 @@ def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> 
                  "Unsafe error handling can expose stack traces, queries, or secrets to callers, aiding attackers.",
                  "Low", c, None, ["Return generic errors to clients", "Log details server-side only", "Disable debug modes in production"])
 
+        # ---- Agentic AI (OWASP LLM / Agentic) ----
+        autonomy = str(c.get("autonomy_level", "")).strip().lower()
+        tool_acc = str(c.get("tool_access", "")).strip().lower()
+        mem_scope = str(c.get("memory_scope", "")).strip().lower()
+        src_trust = str(c.get("content_source_trust", "")).strip().lower()
+        if autonomy == "autonomous" and tool_acc in ("write", "exec") and _yn_no(c, "human_in_the_loop"):
+            emit("Elevation of Privilege",
+                 f"Excessive agency — autonomous agent, {tool_acc} tools, no human review: {c['name']}",
+                 "A fully autonomous agent that can take write/exec actions with no human-in-the-loop can perform "
+                 "unintended or attacker-induced actions at scale (OWASP LLM Excessive Agency / Agentic).",
+                 "Critical", c, None, ["Require human approval for high-impact actions",
+                 "Scope tools to least privilege (read-only where possible)",
+                 "Add allow-lists, spend/rate caps, and make actions reversible"])
+        if tool_acc == "exec" and _yn_no(c, "sandboxed"):
+            emit("Elevation of Privilege", f"Unsandboxed tool/code execution: {c['name']}",
+                 "An agent that executes code or tools without a sandbox risks remote code execution and host "
+                 "compromise if the model is manipulated (OWASP LLM / Agentic).",
+                 "Critical", c, None, ["Run tools/code in an isolated sandbox",
+                 "Drop privileges; restrict network and filesystem", "Validate and allow-list tool calls"])
+        if _yn_yes(c, "ingests_untrusted_content") and _yn_no(c, "prompt_injection_defense"):
+            emit("Tampering", f"Prompt injection — untrusted content, no defense: {c['name']}",
+                 "This element ingests untrusted content into the model context with no prompt-injection defenses, so "
+                 "attacker-controlled text can override instructions (OWASP LLM01 Prompt Injection).",
+                 "High", c, None, ["Separate trusted instructions from untrusted data",
+                 "Add input filtering / guardrails and constrain outputs",
+                 "Never let raw model output trigger privileged actions"])
+        if _yn_no(c, "output_validated") and c.get("type") in _AI_TYPES:
+            emit("Tampering", f"Model output used without validation: {c['name']}",
+                 "Model output is consumed downstream without validation or encoding, enabling insecure output "
+                 "handling — injection into tools, code, SQL, or the browser (OWASP LLM Insecure Output Handling).",
+                 "High", c, None, ["Treat model output as untrusted",
+                 "Validate/encode before use in tools, queries, or HTML", "Constrain output format; reject anomalies"])
+        if mem_scope in ("cross_user", "cross_tenant"):
+            who = "tenants" if mem_scope == "cross_tenant" else "users"
+            emit("Information Disclosure", f"Agent memory shared across {who}: {c['name']}",
+                 f"Memory shared across {who} enables cross-{who[:-1]} data leakage and memory poisoning, where one "
+                 "party's injected content influences another's session (OWASP LLM / Agentic).",
+                 "High", c, None, [f"Scope memory per user/session/{'tenant' if mem_scope == 'cross_tenant' else 'user'}",
+                 "Sanitize and validate what is written to memory", "Isolate and access-control memory reads"])
+        if src_trust in ("web_scraped", "user_uploaded"):
+            emit("Tampering", f"Untrusted grounding source ({src_trust}): {c['name']}",
+                 "Grounding/RAG content from untrusted sources can carry indirect prompt injection and poisoned data "
+                 "that the model treats as instructions (OWASP LLM01 / Data Poisoning).",
+                 "High", c, None, ["Vet and sanitize ingested content",
+                 "Isolate retrieved content from instructions", "Track provenance; filter content"])
+        if _yn_yes(c, "can_spawn_agents") and autonomy == "autonomous":
+            emit("Denial of Service", f"Autonomous agent can spawn agents — unbounded consumption: {c['name']}",
+                 "An autonomous agent that spawns other agents without limits risks runaway loops and cost/resource "
+                 "exhaustion (OWASP LLM Unbounded Consumption / Agentic).",
+                 "Medium", c, None, ["Cap recursion depth and concurrent agents",
+                 "Enforce budgets and timeouts", "Monitor and kill runaway chains"])
+
     for f in system.get("data_flows", []):
         dst = comp_by_id.get(f.get("to"))
         src = comp_by_id.get(f.get("from"))
@@ -800,6 +1000,21 @@ def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> 
             emit("Spoofing", f"TLS certificates not validated: {src['name']} → {dst['name']}",
                  "Skipping certificate validation lets an attacker present a forged certificate and man-in-the-middle this flow.",
                  "High", dst, f, ["Validate the full certificate chain", "Pin certificates/public keys where practical", "Never disable verification in production"])
+        # Authorization (distinct from authentication) — absence is Broken Access Control.
+        authz = str(f.get("authorization", "")).strip().lower()
+        if authz == "none":
+            emit("Elevation of Privilege", f"No authorization on flow: {src['name']} → {dst['name']}",
+                 "This call may authenticate the caller but enforces no authorization, so any authenticated caller can "
+                 "invoke it — Broken Access Control / BOLA (OWASP A01 / API1).",
+                 "High", dst, f, ["Enforce per-request, object-level authorization",
+                 "Deny by default; check ownership and scope", "Test for BOLA / BFLA / IDOR"])
+        # Agent → tool/exec call with no authorization: excessive-agency amplifier.
+        if authz == "none" and dst.get("type") in ("llm_tool", "mcp_server") and src.get("type") in ("ai_agent", "agent_orchestrator"):
+            emit("Elevation of Privilege", f"Agent invokes tool without authorization: {src['name']} → {dst['name']}",
+                 "An agent can call this tool with no authorization check, so a manipulated agent can trigger "
+                 "unauthorized actions — excessive agency via unscoped tool access (OWASP LLM / Agentic).",
+                 "High", dst, f, ["Scope and authorize each tool call to the acting user",
+                 "Least-privilege tool permissions", "Require approval for high-impact tools"])
 
     return out
 
@@ -820,24 +1035,37 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
     for category_name, category in methodology["categories"].items():
         applies = category["applies_to"]
         for component in components:
-            if "*" in applies or component["type"] in applies:
-                for rule in category["threats"]:
-                    threats.append({
-                        "id": f"t_{uuid.uuid4().hex[:8]}",
-                        "methodology": methodology["name"],
-                        "category": category_name,
-                        "title": rule["title"],
-                        "description": rule["description"],
-                        "severity": rule["severity"],
-                        "component_id": component["id"],
-                        "component_name": component["name"],
-                        "component_type": component["type"],
-                        "flow_id": None,
-                        "mitigations": rule["mitigations"],
-                        "source": "rule-based",
-                        "tier": _component_evidence(rule, component, ev_ctx),
-                        "dread": _score_dread(rule, component, None),
-                    })
+            ctype = component["type"]
+            category_applies = "*" in applies or ctype in applies
+            for rule in category["threats"]:
+                # A rule may declare its own component scope, which is authoritative:
+                # it both *narrows* (container escape won't land on a database) and
+                # *widens* (it fires on a container even though the category's list
+                # doesn't include one). Rules without their own scope use the category.
+                rule_types = rule.get("applies_to")
+                if rule_types is not None:
+                    if ctype not in rule_types:
+                        continue
+                elif not category_applies:
+                    continue
+                _tier = _component_evidence(rule, component, ev_ctx)
+                threats.append({
+                    "id": f"t_{uuid.uuid4().hex[:8]}",
+                    "methodology": methodology["name"],
+                    "category": category_name,
+                    "title": rule["title"],
+                    "description": rule["description"],
+                    "severity": rule["severity"],
+                    "component_id": component["id"],
+                    "component_name": component["name"],
+                    "component_type": component["type"],
+                    "flow_id": None,
+                    "mitigations": rule["mitigations"],
+                    "source": "rule-based",
+                    "tier": _tier,
+                    "evidence": _catalog_evidence(rule, component, _tier),
+                    "dread": _score_dread(rule, component, None),
+                })
 
     # Flow-level enrichment: unencrypted flows attract Tampering / Info-Disclosure
     for flow in flows:
@@ -851,7 +1079,7 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "methodology": methodology["name"],
                 "category": "Information Disclosure" if methodology_key == "stride" else "Disclosure of information",
                 "title": f"Unencrypted flow: {src['name']} → {dst['name']}",
-                "description": f"Data flow '{flow.get('label','')}' uses {flow.get('protocol','unknown')} without encryption.",
+                "description": f"Data flow '{flow.get('label','')}' uses {_protocol_display(flow)} without encryption.",
                 "severity": "High",
                 "component_id": dst["id"],
                 "component_name": dst["name"],
@@ -860,11 +1088,12 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "mitigations": ["Enable TLS on this flow", "If internal, enforce mTLS", "Verify cert pinning where relevant"],
                 "source": "rule-based",
                 "tier": "evidenced",
+                "evidence": f"Evidenced: flow {src['name']} → {dst['name']} declares "
+                            f"encrypted=no (protocol {_protocol_display(flow) or 'unspecified'}).",
                 "dread": _score_dread({"severity": "High"}, dst, flow),
             })
 
-        auth_val = (flow.get("auth") or "").strip().lower()
-        if auth_val in ("", "none", "n/a"):
+        if _is_weak_auth(flow):
             src = comp_by_id.get(flow["from"])
             dst = comp_by_id.get(flow["to"])
             if not src or not dst:
@@ -883,6 +1112,8 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "mitigations": ["Add token / mTLS auth on this flow", "Validate caller identity at the receiver"],
                 "source": "rule-based",
                 "tier": "evidenced",
+                "evidence": f"Evidenced: flow {src['name']} → {dst['name']} declares "
+                            f"auth={_auth_display(flow) or 'none'} — no strong caller authentication.",
                 "dread": _score_dread({"severity": "High"}, dst, flow),
             })
 
@@ -980,6 +1211,8 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
                 "mitigations": tmpl["mitigations"],
                 "source": "rule-based",
                 "tier": "evidenced",
+                "evidence": f"Evidenced: flow {src['name']} → {dst['name']} crosses the trust "
+                            f"boundary '{src_zone}' → '{dst_zone}'.",
                 "cross_boundary": True,
                 "src_zone": src_zone,
                 "dst_zone": dst_zone,
@@ -1081,6 +1314,8 @@ Respond with ONLY valid JSON — no prose, no markdown fences. Schema:
             "mitigations": t.get("mitigations", []),
             "source": "llm-enhanced",
             "tier": "evidenced",
+            "evidence": "Suggested by the configured LLM from this system's specific "
+                        "context (not a rule-engine template).",
             "dread": _score_dread({"severity": t.get("severity", "Medium")}, comp, None),
         })
     return out, None
@@ -1089,6 +1324,103 @@ Respond with ONLY valid JSON — no prose, no markdown fences. Schema:
 # ---------------------------------------------------------------------------
 # Public entrypoint
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Precision: suppress catalog threats an answered control positively negates.
+# ---------------------------------------------------------------------------
+# Each entry: (attribute answered "yes", [title fragments it contradicts], reason).
+# Applies ONLY to generic type-template catalog threats — attribute-driven threats
+# fire on a "no" answer (so they can't collide with a "yes" here) and evidenced
+# flow / boundary threats are excluded outright. Suppressed threats are DISCLOSED
+# with a reason, never dropped silently.
+_CONTROL_SUPPRESSIONS = [
+    ("enforces_authorization", ["broken access control", "missing authz",
+     "insecure direct object", "idor", "mass assignment"], "enforces authorization"),
+    ("validates_input", ["injection", "unbounded input"], "validates input"),
+    ("encrypted_at_rest", ["at rest"], "is encrypted at rest"),
+    ("logs_security_events", ["audit logging"], "logs security events"),
+    ("secure_error_handling", ["verbose error", "stack trace"], "uses safe error handling"),
+    ("rate_limited", ["ddos", "algorithmic complexity", "unbounded input"], "is rate limited"),
+    ("mfa", ["credential stuffing"], "enforces multi-factor authentication"),
+]
+
+
+def _apply_control_suppressions(threats: list[dict], comp_by_id: dict) -> tuple[list[dict], list[dict]]:
+    """Partition threats into (kept, suppressed).
+
+    A generic catalog threat is suppressed when the element it names has explicitly
+    answered a security control that negates it — the positive answer is evidence
+    the generic risk is already handled. Nothing vanishes silently: each suppressed
+    row carries `suppressed=True` + a reason and is returned for disclosure.
+    """
+    kept: list[dict] = []
+    suppressed: list[dict] = []
+    for t in threats:
+        # Only generic catalog component threats are candidates (no flow, not a
+        # boundary crossing, rule-engine origin).
+        if t.get("flow_id") or t.get("cross_boundary") or t.get("source") != "rule-based":
+            kept.append(t)
+            continue
+        comp = comp_by_id.get(t.get("component_id")) or {}
+        title = (t.get("title") or "").lower()
+        reason = None
+        for attr, frags, why in _CONTROL_SUPPRESSIONS:
+            if _yn_yes(comp, attr) and any(fr in title for fr in frags):
+                reason = f"{comp.get('name', 'This element')} {why} (you answered {attr}=yes)"
+                break
+        if reason:
+            kept_out = suppressed
+            t = {**t, "suppressed": True, "suppression_reason": reason}
+        else:
+            kept_out = kept
+        kept_out.append(t)
+    return kept, suppressed
+
+
+# ---------------------------------------------------------------------------
+# Severity calibration: nudge the displayed severity by at most one level to
+# reflect real exposure, so an internet-facing unauthenticated / sensitive path
+# outranks an internal encrypted call that shared the same static label. Bounded
+# to ±1 and always records the original label + rationale — auditable, not silent.
+# ---------------------------------------------------------------------------
+_SEV_ORDER = ["Info", "Low", "Medium", "High", "Critical"]
+
+
+def _sev_bump(sev: str, delta: int) -> str:
+    i = _SEV_ORDER.index(sev) if sev in _SEV_ORDER else 2
+    return _SEV_ORDER[max(0, min(len(_SEV_ORDER) - 1, i + delta))]
+
+
+def _calibrate_severity(threat: dict, component: dict, flow: dict | None,
+                        exposed: set, sensitive_ids: set) -> dict:
+    """Adjust threat['severity'] by at most one level from exposure context."""
+    sev = threat.get("severity", "Medium")
+    cid = threat.get("component_id")
+    is_exposed = cid in exposed
+    is_sensitive = cid in sensitive_ids or component.get("type") in _SENSITIVE_TYPES
+    auths = _flow_auths(flow) if flow else []
+    unauth = bool(flow) and not any(a not in ("", "none", "n/a", "basic", "anonymous") for a in auths)
+    strong = any(a in ("mtls", "mutual-tls", "client-cert") for a in auths)
+    encrypted = (not flow) or flow.get("encrypted", True)
+    cb = bool(threat.get("cross_boundary"))
+
+    delta, why = 0, None
+    if is_exposed and (is_sensitive or unauth) and sev != "Critical":
+        why = ("raised: exposed to a less-trusted zone with "
+               + ("sensitive data" if is_sensitive else "no caller authentication"))
+        delta = 1
+    elif (not is_exposed and not cb and encrypted and (strong or not flow)
+          and threat.get("tier") == "baseline" and not is_sensitive and sev in ("High", "Medium")):
+        why = ("lowered: internal, encrypted"
+               + (", strong-auth" if strong else "")
+               + " path with no model evidence of exposure")
+        delta = -1
+    if delta:
+        threat["severity_original"] = sev
+        threat["severity"] = _sev_bump(sev, delta)
+        threat["severity_rationale"] = why
+    return threat
+
+
 def analyze_system(
     system: dict[str, Any],
     methodology_keys: list[str],
@@ -1145,9 +1477,16 @@ def analyze_system(
             if err and llm_error is None:
                 llm_error = err
 
+    # Precision: cut false positives. When an element explicitly answers a control
+    # that negates a generic catalog threat, that threat is a false positive here —
+    # move it to a disclosed `suppressed_threats` list (with a reason) rather than
+    # letting it inflate the count. Nothing is dropped silently.
+    all_threats, suppressed_threats = _apply_control_suppressions(all_threats, comp_by_id)
+
     # Per-analysis context for DREAD's independent axes: which components are
     # exposed to a less-trusted zone, and each component's blast radius (flow degree).
     exposed_ids, blast_by_id = _dread_context(system)
+    sensitive_ids = _evidence_context(system).get("sensitive_ids", set())
 
     # Enrich each threat with CVSS, CWE, and per-threat detail
     for t in all_threats:
@@ -1164,6 +1503,8 @@ def analyze_system(
             system_name=system.get("name", ""),
             use_llm=use_llm,
         )
+        # Calibrate the displayed severity to real exposure (bounded ±1, audited).
+        _calibrate_severity(t, component or {}, flow, exposed_ids, sensitive_ids)
 
     # Summary stats
     summary = {
@@ -1175,13 +1516,34 @@ def analyze_system(
         "by_tier": {"evidenced": 0, "baseline": 0},
         "rule_based": 0,
         "llm_enhanced": 0,
+        # Threats a positively-answered control negated — cut from the active count
+        # but disclosed (never dropped silently). See `suppressed_threats`.
+        "suppressed": len(suppressed_threats),
+        # How many active threats had their severity nudged by exposure calibration.
+        "recalibrated": 0,
+        # Grounded findings (proven by the model) vs generic "standard checks" (baseline
+        # type-templates the model neither confirms nor rules out). The headline count a
+        # user sees is `findings`; standard checks are shown separately, not counted as
+        # findings, so generic items no longer read as false positives.
+        "findings": 0,
+        "standard_checks": 0,
+        # Severity breakdown of grounded findings only (drives the headline stats).
+        "findings_by_severity": {s: 0 for s in ["Critical", "High", "Medium", "Low", "Info"]},
     }
     for t in all_threats:
         summary["by_severity"][t["severity"]] = summary["by_severity"].get(t["severity"], 0) + 1
+        if t.get("tier") == "evidenced":
+            summary["findings"] += 1
+            summary["findings_by_severity"][t["severity"]] = \
+                summary["findings_by_severity"].get(t["severity"], 0) + 1
+        else:
+            summary["standard_checks"] += 1
         summary["by_category"][t["category"]] = summary["by_category"].get(t["category"], 0) + 1
         summary["by_component"][t["component_name"]] = summary["by_component"].get(t["component_name"], 0) + 1
         summary["by_methodology"][t["methodology"]] = summary["by_methodology"].get(t["methodology"], 0) + 1
         summary["by_tier"][t.get("tier", "baseline")] = summary["by_tier"].get(t.get("tier", "baseline"), 0) + 1
+        if t.get("severity_original"):
+            summary["recalibrated"] += 1
         if t["source"] == "rule-based":
             summary["rule_based"] += 1
         else:
@@ -1214,14 +1576,24 @@ def analyze_system(
     }
 
     from .dataflow_summary import build_dataflow_summary
+    from .readiness import compute_readiness
     _untrusted = _untrusted_input_crossings(system, all_threats)
+    _readiness = compute_readiness(system)
 
     return {
         "system": system,
         "threats": all_threats,
+        # Generic catalog threats an answered control positively negated. Disclosed
+        # here (with a reason each) so suppression is visible and auditable, never
+        # a silent drop.
+        "suppressed_threats": suppressed_threats,
         "summary": summary,
         "dataflow_summary": build_dataflow_summary(system, all_threats, summary, _untrusted),
         "untrusted_crossings": _untrusted,
+        # Model completeness: which security questions are still unanswered, and a
+        # score. Answering a question turns a generic "standard check" into a precise
+        # finding or clears it — so this checklist shrinks the noise as it's filled in.
+        "readiness": _readiness,
         # What model normalization repaired or flagged (missing/duplicate ids,
         # dangling flow references turned into placeholders, invalid types, …).
         # Surfaced in the UI and reports so no auto-repair is ever hidden.
@@ -1335,8 +1707,8 @@ def _untrusted_input_crossings(system: dict, all_threats: list[dict]) -> list[di
             "source_zone": src_b["name"] if src_b else "External (untrusted)",
             "destination_zone": dst_b["name"],
             "label": f.get("label", ""),
-            "protocol": f.get("protocol", ""),
-            "auth": f.get("auth") or "none",
+            "protocol": _protocol_display(f),
+            "auth": _auth_display(f),
             "encrypted": bool(f.get("encrypted")),
             "threat_count": len(flow_threats),
             "highest_severity": (
@@ -1372,6 +1744,6 @@ def _input_validation_requirements(dst: dict, flow: dict) -> list[str]:
         ]
     if not flow.get("encrypted"):
         reqs.append("Enable TLS on this flow before any of the above controls — without encryption, on-path attackers can substitute payloads after validation.")
-    if (flow.get("auth") or "none") == "none":
+    if _is_weak_auth(flow):
         reqs.append("Add authentication on this flow — input validation alone does not establish caller identity.")
     return reqs

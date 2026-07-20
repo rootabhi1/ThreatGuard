@@ -45,9 +45,12 @@
       );
       for (const tm of results) {
         if (!tm || !tm.analysis) continue;
-        threats += tm.analysis.summary.total || 0;
+        const sm = tm.analysis.summary || {};
+        // Headline counts reflect grounded findings, not generic standard checks.
+        threats += (sm.findings != null ? sm.findings : (sm.total || 0));
         const statuses = tm.threat_statuses || {};
         for (const t of tm.analysis.threats || []) {
+          if ((t.tier || 'baseline') !== 'evidenced') continue;  // findings only
           const s = (statuses[t.id] && statuses[t.id].status) || 'open';
           if (s === 'open') open++;
           else if (s === 'mitigated') mitigated++;
@@ -423,7 +426,7 @@
     const ov = d.overlap || {};
     let overlapBanner = '';
     if (ov.unrelated) {
-      overlapBanner = `<div class="card p-3 mb-3" style="border-left:4px solid var(--c-critical);background:#fef2f2;color:#991b1b;">
+      overlapBanner = `<div class="card p-3 mb-3" style="border-left:4px solid var(--c-critical);background:var(--tone-danger-bg);color:var(--tone-danger-fg);">
         <strong>⚠ These don't look like the same system.</strong> They share no components and no threats,
         so every threat shows as both “new” and “resolved” — this isn't a meaningful diff.
         Compare works best on two versions of the <em>same</em> system (e.g. the same feature across releases).</div>`;
@@ -440,14 +443,14 @@
       <div class="grid grid-cols-4 gap-2 mb-4">
         ${stat(nNew, 'New', 'var(--c-critical)')}
         ${stat(nRes, 'Resolved', 'var(--c-success)')}
-        ${stat(nChg, 'Re-rated', '#ca8a04')}
+        ${stat(nChg, 'Re-rated', 'var(--ink-medium)')}
         ${stat(nComp, 'Components', 'var(--c-brand)')}
       </div>
       ${nNew+nRes+nChg+nComp === 0 ? '<div class="card p-4 text-center text-sm text-light">No differences — these two analyses are identical.</div>' : `
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div><div class="font-semibold text-sm mb-2" style="color:var(--c-critical);">🆕 New threats</div>${rows(d.new_threats||[], threatRow, 'None added.')}</div>
         <div><div class="font-semibold text-sm mb-2" style="color:var(--c-success);">✅ Resolved threats</div>${rows(d.resolved_threats||[], threatRow, 'None resolved.')}</div>
-        <div><div class="font-semibold text-sm mb-2" style="color:#ca8a04;">↕ Re-rated severity</div>${rows(d.changed_severity||[], c => `<div class="card p-2 text-sm">${esc(c.threat.title)}: <strong>${esc(c.old)}</strong> → <strong>${esc(c.new)}</strong></div>`, 'No severity changes.')}</div>
+        <div><div class="font-semibold text-sm mb-2" style="color:var(--ink-medium);">↕ Re-rated severity</div>${rows(d.changed_severity||[], c => `<div class="card p-2 text-sm">${esc(c.threat.title)}: <strong>${esc(c.old)}</strong> → <strong>${esc(c.new)}</strong></div>`, 'No severity changes.')}</div>
         <div><div class="font-semibold text-sm mb-2" style="color:var(--c-brand);">🧩 Component changes</div>${rows([...(d.new_components||[]).map(n=>({t:'+ '+n,c:'var(--c-success)'})), ...(d.removed_components||[]).map(n=>({t:'− '+n,c:'var(--c-critical)'}))], c => `<div class="card p-2 text-sm" style="color:${c.c};">${esc(c.t)}</div>`, 'No component changes.')}</div>
       </div>`}`;
   });
@@ -520,10 +523,11 @@
         if (!dResp.ok) throw new Error((await dResp.json()).detail || 'Diagram analysis failed');
         const d = await dResp.json();
         const tm = d.threat_model;
-        const total = d.analysis ? d.analysis.summary.total : 0;
+        const sm = d.analysis ? d.analysis.summary : {};
+        const total = (sm.findings != null ? sm.findings : (sm.total || 0));
         UI.hideModal('modal-new-tm');
         const viaVision = d.extraction_method === 'llm_vision';
-        UI.toast(`Created "${tm.name}" from ${viaVision ? 'AI vision' : 'the diagram'} — ${total} threats identified`, 'success');
+        UI.toast(`Created "${tm.name}" from ${viaVision ? 'AI vision' : 'the diagram'} — ${total} findings identified`, 'success');
         if (!viaVision)
           UI.toast("AI vision couldn't read the diagram clearly — created an editable starter model; refine it in the Data Flow Diagram tab.", 'info', 8000);
         await loadAll();
@@ -596,12 +600,23 @@
         delete system.boundary_inference_mode;
       }
 
-      // If the user left the optional Notes field blank, seed the description
-      // from what they typed (system text) so the card/header isn't "No description".
+      // If the user left the optional Notes field blank, seed a clean description.
+      // For free text the prose itself reads well; for a structured/precise spec the
+      // raw "Name : type" lines are NOT a description — summarize the model instead so
+      // the card shows something meaningful rather than the spec dump.
       let description = (fd.get('description') || '').trim();
       if (!description) {
-        const src = (fd.get('system_text') || fd.get('structured_text') || (system && system._source_text) || '').trim();
-        if (src) description = src.length > 160 ? src.slice(0, 157).trimEnd() + '…' : src;
+        if (inputMode === 'structured') {
+          const nc = (system.components || []).length, nf = (system.data_flows || []).length,
+                nb = (system.trust_boundaries || []).length;
+          const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+          if (nc) description = [plural(nc, 'component'), plural(nf, 'flow')]
+            .concat(nb ? [plural(nb, 'trust zone')] : []).join(' · ');
+        } else {
+          const src = (fd.get('system_text') || (system && system._source_text) || '')
+            .split('\n').filter(l => !l.trim().startsWith('#')).join(' ').trim();
+          if (src) description = src.length > 160 ? src.slice(0, 157).trimEnd() + '…' : src;
+        }
       }
 
       setProgress('Creating threat model...');
@@ -629,7 +644,7 @@
       const analysis = await analyzeResp.json();
 
       UI.hideModal('modal-new-tm');
-      UI.toast(`Created "${tm.name}" — ${analysis.summary.total} threats identified`, 'success');
+      UI.toast(`Created "${tm.name}" — ${analysis.summary.findings != null ? analysis.summary.findings : analysis.summary.total} findings identified`, 'success');
       // If AI enhancement was requested, tell the truth about what it did
       // instead of leaving the user to discover "LLM: No" in the report later.
       const st = analysis.llm_status;
@@ -887,6 +902,77 @@
       </details>`;
   }
 
+  // Readiness checklist: keep the disclosure open across the re-render that each
+  // answer triggers, so the user can answer several in a row without it collapsing.
+  let readinessOpen = false;
+
+  function readinessHTML(analysis) {
+    const rd = analysis && analysis.readiness;
+    if (!rd || !rd.applicable) return '';
+    const canEdit = (currentTM.owner_id === me.user.id || me.user.role === 'admin');
+    const pct = rd.score;
+    const barColor = pct >= 75 ? 'var(--c-success)' : pct >= 40 ? 'var(--ink-medium)' : 'var(--c-high)';
+    const openN = rd.open_count;
+
+    const answerCtl = (q) => {
+      if (!canEdit) return '';
+      const d = `data-rq-answer data-scope="${q.scope}" data-target="${esc(q.target_id)}" data-attr="${esc(q.attr)}"`;
+      if (q.kind === 'yn') {
+        return `<span class="rq-yn"><button class="rq-btn" ${d} data-value="yes">Yes</button><button class="rq-btn" ${d} data-value="no">No</button></span>`;
+      }
+      return `<select class="rq-select" ${d}>${q.options.map(o => `<option value="${esc(o)}">${o === '' ? '— pick —' : esc(o)}</option>`).join('')}</select>`;
+    };
+
+    const groups = {};
+    (rd.questions || []).forEach(q => {
+      (groups[q.target_id] = groups[q.target_id] || { name: q.target_name, type: q.target_type, scope: q.scope, items: [] }).items.push(q);
+    });
+    const groupHTML = Object.values(groups).map(g => `
+      <div class="rq-group">
+        <div class="rq-group-head">${g.scope === 'flow' ? '⇄' : '▪'} ${esc(g.name)} <span class="tg-muted">${esc(g.type)}</span></div>
+        ${g.items.map(q => `<div class="rq-row"><span class="rq-label">${esc(q.label)}</span>${answerCtl(q)}</div>`).join('')}
+      </div>`).join('');
+
+    return `
+      <div class="card mb-6 rq-card">
+        <div class="rq-meter-head">
+          <div><div class="rq-title">Model completeness</div>
+            <div class="rq-sub">${rd.answered} of ${rd.applicable} security questions answered${openN ? ` · ${openN} open` : ' · complete'}</div></div>
+          <div class="rq-score" style="color:${barColor};">${pct}%</div>
+        </div>
+        <div class="rq-track"><div class="rq-fill" style="width:${pct}%;background:${barColor};"></div></div>
+        ${openN ? `
+        <details class="tg-disclosure rq-disclosure" ${readinessOpen ? 'open' : ''}>
+          <summary>Answer ${openN} question${openN > 1 ? 's' : ''} to sharpen generic checks into findings — or clear them</summary>
+          <div class="tg-disclosure-body rq-list">${groupHTML}</div>
+        </details>` : `<div class="rq-done">✓ Every applicable security question is answered — findings reflect your model.</div>`}
+      </div>`;
+  }
+
+  async function answerReadiness(scope, targetId, attr, value) {
+    if (!value) return;
+    const sys = JSON.parse(JSON.stringify(currentTM.system || {}));
+    const list = scope === 'flow' ? (sys.data_flows || []) : (sys.components || []);
+    const t = list.find(x => x.id === targetId);
+    if (!t) return;
+    t[attr] = value;
+    try {
+      const put = await Auth.fetch('/api/threat-models/' + currentTM.id, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ system: sys }),
+      });
+      if (!put.ok) throw new Error('Save failed');
+      const an = await Auth.fetch('/api/threat-models/' + currentTM.id + '/analyze', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ methodologies: currentTM.methodologies, use_llm: false }),
+      });
+      if (!an.ok) throw new Error('Analysis failed');
+      const r2 = await Auth.fetch('/api/threat-models/' + currentTM.id);
+      if (r2.ok) { currentTM = await r2.json(); renderDetail(); }
+    } catch (e) {
+      UI.toast(e.message || 'Failed to save answer', 'error');
+    }
+  }
+
   function renderDetail() {
     const tm = currentTM;
     const featureName = (allFeatures.find(f => f.id === tm.feature_id) || {}).name || `#${tm.feature_id}`;
@@ -905,13 +991,22 @@
       return;
     }
 
-    const sev = analysis.summary.by_severity || {};
     const total = analysis.summary.total || 0;
+    // Grounded findings (proven by the model) drive the headline numbers; generic
+    // "standard checks" (baseline) are shown separately so they don't read as false
+    // positives. Fall back to the old all-tiers counts for pre-split stored analyses.
+    const sev = analysis.summary.findings_by_severity || analysis.summary.by_severity || {};
+    const findings = analysis.summary.findings != null ? analysis.summary.findings : total;
+    const stdChecks = analysis.summary.standard_checks || 0;
 
     const body = `
       <p class="text-sm text-dim mb-6">${esc(tm.description || 'No description')}</p>
 
-      <!-- Severity breakdown -->
+      <!-- Severity breakdown (grounded findings) -->
+      <div class="flex items-baseline gap-3 mb-2" style="flex-wrap:wrap;">
+        <span class="text-xs font-semibold" style="text-transform:uppercase;letter-spacing:.06em;color:var(--c-text-light);">Findings — proven by your model</span>
+        ${stdChecks ? `<span class="text-xs text-light">·&nbsp; ${stdChecks} standard check${stdChecks>1?'s':''} to review (not counted)</span>` : ''}
+      </div>
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         <div class="card p-4 flex items-center justify-center" style="background: linear-gradient(135deg, #fafbff, #eef2ff);">
           <svg id="detail-ring"></svg>
@@ -920,19 +1015,20 @@
           ${['Critical','High','Medium','Low','Info'].map(s => `
             <button data-filter-sev="${s}" class="card p-3 text-center cursor-pointer ${filter.severity === s ? 'animate-glow' : ''}" style="${filter.severity === s ? 'border-color: var(--c-brand);' : ''}">
               <div class="text-xs font-semibold" style="text-transform: uppercase; letter-spacing: 0.05em; color: var(--c-text-light);">${s}</div>
-              <div style="font-size: 1.75rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 0.25rem; color: ${s==='Critical'?'var(--c-critical)':s==='High'?'var(--c-high)':s==='Medium'?'#ca8a04':s==='Low'?'var(--c-low)':'var(--c-info)'};">${sev[s] || 0}</div>
+              <div style="font-size: 1.75rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 0.25rem; color: ${s==='Critical'?'var(--c-critical)':s==='High'?'var(--c-high)':s==='Medium'?'var(--ink-medium)':s==='Low'?'var(--c-low)':'var(--c-info)'};">${sev[s] || 0}</div>
             </button>
           `).join('')}
         </div>
       </div>
 
+      ${readinessHTML(analysis)}
       ${modelIssuesHTML(analysis)}
       ${assumptionsHTML(analysis)}
       ${dataFlowOverviewHTML(analysis)}
 
       <!-- Tabs -->
       <div class="tabs">
-        <button data-tab="threats" class="tab active">Threats <span class="tab-badge">${total}</span></button>
+        <button data-tab="threats" class="tab active">Threats <span class="tab-badge">${findings}</span></button>
         <button data-tab="analysis" class="tab">Analysis</button>
         <button data-tab="dfd" class="tab">Data Flow Diagram</button>
         <button data-tab="system" class="tab">System Components</button>
@@ -1035,7 +1131,7 @@
     document.getElementById('detail-body').innerHTML = body;
 
     const ring = document.getElementById('detail-ring');
-    if (ring) UI.renderRingChart(ring, sev, total, { size: 160 });
+    if (ring) UI.renderRingChart(ring, sev, findings, { size: 160 });
 
     renderThreats();
     wireDetailActions();
@@ -1071,13 +1167,37 @@
     const statuses = currentTM.threat_statuses || {};
 
     if (threats.length === 0) {
-      list.innerHTML = '<div class="text-center text-sm text-light" style="padding: 2rem;">No threats match filters</div>';
+      list.innerHTML = `<div class="empty-state" style="padding:2.5rem 1rem;">
+        <div class="empty-state-art">🔍</div>
+        <div class="empty-state-title">No threats match your filters</div>
+        <div class="empty-state-desc">Try clearing the severity or status filter, or the search box.</div>
+      </div>`;
       return;
     }
 
-    list.innerHTML = `
-      <div class="text-xs text-light mb-2">Showing ${threats.length} of ${total} threats</div>
-      ${threats.slice(0, 100).map((t, i) => {
+    // Framework badges use the shared token-driven pill (.tg-badge--framework +
+    // data-fw) so their colours match the reports and coverage strip.
+    const frameworkBadges = (t) => {
+      if (!t.frameworks || !t.frameworks.length) return '';
+      return `<div class="detail-section">
+        <div class="detail-section-title">Framework mapping</div>
+        <div class="flex gap-2" style="flex-wrap:wrap;">
+          ${t.frameworks.map(fr => `<a href="${esc(fr.url || '#')}" target="_blank" title="${esc(fr.label)}"
+              class="tg-badge tg-badge--framework" data-fw="${esc(fr.framework)}" style="text-decoration:none;">
+              <span class="tg-fw-key">${esc(fr.framework)}</span>${esc(fr.id)}</a>`).join('')}
+        </div></div>`;
+    };
+    // Disclosed (not dropped): generic threats a positively-answered control negated.
+    const suppressed = currentTM.analysis.suppressed_threats || [];
+    const suppressedBanner = suppressed.length ? `
+      <details class="tg-disclosure" style="margin-bottom:.6rem;">
+        <summary>${suppressed.length} generic threat${suppressed.length>1?'s':''} suppressed by controls you answered</summary>
+        <div class="tg-disclosure-body" style="display:flex;flex-direction:column;gap:.35rem;">
+          ${suppressed.map(t => `<div class="text-xs"><span class="tg-strike">${esc(t.title)}</span><span class="tg-muted"> — ${esc(t.suppression_reason || '')}</span></div>`).join('')}
+        </div>
+      </details>` : '';
+
+    const cardHTML = (t, i) => {
         const status = (statuses[t.id] && statuses[t.id].status) || 'open';
         const cwe = t.cwe || {};
         const cvss31 = t.cvss31 || {};
@@ -1094,6 +1214,8 @@
                 <div class="threat-meta">
                   <span class="threat-meta-tag">${esc(t.methodology || '')}</span>
                   <span>${esc(t.category || '')}</span>
+                  ${t.tier === 'evidenced' ? `<span class="tg-badge tg-badge--finding" title="The model proves this threat's precondition">finding</span>` : (t.tier === 'baseline' ? `<span class="tg-badge tg-badge--standard" title="Generic type-template — no model evidence proves it applies here; not counted as a finding">standard check</span>` : '')}
+                  ${t.severity_original ? `<span class="tg-badge tg-badge--calibrated" title="${esc(t.severity_rationale || '')}">${esc(t.severity_original)}→${esc(t.severity)}</span>` : ''}
                   ${cwe.id ? `<span class="threat-meta-tag threat-meta-tag-cwe">${esc(cwe.id)}</span>` : ''}
                   ${owasp ? `<span class="threat-meta-tag threat-meta-tag-owasp">${esc(owasp.label)}</span>` : ''}
                   ${cvss31.score !== undefined ? `<span class="threat-meta-tag threat-meta-tag-cvss">CVSS ${cvss31.score}</span>` : ''}
@@ -1124,6 +1246,13 @@
                   <p class="text-sm">${esc(t.location || '—')}</p>
                 </div>
               </div>
+
+              ${t.evidence ? `
+                <div class="detail-section tg-evidence">
+                  <div class="detail-section-title">Why this fired</div>
+                  <p class="text-sm text-dim">${esc(t.evidence)}${t.severity_original ? ` <span class="tg-evidence-cal">· severity ${esc(t.severity_rationale || '')}</span>` : ''}</p>
+                </div>
+              ` : ''}
 
               ${t.attack_scenario && t.attack_scenario.length > 0 ? `
                 <div class="detail-section">
@@ -1182,14 +1311,19 @@
                 ` : ''}
               </div>
 
-              ${t.references && t.references.length > 0 ? `
+              ${frameworkBadges(t)}
+              ${(() => {
+                const fwLabels = new Set((t.frameworks || []).map(f => f.label));
+                const otherRefs = (t.references || []).filter(r => !fwLabels.has(r.label));
+                if (!otherRefs.length) return '';
+                return `
                 <div class="detail-section">
                   <div class="detail-section-title">References</div>
                   <div class="flex gap-2" style="flex-wrap: wrap;">
-                    ${t.references.map(r => `<a href="${esc(r.url || '#')}" target="_blank" class="ref-badge">${esc(r.label || r.url || 'Ref')}</a>`).join('')}
+                    ${otherRefs.map(r => `<a href="${esc(r.url || '#')}" target="_blank" class="ref-badge">${esc(r.label || r.url || 'Ref')}</a>`).join('')}
                   </div>
-                </div>
-              ` : ''}
+                </div>`;
+              })()}
 
               <div class="mt-3 flex items-center gap-2" style="padding-top: 0.75rem; border-top: 1px solid var(--c-border); flex-wrap: wrap;">
                 <button class="show-history btn btn-sm btn-ghost" data-threat-id="${esc(t.id)}">View status history →</button>
@@ -1201,8 +1335,32 @@
             </div>
           </div>
         `;
-      }).join('')}
-      ${threats.length > 100 ? `<p class="text-xs text-center text-light mt-3">Showing first 100 of ${threats.length}. Download a report for the full list.</p>` : ''}
+    };
+
+    // Split grounded findings (proven by the model) from generic "standard checks"
+    // (baseline type-templates). Findings lead; standard checks live in a collapsed,
+    // muted section and are NOT counted as findings — so generic items stop reading
+    // as false positives. Nothing is dropped: every check is one click away.
+    const findings = threats.filter(t => (t.tier || 'baseline') === 'evidenced');
+    const checks = threats.filter(t => (t.tier || 'baseline') !== 'evidenced');
+    const checksSection = checks.length ? `
+      <details class="tg-disclosure" style="margin-top:.85rem;">
+        <summary>${checks.length} standard check${checks.length>1?'s':''} — generic risks for these component types your model doesn't yet confirm or rule out <span class="tg-muted">(not counted as findings)</span></summary>
+        <div class="tg-disclosure-body" style="opacity:.92;">${checks.slice(0, 100).map(cardHTML).join('')}</div>
+        ${checks.length > 100 ? `<p class="text-xs text-center text-light mt-2">Showing first 100 of ${checks.length} standard checks.</p>` : ''}
+      </details>` : '';
+
+    list.innerHTML = `
+      <div class="text-xs text-light mb-2">${findings.length} finding${findings.length!==1?'s':''}${checks.length?` · ${checks.length} standard check${checks.length>1?'s':''}`:''}${suppressed.length ? ` · ${suppressed.length} suppressed` : ''}</div>
+      ${suppressedBanner}
+      ${findings.slice(0, 100).map(cardHTML).join('')}
+      ${findings.length === 0 ? `<div class="empty-state" style="padding:2rem 1rem;">
+        <div class="empty-state-art">✓</div>
+        <div class="empty-state-title">No grounded findings here</div>
+        <div class="empty-state-desc">Your model didn't prove any threats for this filter. Review the standard checks below, or answer more security properties on components to sharpen the model.</div>
+      </div>` : ''}
+      ${findings.length > 100 ? `<p class="text-xs text-center text-light mt-3">Showing first 100 of ${findings.length} findings. Download a report for the full list.</p>` : ''}
+      ${checksSection}
     `;
 
     list.querySelectorAll('.threat-header').forEach(h => {
@@ -1407,6 +1565,20 @@
     const runBtn = document.getElementById('btn-run-analysis');
     if (runBtn) runBtn.addEventListener('click', () => runAnalysis(runBtn));
 
+    // Readiness checklist — answering a question saves the attribute + re-analyses.
+    const rqDisc = document.querySelector('.rq-disclosure');
+    if (rqDisc) rqDisc.addEventListener('toggle', () => { readinessOpen = rqDisc.open; });
+    document.querySelectorAll('[data-rq-answer]').forEach(el => {
+      const isSelect = el.tagName === 'SELECT';
+      el.addEventListener(isSelect ? 'change' : 'click', () => {
+        const value = isSelect ? el.value : el.dataset.value;
+        if (!value) return;
+        readinessOpen = true;
+        el.closest('.rq-card')?.classList.add('rq-busy');
+        answerReadiness(el.dataset.scope, el.dataset.target, el.dataset.attr, value);
+      });
+    });
+
     const delBtn = document.getElementById('btn-delete-tm');
     if (delBtn) delBtn.addEventListener('click', () => {
       UI.confirmDialog(`Permanently delete "${currentTM.name}"? This cannot be undone.`, async () => {
@@ -1471,7 +1643,18 @@
     const sourceText = (currentTM.system && currentTM.system._source_text) || currentTM.description || '';
     const canEdit = (currentTM.owner_id === me.user.id || me.user.role === 'admin');
 
-    dfdEditor = window.DfdEditor.mount(container, currentTM.system || {}, {
+    // When the saved model defines no trust boundaries, analysis infers them (and the
+    // cross-boundary threats are based on those inferred zones). Seed the editor with
+    // the same inferred boundaries so the diagram matches the threats instead of
+    // showing a flat, zone-less system that contradicts the findings.
+    const baseSys = currentTM.system || {};
+    let sysForDfd = baseSys;
+    if (!((baseSys.trust_boundaries || []).length)) {
+      const inferred = ((currentTM.analysis && currentTM.analysis.system) || {}).trust_boundaries || [];
+      if (inferred.length) sysForDfd = { ...baseSys, trust_boundaries: inferred };
+    }
+
+    dfdEditor = window.DfdEditor.mount(container, sysForDfd, {
       readOnly: !canEdit,
       sourceText: sourceText,
       onChange: () => {

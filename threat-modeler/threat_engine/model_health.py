@@ -47,6 +47,49 @@ def _as_list(value) -> list:
     return value if isinstance(value, list) else []
 
 
+# --- Flow protocol / auth are multi-value (defence-in-depth) -----------------
+# These helpers accept either a legacy single string or a list, so every consumer
+# works regardless of how a flow was authored (editor, parser, or older stored model).
+_WEAK_AUTHS = {"", "none", "n/a", "basic", "anonymous"}
+
+
+def value_list(value) -> list[str]:
+    """Normalize a scalar-or-list flow attribute to a clean list of strings."""
+    if isinstance(value, (list, tuple)):
+        items = value
+    elif value in (None, ""):
+        items = []
+    else:
+        items = [value]
+    return [str(v).strip() for v in items if str(v).strip()]
+
+
+def flow_auths(flow: dict) -> list[str]:
+    return [a.lower() for a in value_list((flow or {}).get("auth"))]
+
+
+def flow_protocols(flow: dict) -> list[str]:
+    return value_list((flow or {}).get("protocol"))
+
+
+def auth_display(flow: dict) -> str:
+    return " + ".join(flow_auths(flow)) or "none"
+
+
+def protocol_display(flow: dict) -> str:
+    return " / ".join(flow_protocols(flow)) or "—"
+
+
+def has_strong_auth(flow: dict) -> bool:
+    """True if the flow declares at least one non-weak authentication method."""
+    return any(a not in _WEAK_AUTHS for a in flow_auths(flow))
+
+
+def is_weak_auth(flow: dict) -> bool:
+    """True when no strong auth is present (no auth, or only weak methods)."""
+    return not has_strong_auth(flow)
+
+
 def _clean_id(value) -> str:
     return value.strip() if isinstance(value, str) and value.strip() else ""
 
@@ -170,6 +213,10 @@ def normalize_system(system: dict | None) -> tuple[dict, list[dict]]:
             n_flow_dup_id += 1
         seen_flow_ids.add(fid)
         f["id"] = fid
+        # Protocol / auth are multi-value; normalize scalars to lists so every
+        # downstream consumer sees a consistent shape (no data loss on either form).
+        f["protocol"] = value_list(f.get("protocol"))
+        f["auth"] = value_list(f.get("auth"))
 
         for end in ("from", "to"):
             ref = _clean_id(f.get(end))

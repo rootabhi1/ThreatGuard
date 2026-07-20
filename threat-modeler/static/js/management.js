@@ -130,10 +130,13 @@
   // Portfolio remediation progress bar (open → mitigated), from the flat list.
   function renderRemediation() {
     const card = document.getElementById('remediation-card');
-    if (!mgThreats.length) { card.classList.add('hidden'); return; }
+    // Remediation tracks grounded findings — generic "standard checks" aren't
+    // triageable work items, so counting them would contradict the Findings total.
+    const remThreats = mgThreats.filter(t => (t.tier || 'baseline') === 'evidenced');
+    if (!remThreats.length) { card.classList.add('hidden'); return; }
     const counts = { open: 0, in_progress: 0, mitigated: 0, accepted_risk: 0, false_positive: 0 };
-    mgThreats.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; });
-    const total = mgThreats.length;
+    remThreats.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; });
+    const total = remThreats.length;
     const segs = [
       { k: 'mitigated', label: 'Mitigated', color: 'var(--c-success)' },
       { k: 'in_progress', label: 'In progress', color: 'var(--c-high)' },
@@ -279,6 +282,22 @@
     });
   }
 
+  // Colour + name per OWASP/agentic framework for the multi-framework coverage strip.
+  // Names only — colours come from the shared framework tokens via .tg-fw-soft.
+  const FW_NAME = { WEB: 'OWASP Web', API: 'OWASP API', MOBILE: 'OWASP Mobile', LLM: 'OWASP LLM', AGENTIC: 'OWASP Agentic' };
+  function frameworkStrip() {
+    const agg = {};
+    overview.forEach(f => Object.entries(f.by_framework || {}).forEach(([fw, n]) => { agg[fw] = (agg[fw] || 0) + n; }));
+    const order = ['WEB', 'API', 'MOBILE', 'LLM', 'AGENTIC'].filter(fw => agg[fw]);
+    if (!order.length) return '';
+    const chips = order.map(fw =>
+      `<span class="tg-badge tg-fw-soft" data-fw="${fw}" style="margin:3px 8px 3px 0;">${FW_NAME[fw]}<b>${agg[fw]}</b></span>`
+    ).join('');
+    return `<div class="card" style="grid-column:1 / -1;padding:1rem 1.25rem;">
+      <div class="text-xs font-semibold text-light" style="text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">🗺 Framework coverage — threats mapped per framework</div>
+      <div>${chips}</div></div>`;
+  }
+
   function renderOwasp() {
     const grid = document.getElementById('owasp-grid');
     // Aggregate across all features
@@ -291,15 +310,15 @@
       });
     });
 
+    const fwStrip = frameworkStrip();
     if (totalOwasp === 0) {
-      grid.innerHTML = `
+      grid.innerHTML = fwStrip + `
         <div class="card text-center" style="padding: 3rem; grid-column: 1 / -1;">
-          <p class="text-sm text-light">No OWASP-mapped threats yet. Run analysis on threat models to populate this view.</p>
+          <p class="text-sm text-light">No OWASP Web-mapped threats yet. The framework strip above covers API/Mobile/LLM/Agentic; run analysis to populate the Web grid.</p>
         </div>`;
       return;
     }
-
-    grid.innerHTML = Object.entries(OWASP_2021).map(([code, title]) => {
+    grid.innerHTML = fwStrip + Object.entries(OWASP_2021).map(([code, title]) => {
       const label = `${code} — ${title}`;
       const count = aggregate[label] || 0;
       const pct = totalOwasp > 0 ? (count / totalOwasp * 100).toFixed(1) : 0;

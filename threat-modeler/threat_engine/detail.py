@@ -12,6 +12,8 @@ analyze call, we also enrich the attack_scenario with the configured LLM.
 from __future__ import annotations
 import json
 
+from .model_health import protocol_display as _pd, auth_display as _ad
+
 
 # ---------------------------------------------------------------------------
 # References — methodology / OWASP cross-links
@@ -53,8 +55,8 @@ def _location(threat: dict, components: list[dict], flows: list[dict]) -> str:
         if threat.get("cross_boundary"):
             zone_info = f", crossing the trust boundary from `{threat.get('src_zone','External')}` into `{threat.get('dst_zone','External')}`"
         return (f"On the data flow **{src.get('name','?')} → {dst.get('name','?')}** "
-                f"(label: *{flow.get('label','—')}*, protocol: {flow.get('protocol','unknown')}, "
-                f"auth: {flow.get('auth') or 'none'}, encrypted: {'yes' if flow.get('encrypted') else 'no'})"
+                f"(label: *{flow.get('label','—')}*, protocol: {_pd(flow)}, "
+                f"auth: {_ad(flow)}, encrypted: {'yes' if flow.get('encrypted') else 'no'})"
                 f"{zone_info}. The receiving component is **{component.get('name','?')}** "
                 f"(`{component.get('type','')}`).")
     if component:
@@ -110,7 +112,7 @@ def _attack_scenario(threat: dict, component: dict, flow: dict | None) -> list[s
     if "unencrypted flow" in title:
         return [
             f"Attacker gains read access to the network path (sniffing on shared LAN, compromised router, hostile cloud tenant, malicious admin).",
-            f"Captures cleartext traffic on the {flow.get('protocol','unknown') if flow else 'unknown'} channel.",
+            f"Captures cleartext traffic on the {_pd(flow) if flow else 'unknown'} channel.",
             f"Extracts credentials, session tokens, PII, or business secrets from packet captures.",
             f"Uses the credentials to impersonate {cname} or the calling component, or sells/leaks the captured data.",
         ]
@@ -405,13 +407,24 @@ def enrich_threat_with_detail(threat: dict, component: dict, flow: dict | None,
     threat["attack_scenario"] = scenario
     threat["specific_mitigations"] = _specific_mitigations(threat, component or {}, flow)
 
-    # References
-    refs = []
-    cat_low = (threat.get("category") or "").lower()
-    for key, (label, url) in OWASP_LINKS.items():
-        if key in cat_low:
-            refs.append({"label": label, "url": url})
-            break
+    # References + multi-framework OWASP mapping (Web/API/Mobile/LLM/Agentic).
+    # Collect every component type the threat touches — its own component plus both
+    # endpoints of its flow — so a flow's mobile/API source (a flow threat attaches to
+    # the destination) still activates its lens.
+    from .owasp import map_threat
+    involved = {(component or {}).get("type", "")}
+    fid = threat.get("flow_id")
+    if fid:
+        _by_id = {c["id"]: c for c in components}
+        _fl = next((f for f in flows if f.get("id") == fid), None)
+        if _fl:
+            for _end in (_fl.get("from"), _fl.get("to")):
+                _c = _by_id.get(_end)
+                if _c:
+                    involved.add(_c.get("type", ""))
+    frameworks = map_threat(threat, component or {}, involved)
+    threat["frameworks"] = frameworks   # structured, for badges + coverage view
+    refs = [{"label": fr["label"], "url": fr["url"]} for fr in frameworks]
     methodology = (threat.get("methodology") or "").upper()
     for mkey, url in METHODOLOGY_LINKS.items():
         if mkey in methodology:
