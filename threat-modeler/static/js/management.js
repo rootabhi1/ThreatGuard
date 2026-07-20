@@ -130,10 +130,13 @@
   // Portfolio remediation progress bar (open → mitigated), from the flat list.
   function renderRemediation() {
     const card = document.getElementById('remediation-card');
-    if (!mgThreats.length) { card.classList.add('hidden'); return; }
+    // Remediation tracks grounded findings — generic "standard checks" aren't
+    // triageable work items, so counting them would contradict the Findings total.
+    const remThreats = mgThreats.filter(t => (t.tier || 'baseline') === 'evidenced');
+    if (!remThreats.length) { card.classList.add('hidden'); return; }
     const counts = { open: 0, in_progress: 0, mitigated: 0, accepted_risk: 0, false_positive: 0 };
-    mgThreats.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; });
-    const total = mgThreats.length;
+    remThreats.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; });
+    const total = remThreats.length;
     const segs = [
       { k: 'mitigated', label: 'Mitigated', color: 'var(--c-success)' },
       { k: 'in_progress', label: 'In progress', color: 'var(--c-high)' },

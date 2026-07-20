@@ -886,10 +886,12 @@ def t_management_overview_with_data():
     fake = {
         "summary": {"total": 4, "by_severity": {"Critical": 2, "High": 2}, "rule_based": 4, "llm_enhanced": 0},
         "threats": [
-            {"id": "c1", "title": "Crit 1", "severity": "Critical"},
-            {"id": "c2", "title": "Crit 2", "severity": "Critical"},
-            {"id": "h1", "title": "High 1", "severity": "High"},
-            {"id": "h2", "title": "High 2", "severity": "High"},
+            {"id": "c1", "title": "Crit 1", "severity": "Critical", "tier": "evidenced"},
+            {"id": "c2", "title": "Crit 2", "severity": "Critical", "tier": "evidenced"},
+            {"id": "h1", "title": "High 1", "severity": "High", "tier": "evidenced"},
+            {"id": "h2", "title": "High 2", "severity": "High", "tier": "evidenced"},
+            # A baseline "standard check" must NOT inflate the findings count.
+            {"id": "b1", "title": "Baseline noise", "severity": "Critical", "tier": "baseline"},
         ],
         "system": {}, "untrusted_crossings": [], "methodologies_used": ["stride"], "llm_used": False,
     }
@@ -899,11 +901,13 @@ def t_management_overview_with_data():
     assert len(overview) == 1
     f = overview[0]
     assert f["feature_name"] == "Auth"
-    assert f["total_threats"] == 4
-    assert f["by_severity"]["Critical"] == 2
+    assert f["total_threats"] == 4              # findings only (baseline excluded)
+    assert f["standard_checks"] == 1            # the baseline check, surfaced separately
+    assert f["by_severity"]["Critical"] == 2    # baseline Critical must not inflate this
     assert f["by_severity"]["High"] == 2
     assert f["by_status"]["mitigated"] == 1
     assert "Crit 1" in f["top_critical_titles"]
+    assert "Baseline noise" not in f["top_critical_titles"]
 
 t("Management overview aggregates correctly", t_management_overview_with_data)
 

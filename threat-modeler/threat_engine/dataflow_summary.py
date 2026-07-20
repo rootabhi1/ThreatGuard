@@ -73,8 +73,13 @@ def build_dataflow_summary(system: dict, threats: list[dict] | None = None,
         return (boundary_of.get(cid) or "").lower()
 
     # --- Threats per component (for severity annotations / hotspots) ----------
+    # Count grounded findings only, so hotspots and the "N critical findings"
+    # narrative agree with the headline instead of inflating with generic
+    # "standard checks" (baseline type-templates).
     comp_sev: dict[str, dict[str, int]] = {}
     for t in threats:
+        if t.get("tier", "baseline") != "evidenced":
+            continue
         cn = t.get("component_name") or ""
         sev = t.get("severity") or "Info"
         d = comp_sev.setdefault(cn, {"Critical": 0, "High": 0, "Medium": 0,

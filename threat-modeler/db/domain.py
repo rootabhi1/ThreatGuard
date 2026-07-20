@@ -407,7 +407,8 @@ def management_overview() -> list[dict]:
             status_counts = {s: 0 for s in VALID_THREAT_STATUSES}
             owasp_counts: dict[str, int] = {}
             framework_counts: dict[str, int] = {}   # Web/API/Mobile/LLM/Agentic
-            total_threats = 0
+            total_threats = 0          # grounded findings (headline number)
+            standard_checks = 0        # generic baseline checks (not counted as findings)
             critical_titles: list[str] = []
             ttc_seconds: list[int] = []  # closures we've measured
 
@@ -417,11 +418,16 @@ def management_overview() -> list[dict]:
                 analysis = json.loads(tm["analysis_json"])
                 for t in analysis.get("threats", []):
                     sev = t.get("severity", "Medium")
-                    if sev in severity_counts:
-                        severity_counts[sev] += 1
-                    total_threats += 1
-                    if sev == "Critical" and len(critical_titles) < 5:
-                        critical_titles.append(t.get("title", "—"))
+                    # Managers track grounded findings; generic "standard checks"
+                    # (baseline type-templates) are surfaced separately, not counted.
+                    if t.get("tier", "baseline") != "evidenced":
+                        standard_checks += 1
+                    else:
+                        if sev in severity_counts:
+                            severity_counts[sev] += 1
+                        total_threats += 1
+                        if sev == "Critical" and len(critical_titles) < 5:
+                            critical_titles.append(t.get("title", "—"))
                     # OWASP distribution (Web-only label, kept for the existing grid)
                     owasp = _extract_owasp_label(t.get("references", []))
                     if owasp:
@@ -453,6 +459,7 @@ def management_overview() -> list[dict]:
                 "release_status": f["release_status"],
                 "threat_model_count": len(tms),
                 "total_threats": total_threats,
+                "standard_checks": standard_checks,
                 "by_severity": severity_counts,
                 "by_status": status_counts,
                 "by_owasp": owasp_counts,            # NEW

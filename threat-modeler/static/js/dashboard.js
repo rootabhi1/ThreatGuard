@@ -523,10 +523,11 @@
         if (!dResp.ok) throw new Error((await dResp.json()).detail || 'Diagram analysis failed');
         const d = await dResp.json();
         const tm = d.threat_model;
-        const total = d.analysis ? d.analysis.summary.total : 0;
+        const sm = d.analysis ? d.analysis.summary : {};
+        const total = (sm.findings != null ? sm.findings : (sm.total || 0));
         UI.hideModal('modal-new-tm');
         const viaVision = d.extraction_method === 'llm_vision';
-        UI.toast(`Created "${tm.name}" from ${viaVision ? 'AI vision' : 'the diagram'} — ${total} threats identified`, 'success');
+        UI.toast(`Created "${tm.name}" from ${viaVision ? 'AI vision' : 'the diagram'} — ${total} findings identified`, 'success');
         if (!viaVision)
           UI.toast("AI vision couldn't read the diagram clearly — created an editable starter model; refine it in the Data Flow Diagram tab.", 'info', 8000);
         await loadAll();

@@ -53,22 +53,30 @@ def generate_executive_report(analysis: dict, api_key: str | None = None) -> str
 
     sev_colors  = {"Critical": "#e11d48", "High": "#f97316", "Medium": "#eab308", "Low": "#3b82f6", "Info": "#94a3b8"}
 
+    # Executives see grounded findings, not the generic "standard checks" (baseline
+    # type-templates). Everything below counts and ranks findings only; standard
+    # checks are mentioned as a separate, uncounted number.
+    findings    = [t for t in threats if t.get("tier", "baseline") == "evidenced"]
+    fsev        = summary.get("findings_by_severity", summary.get("by_severity", {}))
+    n_findings  = summary.get("findings", len(findings))
+    n_standard  = summary.get("standard_checks", len(threats) - len(findings))
+
     # Try LLM narrative, fall back to template
     from .llm import llm_available
     narrative = None
     if llm_available():
         try:
-            narrative = _llm_narrative(threats, system_name)
+            narrative = _llm_narrative(findings, system_name)
         except Exception as e:
             print(f"[exec_report] LLM narrative failed: {e}")
 
     if not narrative:
-        crit = summary.get("by_severity", {}).get("Critical", 0)
-        high = summary.get("by_severity", {}).get("High", 0)
+        crit = fsev.get("Critical", 0)
+        high = fsev.get("High", 0)
         narrative = {
-            "EXECUTIVE_SUMMARY": f"The threat model for {system_name} identified {summary.get('total', 0)} security threats across {len(set(t.get('component_name','') for t in threats))} components. Immediate attention is required for {crit} Critical and {high} High severity findings.",
-            "KEY_FINDINGS": [f"{v} {k} severity threats identified" for k, v in summary.get("by_severity", {}).items() if v],
-            "TOP_RISKS":    [f"{t.get('severity')}: {t.get('title')} ({t.get('component_name')})" for t in threats[:3]],
+            "EXECUTIVE_SUMMARY": f"The threat model for {system_name} identified {n_findings} findings proven by the model across {len(set(t.get('component_name','') for t in findings))} components. Immediate attention is required for {crit} Critical and {high} High severity findings. A further {n_standard} generic standard checks are listed for review but not counted as findings.",
+            "KEY_FINDINGS": [f"{v} {k} severity findings identified" for k, v in fsev.items() if v],
+            "TOP_RISKS":    [f"{t.get('severity')}: {t.get('title')} ({t.get('component_name')})" for t in findings[:3]],
             "RECOMMENDED_ACTIONS": ["Review and remediate all Critical threats immediately", "Assign owners and due dates to High severity findings", "Re-run threat model after architectural changes", "Enable LLM-enhanced analysis for deeper coverage"],
             "RISK_POSTURE": f"Overall risk posture is {'Critical' if crit > 0 else 'High' if high > 0 else 'Medium'} — immediate remediation action required.",
         }
@@ -82,11 +90,11 @@ def generate_executive_report(analysis: dict, api_key: str | None = None) -> str
         f'''<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
           <span style="width:80px;text-align:right;font-size:13px;font-weight:600;color:{sev_colors.get(s,"#333")}">{s}</span>
           <div style="flex:1;background:#f1f5f9;border-radius:4px;height:18px;overflow:hidden;">
-            <div style="width:{round(c/max(1,summary.get("total",1))*100)}%;height:100%;background:{sev_colors.get(s,"#333")};border-radius:4px;"></div>
+            <div style="width:{round(c/max(1,n_findings)*100)}%;height:100%;background:{sev_colors.get(s,"#333")};border-radius:4px;"></div>
           </div>
           <span style="font-size:13px;color:#64748b;width:24px;">{c}</span>
         </div>'''
-        for s, c in summary.get("by_severity", {}).items()
+        for s, c in fsev.items()
     )
 
     top_threats_rows = "".join(
@@ -96,7 +104,7 @@ def generate_executive_report(analysis: dict, api_key: str | None = None) -> str
           <td style="padding:10px;color:#64748b;border-bottom:1px solid #e2e8f0;">{t.get("component_name","")}</td>
           <td style="padding:10px;color:#64748b;font-size:12px;border-bottom:1px solid #e2e8f0;">{t.get("methodology","").upper()}</td>
         </tr>'''
-        for t in threats if t.get("severity") in ("Critical", "High")
+        for t in findings if t.get("severity") in ("Critical", "High")
     )
 
     return f"""<!DOCTYPE html>
@@ -120,7 +128,8 @@ def generate_executive_report(analysis: dict, api_key: str | None = None) -> str
 <div class="meta">
   <strong>System:</strong> {system_name} &nbsp;|&nbsp;
   <strong>Date:</strong> {date_str} &nbsp;|&nbsp;
-  <strong>Total threats:</strong> {summary.get("total", 0)}
+  <strong>Findings:</strong> {n_findings} &nbsp;|&nbsp;
+  <strong>Standard checks (not counted):</strong> {n_standard}
 </div>
 
 <h2>Executive Summary</h2>

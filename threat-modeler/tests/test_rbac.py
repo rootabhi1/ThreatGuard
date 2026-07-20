@@ -407,9 +407,9 @@ def test_management_overview_aggregation():
         "system": {"name": "X"},
         "summary": {"total": 3, "by_severity": {"Critical": 2, "High": 1}, "rule_based": 3, "llm_enhanced": 0},
         "threats": [
-            {"id": "t1", "title": "Critical bug", "severity": "Critical"},
-            {"id": "t2", "title": "Another crit", "severity": "Critical"},
-            {"id": "t3", "title": "High issue", "severity": "High"},
+            {"id": "t1", "title": "Critical bug", "severity": "Critical", "tier": "evidenced"},
+            {"id": "t2", "title": "Another crit", "severity": "Critical", "tier": "evidenced"},
+            {"id": "t3", "title": "High issue", "severity": "High", "tier": "evidenced"},
         ],
         "untrusted_crossings": [],
         "methodologies_used": ["stride"],
