@@ -49,6 +49,38 @@
   --shadow-xl: 0 20px 40px -8px rgba(15, 23, 42, 0.15), 0 28px 56px -12px rgba(15, 23, 42, 0.12);
   --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.2);
   --shadow-glow-strong: 0 0 36px rgba(99, 102, 241, 0.4);
+
+  /* Radius scale */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-pill: 999px;
+
+  /* Spacing scale (4px base) */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+
+  /* Type scale */
+  --fs-xs: 0.72rem; --fs-sm: 0.8rem; --fs-base: 0.9rem; --fs-md: 1rem;
+  --fs-lg: 1.15rem; --fs-xl: 1.4rem; --fs-2xl: 1.75rem; --fs-3xl: 2.25rem;
+
+  /* Semantic tone pairs (soft background + readable foreground) — one source of
+     truth for the status pills used across findings, evidence and disclosures. */
+  --tone-finding-bg:   #ecfdf5; --tone-finding-fg:   #047857;   /* proven / good */
+  --tone-standard-bg:  #f1f5f9; --tone-standard-fg:  #64748b;   /* generic / muted */
+  --tone-calibrated-bg:#fef3c7; --tone-calibrated-fg:#92400e;   /* changed / caution */
+  --tone-danger-bg:    #fef2f2; --tone-danger-fg:    #b91c1c;   /* critical */
+
+  /* OWASP framework tones (match the report + coverage colours) */
+  --fw-web: #334155; --fw-api: #0e7490; --fw-mobile: #047857;
+  --fw-llm: #6d28d9; --fw-agentic: #a21caf;
+
+  /* Severity *ink* — darker, readable-on-light text shades (the --c-severity
+     values above are vivid badge/fill colours and read poorly as text). */
+  --ink-critical: #b91c1c; --ink-high: #c2410c; --ink-medium: #ca8a04;
+  --ink-low: #1d4ed8; --ink-info: #475569;
 }
 
 /* ==========================================================================
@@ -1510,3 +1542,76 @@ button, a, input, select { transition: all 0.15s ease; }
 .dfd-checkbox-list input { width: 13px; height: 13px; accent-color: var(--c-brand); }
 
 .dfd-component:hover rect:first-child { stroke: var(--c-brand); }
+
+/* ==========================================================================
+   Accuracy UI — unified tone badges, evidence notes & disclosures (0.2)
+   One token-driven system for the finding/standard/calibration/framework pills
+   and the "why this fired" / suppressed / standard-checks panels, replacing the
+   ad-hoc inline colours introduced with the accuracy features.
+   ========================================================================== */
+.tg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.tg-badge--finding    { background: var(--tone-finding-bg);    color: var(--tone-finding-fg); }
+.tg-badge--standard   { background: var(--tone-standard-bg);   color: var(--tone-standard-fg); }
+.tg-badge--calibrated { background: var(--tone-calibrated-bg); color: var(--tone-calibrated-fg); }
+.tg-badge--framework  { border: 1px solid currentColor; background: transparent; }
+.tg-badge--framework .tg-fw-key { font-size: 0.6rem; opacity: .7; letter-spacing: .03em; }
+.tg-badge[data-fw="WEB"]     { color: var(--fw-web); }
+.tg-badge[data-fw="API"]     { color: var(--fw-api); }
+.tg-badge[data-fw="MOBILE"]  { color: var(--fw-mobile); }
+.tg-badge[data-fw="LLM"]     { color: var(--fw-llm); }
+.tg-badge[data-fw="AGENTIC"] { color: var(--fw-agentic); }
+
+/* Soft-filled framework chip (management coverage strip) — background is derived
+   from the same framework token, so there is one source of truth for the colour. */
+.tg-fw-soft {
+  padding: 5px 14px;
+  font-size: var(--fs-base);
+  background: color-mix(in srgb, currentColor 11%, white);
+  border: 1px solid color-mix(in srgb, currentColor 22%, white);
+}
+.tg-fw-soft b { font-variant-numeric: tabular-nums; opacity: .85; margin-left: 3px; }
+
+/* "Why this fired" evidence note — a quiet, left-ruled block */
+.tg-evidence {
+  border-left: 3px solid var(--c-border-strong);
+  padding-left: var(--sp-3);
+}
+.tg-evidence .tg-evidence-cal { color: var(--tone-calibrated-fg); }
+
+/* Collapsible disclosure (suppressed threats, standard checks) */
+.tg-disclosure {
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-surface-2);
+  padding: var(--sp-3) var(--sp-4);
+  margin-top: var(--sp-3);
+}
+.tg-disclosure > summary {
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--c-text-dim);
+  list-style: none;
+}
+.tg-disclosure > summary::-webkit-details-marker { display: none; }
+.tg-disclosure > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: var(--sp-2);
+  color: var(--c-text-light);
+  transition: transform .15s ease;
+}
+.tg-disclosure[open] > summary::before { transform: rotate(90deg); }
+.tg-disclosure .tg-disclosure-body { margin-top: var(--sp-3); }
+.tg-disclosure .tg-muted { color: var(--c-text-light); font-weight: 400; }
+.tg-strike { text-decoration: line-through; color: var(--c-text-light); }

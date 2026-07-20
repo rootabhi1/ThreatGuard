@@ -426,7 +426,7 @@
     const ov = d.overlap || {};
     let overlapBanner = '';
     if (ov.unrelated) {
-      overlapBanner = `<div class="card p-3 mb-3" style="border-left:4px solid var(--c-critical);background:#fef2f2;color:#991b1b;">
+      overlapBanner = `<div class="card p-3 mb-3" style="border-left:4px solid var(--c-critical);background:var(--tone-danger-bg);color:var(--tone-danger-fg);">
         <strong>⚠ These don't look like the same system.</strong> They share no components and no threats,
         so every threat shows as both “new” and “resolved” — this isn't a meaningful diff.
         Compare works best on two versions of the <em>same</em> system (e.g. the same feature across releases).</div>`;
@@ -443,14 +443,14 @@
       <div class="grid grid-cols-4 gap-2 mb-4">
         ${stat(nNew, 'New', 'var(--c-critical)')}
         ${stat(nRes, 'Resolved', 'var(--c-success)')}
-        ${stat(nChg, 'Re-rated', '#ca8a04')}
+        ${stat(nChg, 'Re-rated', 'var(--ink-medium)')}
         ${stat(nComp, 'Components', 'var(--c-brand)')}
       </div>
       ${nNew+nRes+nChg+nComp === 0 ? '<div class="card p-4 text-center text-sm text-light">No differences — these two analyses are identical.</div>' : `
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div><div class="font-semibold text-sm mb-2" style="color:var(--c-critical);">🆕 New threats</div>${rows(d.new_threats||[], threatRow, 'None added.')}</div>
         <div><div class="font-semibold text-sm mb-2" style="color:var(--c-success);">✅ Resolved threats</div>${rows(d.resolved_threats||[], threatRow, 'None resolved.')}</div>
-        <div><div class="font-semibold text-sm mb-2" style="color:#ca8a04;">↕ Re-rated severity</div>${rows(d.changed_severity||[], c => `<div class="card p-2 text-sm">${esc(c.threat.title)}: <strong>${esc(c.old)}</strong> → <strong>${esc(c.new)}</strong></div>`, 'No severity changes.')}</div>
+        <div><div class="font-semibold text-sm mb-2" style="color:var(--ink-medium);">↕ Re-rated severity</div>${rows(d.changed_severity||[], c => `<div class="card p-2 text-sm">${esc(c.threat.title)}: <strong>${esc(c.old)}</strong> → <strong>${esc(c.new)}</strong></div>`, 'No severity changes.')}</div>
         <div><div class="font-semibold text-sm mb-2" style="color:var(--c-brand);">🧩 Component changes</div>${rows([...(d.new_components||[]).map(n=>({t:'+ '+n,c:'var(--c-success)'})), ...(d.removed_components||[]).map(n=>({t:'− '+n,c:'var(--c-critical)'}))], c => `<div class="card p-2 text-sm" style="color:${c.c};">${esc(c.t)}</div>`, 'No component changes.')}</div>
       </div>`}`;
   });
@@ -944,7 +944,7 @@
           ${['Critical','High','Medium','Low','Info'].map(s => `
             <button data-filter-sev="${s}" class="card p-3 text-center cursor-pointer ${filter.severity === s ? 'animate-glow' : ''}" style="${filter.severity === s ? 'border-color: var(--c-brand);' : ''}">
               <div class="text-xs font-semibold" style="text-transform: uppercase; letter-spacing: 0.05em; color: var(--c-text-light);">${s}</div>
-              <div style="font-size: 1.75rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 0.25rem; color: ${s==='Critical'?'var(--c-critical)':s==='High'?'var(--c-high)':s==='Medium'?'#ca8a04':s==='Low'?'var(--c-low)':'var(--c-info)'};">${sev[s] || 0}</div>
+              <div style="font-size: 1.75rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 0.25rem; color: ${s==='Critical'?'var(--c-critical)':s==='High'?'var(--c-high)':s==='Medium'?'var(--ink-medium)':s==='Low'?'var(--c-low)':'var(--c-info)'};">${sev[s] || 0}</div>
             </button>
           `).join('')}
         </div>
@@ -1095,42 +1095,33 @@
     const statuses = currentTM.threat_statuses || {};
 
     if (threats.length === 0) {
-      list.innerHTML = '<div class="text-center text-sm text-light" style="padding: 2rem;">No threats match filters</div>';
+      list.innerHTML = `<div class="empty-state" style="padding:2.5rem 1rem;">
+        <div class="empty-state-art">🔍</div>
+        <div class="empty-state-title">No threats match your filters</div>
+        <div class="empty-state-desc">Try clearing the severity or status filter, or the search box.</div>
+      </div>`;
       return;
     }
 
-    // Colour per OWASP/agentic framework so mappings read at a glance.
-    const FW_COLORS = {
-      WEB:     { bg: '#f1f5f9', fg: '#334155', bd: '#cbd5e1' },
-      API:     { bg: '#ecfeff', fg: '#0e7490', bd: '#a5f3fc' },
-      MOBILE:  { bg: '#ecfdf5', fg: '#047857', bd: '#a7f3d0' },
-      LLM:     { bg: '#f5f3ff', fg: '#6d28d9', bd: '#ddd6fe' },
-      AGENTIC: { bg: '#fdf4ff', fg: '#a21caf', bd: '#f5d0fe' },
-    };
+    // Framework badges use the shared token-driven pill (.tg-badge--framework +
+    // data-fw) so their colours match the reports and coverage strip.
     const frameworkBadges = (t) => {
       if (!t.frameworks || !t.frameworks.length) return '';
       return `<div class="detail-section">
         <div class="detail-section-title">Framework mapping</div>
         <div class="flex gap-2" style="flex-wrap:wrap;">
-          ${t.frameworks.map(fr => {
-            const c = FW_COLORS[fr.framework] || FW_COLORS.WEB;
-            return `<a href="${esc(fr.url || '#')}" target="_blank" title="${esc(fr.label)}"
-              style="display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;padding:2px 9px;border-radius:999px;background:${c.bg};color:${c.fg};border:1px solid ${c.bd};text-decoration:none;">
-              <span style="font-size:.6rem;opacity:.75;letter-spacing:.03em;">${fr.framework}</span>${esc(fr.id)}</a>`;
-          }).join('')}
+          ${t.frameworks.map(fr => `<a href="${esc(fr.url || '#')}" target="_blank" title="${esc(fr.label)}"
+              class="tg-badge tg-badge--framework" data-fw="${esc(fr.framework)}" style="text-decoration:none;">
+              <span class="tg-fw-key">${esc(fr.framework)}</span>${esc(fr.id)}</a>`).join('')}
         </div></div>`;
     };
     // Disclosed (not dropped): generic threats a positively-answered control negated.
     const suppressed = currentTM.analysis.suppressed_threats || [];
     const suppressedBanner = suppressed.length ? `
-      <details class="card" style="padding:.6rem .85rem;margin-bottom:.6rem;background:#f8fafc;">
-        <summary style="cursor:pointer;font-size:.8rem;font-weight:600;color:#475569;">
-          ${suppressed.length} generic threat${suppressed.length>1?'s':''} suppressed by controls you answered — click to review
-        </summary>
-        <div style="margin-top:.5rem;display:flex;flex-direction:column;gap:.35rem;">
-          ${suppressed.map(t => `<div class="text-xs" style="color:#64748b;">
-            <span style="text-decoration:line-through;">${esc(t.title)}</span>
-            <span style="color:#94a3b8;"> — ${esc(t.suppression_reason || '')}</span></div>`).join('')}
+      <details class="tg-disclosure" style="margin-bottom:.6rem;">
+        <summary>${suppressed.length} generic threat${suppressed.length>1?'s':''} suppressed by controls you answered</summary>
+        <div class="tg-disclosure-body" style="display:flex;flex-direction:column;gap:.35rem;">
+          ${suppressed.map(t => `<div class="text-xs"><span class="tg-strike">${esc(t.title)}</span><span class="tg-muted"> — ${esc(t.suppression_reason || '')}</span></div>`).join('')}
         </div>
       </details>` : '';
 
@@ -1151,8 +1142,8 @@
                 <div class="threat-meta">
                   <span class="threat-meta-tag">${esc(t.methodology || '')}</span>
                   <span>${esc(t.category || '')}</span>
-                  ${t.tier === 'evidenced' ? `<span class="threat-meta-tag" title="The model proves this threat's precondition" style="background:#ecfdf5;color:#047857;">finding</span>` : (t.tier === 'baseline' ? `<span class="threat-meta-tag" title="Generic type-template — no model evidence proves it applies here; not counted as a finding" style="background:#f1f5f9;color:#64748b;">standard check</span>` : '')}
-                  ${t.severity_original ? `<span class="threat-meta-tag" title="${esc(t.severity_rationale || '')}" style="background:#fef3c7;color:#92400e;">${esc(t.severity_original)}→${esc(t.severity)}</span>` : ''}
+                  ${t.tier === 'evidenced' ? `<span class="tg-badge tg-badge--finding" title="The model proves this threat's precondition">finding</span>` : (t.tier === 'baseline' ? `<span class="tg-badge tg-badge--standard" title="Generic type-template — no model evidence proves it applies here; not counted as a finding">standard check</span>` : '')}
+                  ${t.severity_original ? `<span class="tg-badge tg-badge--calibrated" title="${esc(t.severity_rationale || '')}">${esc(t.severity_original)}→${esc(t.severity)}</span>` : ''}
                   ${cwe.id ? `<span class="threat-meta-tag threat-meta-tag-cwe">${esc(cwe.id)}</span>` : ''}
                   ${owasp ? `<span class="threat-meta-tag threat-meta-tag-owasp">${esc(owasp.label)}</span>` : ''}
                   ${cvss31.score !== undefined ? `<span class="threat-meta-tag threat-meta-tag-cvss">CVSS ${cvss31.score}</span>` : ''}
@@ -1185,9 +1176,9 @@
               </div>
 
               ${t.evidence ? `
-                <div class="detail-section" style="border-left:3px solid var(--c-border);padding-left:.75rem;">
+                <div class="detail-section tg-evidence">
                   <div class="detail-section-title">Why this fired</div>
-                  <p class="text-sm text-dim">${esc(t.evidence)}${t.severity_original ? ` <span style="color:#92400e;">· severity ${esc(t.severity_rationale || '')}</span>` : ''}</p>
+                  <p class="text-sm text-dim">${esc(t.evidence)}${t.severity_original ? ` <span class="tg-evidence-cal">· severity ${esc(t.severity_rationale || '')}</span>` : ''}</p>
                 </div>
               ` : ''}
 
@@ -1281,11 +1272,9 @@
     const findings = threats.filter(t => (t.tier || 'baseline') === 'evidenced');
     const checks = threats.filter(t => (t.tier || 'baseline') !== 'evidenced');
     const checksSection = checks.length ? `
-      <details class="card" style="padding:.6rem .85rem;margin-top:.85rem;background:#f8fafc;">
-        <summary style="cursor:pointer;font-size:.82rem;font-weight:600;color:#475569;">
-          ${checks.length} standard check${checks.length>1?'s':''} — generic risks for these component types your model doesn't yet confirm or rule out <span style="font-weight:400;color:#94a3b8;">(not counted as findings)</span>
-        </summary>
-        <div style="margin-top:.6rem;opacity:.9;">${checks.slice(0, 100).map(cardHTML).join('')}</div>
+      <details class="tg-disclosure" style="margin-top:.85rem;">
+        <summary>${checks.length} standard check${checks.length>1?'s':''} — generic risks for these component types your model doesn't yet confirm or rule out <span class="tg-muted">(not counted as findings)</span></summary>
+        <div class="tg-disclosure-body" style="opacity:.92;">${checks.slice(0, 100).map(cardHTML).join('')}</div>
         ${checks.length > 100 ? `<p class="text-xs text-center text-light mt-2">Showing first 100 of ${checks.length} standard checks.</p>` : ''}
       </details>` : '';
 
@@ -1293,7 +1282,11 @@
       <div class="text-xs text-light mb-2">${findings.length} finding${findings.length!==1?'s':''}${checks.length?` · ${checks.length} standard check${checks.length>1?'s':''}`:''}${suppressed.length ? ` · ${suppressed.length} suppressed` : ''}</div>
       ${suppressedBanner}
       ${findings.slice(0, 100).map(cardHTML).join('')}
-      ${findings.length === 0 ? `<div class="card text-sm text-light" style="padding:1rem;">No grounded findings for this filter — your model didn't prove any threats here. Review the standard checks below, or answer more security properties on components to sharpen the model.</div>` : ''}
+      ${findings.length === 0 ? `<div class="empty-state" style="padding:2rem 1rem;">
+        <div class="empty-state-art">✓</div>
+        <div class="empty-state-title">No grounded findings here</div>
+        <div class="empty-state-desc">Your model didn't prove any threats for this filter. Review the standard checks below, or answer more security properties on components to sharpen the model.</div>
+      </div>` : ''}
       ${findings.length > 100 ? `<p class="text-xs text-center text-light mt-3">Showing first 100 of ${findings.length} findings. Download a report for the full list.</p>` : ''}
       ${checksSection}
     `;
