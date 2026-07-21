@@ -1189,6 +1189,48 @@
       return;
     }
 
+    // Plain-language meaning of each methodology category, so a card explains
+    // itself instead of assuming the reader knows STRIDE / LINDDUN / PASTA.
+    const CATEGORY_DESC = {
+      // STRIDE
+      'spoofing': 'Pretending to be a user or system you are not, to gain trust or access.',
+      'tampering': 'Altering data or code in transit or at rest so it no longer behaves as intended.',
+      'repudiation': 'Performing an action that cannot later be proven — missing or forgeable audit trail.',
+      'information disclosure': 'Exposing data to someone not authorised to see it.',
+      'denial of service': 'Making a system slow or unavailable to legitimate users.',
+      'elevation of privilege': 'Gaining rights beyond what was granted — the classic path to full compromise.',
+      // LINDDUN (privacy)
+      'linkability': 'Being able to tell that two records or actions relate to the same person.',
+      'identifiability': 'Being able to single out the individual behind the data.',
+      'non-repudiation': 'A person being unable to plausibly deny an action (a privacy harm here, not a security one).',
+      'detectability': 'Being able to tell that a record or item exists at all.',
+      'disclosure of information': 'Personal data exposed to a party not authorised to see it.',
+      'unawareness': 'People not knowing, or not being able to control, how their data is used.',
+      'non-compliance': 'Processing that breaks a privacy obligation (consent, purpose, retention, residency).',
+    };
+    const catDesc = (t) => {
+      const c = String(t.category || '').toLowerCase().trim();
+      if (CATEGORY_DESC[c]) return CATEGORY_DESC[c];
+      if (c.startsWith('stage')) return 'A PASTA stage — attack simulation & risk analysis for this part of the system.';
+      return '';
+    };
+
+    // DREAD is derived from independent model signals (not five copies of severity),
+    // so show what each axis measures — that makes the score auditable, not magic.
+    const DREAD_AXES = [
+      ['D_damage', 'Damage', 'how bad the impact is if exploited'],
+      ['R_reproducibility', 'Reproducibility', 'how reliably an attacker can repeat it'],
+      ['E_exploitability', 'Exploitability', 'how little stands between the attacker and the exploit'],
+      ['A_affected_users', 'Affected users', 'the blast radius / how many are hit'],
+      ['D_discoverability', 'Discoverability', 'how easily the weakness is found'],
+    ];
+    const dreadBar = (n) => {
+      const pct = Math.round((Math.max(1, Math.min(10, n)) / 10) * 100);
+      const col = n >= 8 ? 'var(--c-critical)' : n >= 6 ? 'var(--c-high)' : n >= 4 ? 'var(--ink-medium)' : 'var(--c-low)';
+      return `<span style="display:inline-block;width:56px;height:6px;border-radius:3px;background:var(--c-border);vertical-align:middle;overflow:hidden;">
+        <span style="display:block;width:${pct}%;height:100%;background:${col};"></span></span>`;
+    };
+
     // Framework badges use the shared token-driven pill (.tg-badge--framework +
     // data-fw) so their colours match the reports and coverage strip.
     const frameworkBadges = (t) => {
@@ -1227,12 +1269,12 @@
                 <div class="threat-title">${esc(t.title || 'Untitled')}</div>
                 <div class="threat-meta">
                   <span class="threat-meta-tag">${esc(t.methodology || '')}</span>
-                  <span>${esc(t.category || '')}</span>
+                  <span title="${esc(catDesc(t))}" style="${catDesc(t) ? 'border-bottom:1px dotted var(--c-text-light);cursor:help;' : ''}">${esc(t.category || '')}</span>
                   ${t.tier === 'evidenced' ? `<span class="tg-badge tg-badge--finding" title="The model proves this threat's precondition">finding</span>` : (t.tier === 'baseline' ? `<span class="tg-badge tg-badge--standard" title="Generic type-template — no model evidence proves it applies here; not counted as a finding">standard check</span>` : '')}
                   ${t.severity_original ? `<span class="tg-badge tg-badge--calibrated" title="${esc(t.severity_rationale || '')}">${esc(t.severity_original)}→${esc(t.severity)}</span>` : ''}
                   ${cwe.id ? `<span class="threat-meta-tag threat-meta-tag-cwe">${esc(cwe.id)}</span>` : ''}
                   ${owasp ? `<span class="threat-meta-tag threat-meta-tag-owasp">${esc(owasp.label)}</span>` : ''}
-                  ${cvss31.score !== undefined ? `<span class="threat-meta-tag threat-meta-tag-cvss">CVSS ${cvss31.score}</span>` : ''}
+                  ${cvss31.score !== undefined ? `<span class="threat-meta-tag threat-meta-tag-cvss" title="Estimated from the threat class — refine against a concrete finding">CVSS ${cvss31.score}~</span>` : ''}
                 </div>
               </div>
               <div class="flex items-center gap-2">
@@ -1260,6 +1302,13 @@
                   <p class="text-sm">${esc(t.location || '—')}</p>
                 </div>
               </div>
+
+              ${catDesc(t) ? `
+                <div class="detail-section" style="margin: 0 0 1rem;">
+                  <div class="detail-section-title">${esc(t.methodology || '')} · ${esc(t.category || '')}</div>
+                  <p class="text-sm text-dim">${esc(catDesc(t))}</p>
+                </div>
+              ` : ''}
 
               ${t.evidence ? `
                 <div class="detail-section tg-evidence">
@@ -1309,21 +1358,35 @@
                     ${cwe.url ? `<a href="${esc(cwe.url)}" target="_blank" class="metric-box-detail" style="color: #7c3aed; text-decoration: none;">View on cwe.mitre.org →</a>` : ''}
                   </div>
                 ` : ''}
+                ${dread.total !== undefined ? `
+                  <div class="metric-box metric-box-dread">
+                    <div class="metric-box-label">DREAD · primary risk score</div>
+                    <div class="metric-box-value">${dread.total}/50${dread.tier ? ` · ${esc(dread.tier)}` : ''}</div>
+                    <div class="metric-box-detail" style="font-family: inherit; word-break: normal;">derived from your model — see breakdown below</div>
+                  </div>
+                ` : ''}
                 ${cvss31.score !== undefined ? `
                   <div class="metric-box metric-box-cvss">
-                    <div class="metric-box-label">CVSS 3.1</div>
+                    <div class="metric-box-label" title="Estimated from the threat class, not a measured CVE. Refine against a concrete finding.">CVSS 3.1 · estimated</div>
                     <div class="metric-box-value">${cvss31.score} · ${esc(cvss31.severity || '')}</div>
                     <div class="metric-box-detail">${esc(cvss31.vector || '')}</div>
                   </div>
                 ` : ''}
-                ${dread.total !== undefined ? `
-                  <div class="metric-box metric-box-dread">
-                    <div class="metric-box-label">DREAD</div>
-                    <div class="metric-box-value">${dread.total}/50</div>
-                    <div class="metric-box-detail" style="font-family: inherit; word-break: normal;">D${dread.D_damage} R${dread.R_reproducibility} E${dread.E_exploitability} A${dread.A_affected_users} D${dread.D_discoverability}</div>
-                  </div>
-                ` : ''}
               </div>
+
+              ${dread.total !== undefined ? `
+                <div class="detail-section" style="margin: 0 0 1rem;">
+                  <div class="detail-section-title">Why this DREAD score (${dread.total}/50)</div>
+                  <div style="display:grid;grid-template-columns:auto 116px 1fr;gap:6px 14px;align-items:center;font-size:0.8125rem;">
+                    ${DREAD_AXES.map(([k, label, meaning]) => `
+                      <span style="font-weight:600;white-space:nowrap;">${label}</span>
+                      <span style="white-space:nowrap;">${dreadBar(dread[k] || 0)} <span style="font-variant-numeric:tabular-nums;">${dread[k] || 0}/10</span></span>
+                      <span class="text-dim">${meaning}</span>
+                    `).join('')}
+                  </div>
+                  <p class="text-xs text-light" style="margin-top:.5rem;">DREAD is the primary risk ranking at threat-model stage; CVSS above is an estimate from the threat class.</p>
+                </div>
+              ` : ''}
 
               ${frameworkBadges(t)}
               ${(() => {

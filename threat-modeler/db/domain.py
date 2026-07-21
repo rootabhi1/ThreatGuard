@@ -432,11 +432,12 @@ def management_overview() -> list[dict]:
                     owasp = _extract_owasp_label(t.get("references", []))
                     if owasp:
                         owasp_counts[owasp] = owasp_counts.get(owasp, 0) + 1
-                    # Multi-framework coverage (Web/API/Mobile/LLM/Agentic)
-                    for fr in t.get("frameworks", []):
-                        fw = fr.get("framework")
-                        if fw:
-                            framework_counts[fw] = framework_counts.get(fw, 0) + 1
+                    # Multi-framework coverage (Web/API/Mobile/LLM/Agentic): count each
+                    # threat ONCE per framework, not once per mapped category — a single
+                    # threat maps to several categories, so per-category counts run higher
+                    # than the total number of threats and read as inconsistent.
+                    for fw in {fr.get("framework") for fr in t.get("frameworks", []) if fr.get("framework")}:
+                        framework_counts[fw] = framework_counts.get(fw, 0) + 1
 
                 # Statuses + TTC for this threat model
                 statuses = c.execute(
