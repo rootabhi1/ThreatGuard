@@ -287,14 +287,19 @@
   const FW_NAME = { WEB: 'OWASP Web', API: 'OWASP API', MOBILE: 'OWASP Mobile', LLM: 'OWASP LLM', AGENTIC: 'OWASP Agentic' };
   function frameworkStrip() {
     const agg = {};
-    overview.forEach(f => Object.entries(f.by_framework || {}).forEach(([fw, n]) => { agg[fw] = (agg[fw] || 0) + n; }));
+    let totalThreats = 0;
+    overview.forEach(f => {
+      Object.entries(f.by_framework || {}).forEach(([fw, n]) => { agg[fw] = (agg[fw] || 0) + n; });
+      totalThreats += (f.total_threats || 0) + (f.standard_checks || 0);
+    });
     const order = ['WEB', 'API', 'MOBILE', 'LLM', 'AGENTIC'].filter(fw => agg[fw]);
     if (!order.length) return '';
     const chips = order.map(fw =>
-      `<span class="tg-badge tg-fw-soft" data-fw="${fw}" style="margin:3px 8px 3px 0;">${FW_NAME[fw]}<b>${agg[fw]}</b></span>`
+      `<span class="tg-badge tg-fw-soft" data-fw="${fw}" title="${agg[fw]} threat${agg[fw] !== 1 ? 's' : ''} map to ${FW_NAME[fw]}" style="margin:3px 8px 3px 0;">${FW_NAME[fw]}<b>${agg[fw]}</b></span>`
     ).join('');
     return `<div class="card" style="grid-column:1 / -1;padding:1rem 1.25rem;">
-      <div class="text-xs font-semibold text-light" style="text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">🗺 Framework coverage — threats mapped per framework</div>
+      <div class="text-xs font-semibold text-light" style="text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem;">🗺 Frameworks — how many threats map to each</div>
+      <div class="text-xs text-light" style="margin-bottom:.6rem;">Distinct threats that touch each framework${totalThreats ? `, out of ${totalThreats} analysed` : ''}. One threat can map to several frameworks, so these don't sum to the total.</div>
       <div>${chips}</div></div>`;
   }
 
