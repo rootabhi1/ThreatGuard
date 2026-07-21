@@ -42,8 +42,8 @@ _TYPE_KEYWORDS = {
     "llm":             ["llm", "large language model", "language model", "gpt", "openai", "chatgpt",
                         "bedrock", "sagemaker", "hugging face", "inference endpoint", "model endpoint",
                         "generative ai", "vertex ai"],
-    "vector_db":       ["vector database", "vector db", "pinecone", "weaviate", "qdrant", "milvus",
-                        "chroma", "embedding store"],
+    "vector_db":       ["vector database", "vector db", "vector store", "vector index", "pinecone",
+                        "weaviate", "qdrant", "milvus", "chroma", "faiss", "pgvector", "embedding store"],
     # Agentic AI — autonomous agents, tools, orchestration, memory, and guardrails.
     "ai_agent":        ["ai agent", "autonomous agent", "llm agent", "agent", "react agent",
                         "langchain agent", "autogpt", "babyagi", "copilot agent", "assistant agent"],
@@ -54,7 +54,7 @@ _TYPE_KEYWORDS = {
                         "tool use", "tool-use", "code interpreter", "plugin"],
     "mcp_server":      ["mcp server", "mcp", "model context protocol", "tool server"],
     "agent_memory":    ["agent memory", "conversation memory", "long-term memory", "short-term memory",
-                        "scratchpad", "episodic memory", "memory store"],
+                        "session memory", "chat memory", "scratchpad", "episodic memory", "memory store"],
     "retriever":       ["retriever", "rag", "retrieval augmented", "retrieval-augmented",
                         "retrieval pipeline", "context retrieval", "document retriever"],
     "guardrail":       ["guardrail", "guardrails", "llm firewall", "prompt firewall", "content filter",
@@ -62,7 +62,7 @@ _TYPE_KEYWORDS = {
     "knowledge_base":  ["knowledge base", "knowledgebase", "kb", "document store for rag",
                         "grounding data", "corpus"],
     # Data
-    "database":        ["database", "db", "postgres", "mysql", "mongodb", "dynamodb", "rds", "cassandra",
+    "database":        ["database", "db", "postgres", "postgresql", "mysql", "mongodb", "dynamodb", "rds", "cassandra",
                         "cockroach", "mariadb", "sqlite", "mssql", "sql server", "oracle", "spanner",
                         "aurora", "neo4j", "influxdb", "timescale", "scylla"],
     "object_storage":  ["s3", "object storage", "object store", "blob storage", "minio", "gcs",
@@ -99,3 +99,36 @@ _EXTRA_TYPES = ["config", "service", "worker", "vpc"]
 
 # Human-facing list of valid component types (deduped, keyword-mapped first).
 VALID_COMPONENT_TYPES = list(dict.fromkeys(list(_TYPE_KEYWORDS.keys()) + _EXTRA_TYPES))
+_CANON_SET = set(VALID_COMPONENT_TYPES)
+
+
+def _norm_type(s: str) -> str:
+    """Normalize a type token: lowercase, collapse spaces/hyphens/slashes to '_'."""
+    s = (s or "").strip().lower()
+    for ch in (" ", "-", "/", "."):
+        s = s.replace(ch, "_")
+    while "__" in s:
+        s = s.replace("__", "_")
+    return s.strip("_")
+
+
+# Alias map: a normalized keyword/phrase -> its canonical component type. Lets the
+# structured ("precise") parser accept natural type tokens — e.g. 'vector store',
+# 'llm agent', 'RAG', 'session memory', 'postgres' — instead of only the exact
+# canonical token, mirroring the free-text extractor's vocabulary. Canonical types
+# win over aliases (checked first in resolve_component_type), and the first keyword
+# owner wins on any collision.
+_TYPE_ALIASES: dict[str, str] = {}
+for _canon, _kws in _TYPE_KEYWORDS.items():
+    for _kw in _kws:
+        _TYPE_ALIASES.setdefault(_norm_type(_kw), _canon)
+
+
+def resolve_component_type(raw: str) -> str | None:
+    """Map a declared type token — canonical, an alias, or a natural phrase like
+    'vector store' / 'llm agent' / 'RAG' — to a canonical component type. Returns
+    None when it cannot be resolved (caller keeps it as-is and warns)."""
+    key = _norm_type(raw)
+    if key in _CANON_SET:
+        return key
+    return _TYPE_ALIASES.get(key)
