@@ -300,12 +300,17 @@
 
   function renderOwasp() {
     const grid = document.getElementById('owasp-grid');
-    // Aggregate across all features
+    // Aggregate across all features, keyed by OWASP CODE (e.g. "A01:2021").
+    // The server labels counts as "A01:2021 Broken Access Control" (code + space
+    // + title); the grid renders by code, so normalize to the code on both sides
+    // — a full-label match would silently miss on the title/separator formatting.
     const aggregate = {};
     let totalOwasp = 0;
     overview.forEach(f => {
       Object.entries(f.by_owasp || {}).forEach(([cat, n]) => {
-        aggregate[cat] = (aggregate[cat] || 0) + n;
+        const m = String(cat).match(/A\d{2}:\d{4}/);
+        const code = m ? m[0] : cat;
+        aggregate[code] = (aggregate[code] || 0) + n;
         totalOwasp += n;
       });
     });
@@ -319,8 +324,7 @@
       return;
     }
     grid.innerHTML = fwStrip + Object.entries(OWASP_2021).map(([code, title]) => {
-      const label = `${code} — ${title}`;
-      const count = aggregate[label] || 0;
+      const count = aggregate[code] || 0;
       const pct = totalOwasp > 0 ? (count / totalOwasp * 100).toFixed(1) : 0;
       const sev = count > 10 ? 'critical' : count > 3 ? 'high' : count > 0 ? 'medium' : 'none';
       const colorVar = sev === 'critical' ? '--c-critical' :

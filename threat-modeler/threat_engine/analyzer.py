@@ -342,12 +342,76 @@ def _slug(name: str) -> str:
     return s or "c"
 
 
+def _extract_bracket(text: str) -> tuple[str, str | None]:
+    """Split a trailing/embedded ``[...]`` attribute list off a line.
+
+    Returns (text_without_bracket, inside) where ``inside`` is None when there is
+    no bracket. General for both component and flow lines."""
+    i = text.find("[")
+    if i == -1:
+        return text, None
+    j = text.rfind("]")
+    if j < i:
+        return text, None
+    return (text[:i] + text[j + 1:]).strip(), text[i + 1:j].strip()
+
+
+def _coerce_attr(key: str, val: str, schema: dict) -> tuple[str, str | None, str | None]:
+    """Validate/normalize one ``key=value`` attribute against a schema
+    (COMPONENT_ATTRIBUTES or FLOW_ATTRIBUTES). Returns (key, value, error);
+    ``error`` is set (and value None) when the key is unknown or the value invalid."""
+    k = key.strip().lower().replace(" ", "_").replace("-", "_")
+    v = (val or "").strip().lower()
+    if k not in schema:
+        return k, None, f"unknown attribute '{k}'"
+    _label, kind, options = schema[k]
+    if kind == "yn":
+        if v in ("yes", "true", "y", "1", "on"):
+            return k, "yes", None
+        if v in ("no", "false", "n", "0", "off"):
+            return k, "no", None
+        return k, None, f"'{val.strip()}' is not yes/no for '{k}'"
+    if kind == "choice":
+        opts = [o for o in (options or []) if o]
+        if v in opts:
+            return k, v, None
+        return k, None, f"'{val.strip()}' invalid for '{k}' (expected: {', '.join(opts)})"
+    return k, v, None
+
+
+def _parse_attr_list(inside: str, schema: dict) -> tuple[dict, list[str]]:
+    """Parse ``[k=v, bareflag, k2=v2]`` into {attr: value}. A bare token is a
+    yes-flag (``[internet_facing]`` == ``internet_facing=yes``). Returns
+    (attrs, problems) — problems is a list of human-readable strings to disclose."""
+    attrs: dict = {}
+    problems: list[str] = []
+    for tok in inside.split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        if "=" in tok:
+            rawk, rawv = tok.split("=", 1)
+        else:
+            rawk, rawv = tok, "yes"
+        k, v, err = _coerce_attr(rawk, rawv, schema)
+        if err:
+            problems.append(err)
+            continue
+        attrs[k] = v
+    return attrs, problems
+
+
 def parse_structured_system(text: str) -> dict:
     """Parse a structured system description into a system model — leniently.
 
     Format (lines; '#' and blank lines ignored):
-        Name : type                       -> a component
-        From -> To : proto, auth, enc?    -> a data flow (attrs optional)
+        Name : type [attr=value, flag]     -> a component (attributes optional)
+        From -> To : proto, auth, enc? [attr=value]  -> a data flow (attrs optional)
+
+    Attributes in ``[...]`` set the same security properties the DFD editor exposes
+    (e.g. ``[ingests_untrusted_content, tool_access=exec, human_in_the_loop=no]`` on an
+    agent, or ``[validates_input=no, authorization=none]`` on a flow), which is what
+    drives evidenced findings — including the OWASP-LLM / agentic threats.
 
     Never raises: every line that can be parsed is kept, and every line that can't
     is recorded as a line-referenced entry in the returned ``issues`` list. A flow
@@ -376,6 +440,8 @@ def parse_structured_system(text: str) -> dict:
                             f"or 'A -> B' (a flow). Skipped.")
             continue
         name, _, ctype = line.partition(":")
+        # Pull any [attr=value, …] list off the type portion before normalizing.
+        ctype, bracket = _extract_bracket(ctype)
         name, ctype = name.strip(), ctype.strip().lower().replace(" ", "_")
         if not name:
             _issue("error", f"Line {lineno}: missing a component name before ':'. Skipped.")
@@ -390,6 +456,11 @@ def parse_structured_system(text: str) -> dict:
             continue
         comp = {"id": f"c_{_slug(name)}_{len(components)}", "name": name, "type": ctype,
                 "description": f"Declared component ({ctype})"}
+        if bracket:
+            attrs, problems = _parse_attr_list(bracket, COMPONENT_ATTRIBUTES)
+            comp.update(attrs)
+            for p in problems:
+                _issue("warning", f"Line {lineno}: {p} — ignored.")
         components.append(comp)
         by_name[name.lower()] = comp
 
@@ -399,6 +470,9 @@ def parse_structured_system(text: str) -> dict:
     data_flows: list[dict] = []
     n_default_attrs = 0
     for lineno, line in flow_lines:
+        # Pull any [attr=value, …] list off first so it isn't confused with the
+        # comma-separated protocol/auth tokens.
+        line, flow_bracket = _extract_bracket(line)
         endpoints, _, attrs = line.partition(":")
         src_name, _, dst_name = endpoints.partition("->")
         src_name, dst_name = src_name.strip(), dst_name.strip()
@@ -435,7 +509,7 @@ def parse_structured_system(text: str) -> dict:
                 encrypted = True
             elif tok in ("plaintext", "unencrypted", "cleartext", "insecure", "no", "none_enc"):
                 encrypted = False
-        data_flows.append({
+        flow = {
             "id": f"f_{len(data_flows)}",
             "from": src["id"] if src else src_name,
             "to": dst["id"] if dst else dst_name,
@@ -443,7 +517,14 @@ def parse_structured_system(text: str) -> dict:
             "protocol": protocols or ["HTTPS"],
             "auth": auths or ["none"],
             "authorization": authorization, "encrypted": encrypted,
-        })
+        }
+        if flow_bracket:
+            fattrs, fproblems = _parse_attr_list(flow_bracket, FLOW_ATTRIBUTES)
+            # authorization may be set either inline (a bare token) or via [authorization=...]
+            flow.update(fattrs)
+            for p in fproblems:
+                _issue("warning", f"Line {lineno}: {p} — ignored.")
+        data_flows.append(flow)
 
     # Structured input is exact for what you write, but unspecified flow attributes
     # fall back to defaults — disclose that so those defaults aren't mistaken for facts.
@@ -817,6 +898,144 @@ def _yn_yes(d: dict, k: str) -> bool:
     return str(d.get(k, "")).strip().lower() == "yes"
 
 
+def _val(d: dict, k: str) -> str:
+    return str(d.get(k, "")).strip().lower()
+
+
+# ---------------------------------------------------------------------------
+# Agentic / OWASP-LLM threat classes — single source of truth (data-driven).
+#
+# Each class is keyed to a *set of component types* (so it applies to ANY agentic
+# architecture, never to specific component names) and carries two predicates:
+#   risky(c)   -> the modeller answered a property that PROVES the risk  -> evidenced finding
+#   cleared(c) -> the modeller answered a property that RULES IT OUT     -> nothing to report
+# When neither holds (the property is simply unanswered), the class still applies
+# to the type, so it surfaces as a disclosed *baseline* standard-check — that is
+# what makes an agentic system show its OWASP-LLM risk surface from the type alone,
+# and readiness questions then promote each check to an evidenced finding (or clear
+# it) as the property is answered. Adding a component type to a class's `types`
+# extends coverage to every model that uses it.
+# ---------------------------------------------------------------------------
+_AGENTIC_CLASSES = [
+    {
+        "id": "prompt_injection", "category": "Tampering", "severity": "High", "owasp": "LLM01",
+        "types": {"llm", "ai_agent", "agent_orchestrator", "retriever", "guardrail"},
+        "risky": lambda c: _yn_yes(c, "ingests_untrusted_content") and _yn_no(c, "prompt_injection_defense"),
+        "cleared": lambda c: _yn_no(c, "ingests_untrusted_content") or _yn_yes(c, "prompt_injection_defense"),
+        "ask": "ingests_untrusted_content / prompt_injection_defense",
+        "e_title": "Prompt injection — untrusted content, no defense",
+        "b_title": "Prompt injection exposure — confirm untrusted-input handling",
+        "e_desc": "This element ingests untrusted content into the model context with no prompt-injection "
+                  "defenses, so attacker-controlled text can override instructions (OWASP LLM01 Prompt Injection).",
+        "b_desc": "LLM/agent elements can be steered by attacker-controlled text placed in the model context "
+                  "(OWASP LLM01 Prompt Injection). Confirm whether this ingests untrusted content and whether "
+                  "prompt-injection defenses exist.",
+        "mitigations": ["Separate trusted instructions from untrusted data",
+                        "Add input filtering / guardrails and constrain outputs",
+                        "Never let raw model output trigger privileged actions"],
+    },
+    {
+        "id": "excessive_agency", "category": "Elevation of Privilege", "severity": "Critical", "owasp": "LLM06",
+        "types": {"ai_agent", "agent_orchestrator"},
+        "risky": lambda c: _val(c, "autonomy_level") == "autonomous" and _val(c, "tool_access") in ("write", "exec")
+                 and _yn_no(c, "human_in_the_loop"),
+        "cleared": lambda c: _yn_yes(c, "human_in_the_loop") or _val(c, "autonomy_level") == "suggest"
+                   or _val(c, "tool_access") in ("none", "read"),
+        "ask": "autonomy_level / tool_access / human_in_the_loop",
+        "e_title": "Excessive agency — autonomous agent with write/exec tools and no human review",
+        "b_title": "Excessive agency — confirm autonomy, tool scope and human review",
+        "e_desc": "A fully autonomous agent that can take write/exec actions with no human-in-the-loop can perform "
+                  "unintended or attacker-induced actions at scale (OWASP LLM06 Excessive Agency / Agentic).",
+        "b_desc": "Agents that act with tools can take unintended or attacker-induced actions (OWASP LLM06 "
+                  "Excessive Agency). Confirm the autonomy level, how privileged the tool access is, and whether "
+                  "high-impact actions require human approval.",
+        "mitigations": ["Require human approval for high-impact actions",
+                        "Scope tools to least privilege (read-only where possible)",
+                        "Add allow-lists, spend/rate caps, and make actions reversible"],
+    },
+    {
+        "id": "unsandboxed_exec", "category": "Elevation of Privilege", "severity": "Critical", "owasp": "LLM06",
+        "types": {"ai_agent", "agent_orchestrator", "llm_tool", "mcp_server"},
+        "risky": lambda c: _val(c, "tool_access") == "exec" and _yn_no(c, "sandboxed"),
+        "cleared": lambda c: _yn_yes(c, "sandboxed") or _val(c, "tool_access") in ("none", "read", "write"),
+        "ask": "tool_access / sandboxed",
+        "e_title": "Unsandboxed tool/code execution",
+        "b_title": "Tool/code execution — confirm sandboxing",
+        "e_desc": "An element that executes code or tools without a sandbox risks remote code execution and host "
+                  "compromise if the model is manipulated (OWASP LLM06 / Agentic).",
+        "b_desc": "Tool/code-execution surfaces can lead to RCE and host compromise if a model is manipulated "
+                  "(OWASP LLM06 / Agentic). Confirm whether this executes tools/code and whether it is sandboxed.",
+        "mitigations": ["Run tools/code in an isolated sandbox",
+                        "Drop privileges; restrict network and filesystem",
+                        "Validate and allow-list tool calls"],
+    },
+    {
+        "id": "insecure_output", "category": "Tampering", "severity": "High", "owasp": "LLM05",
+        "types": {"llm", "ai_agent", "agent_orchestrator", "llm_tool"},
+        "risky": lambda c: _yn_no(c, "output_validated"),
+        "cleared": lambda c: _yn_yes(c, "output_validated"),
+        "ask": "output_validated",
+        "e_title": "Model output used without validation",
+        "b_title": "Model output handling — confirm downstream validation",
+        "e_desc": "Model output is consumed downstream without validation or encoding, enabling insecure output "
+                  "handling — injection into tools, code, SQL, or the browser (OWASP LLM05 Improper Output Handling).",
+        "b_desc": "Model output consumed downstream without validation enables injection into tools, code, SQL or "
+                  "the browser (OWASP LLM05 Improper Output Handling). Confirm output is validated/encoded before use.",
+        "mitigations": ["Treat model output as untrusted",
+                        "Validate/encode before use in tools, queries, or HTML",
+                        "Constrain output format; reject anomalies"],
+    },
+    {
+        "id": "memory_poisoning", "category": "Information Disclosure", "severity": "High", "owasp": "LLM01",
+        "types": {"agent_memory", "vector_db", "knowledge_base"},
+        "risky": lambda c: _val(c, "memory_scope") in ("cross_user", "cross_tenant"),
+        "cleared": lambda c: _val(c, "memory_scope") in ("session", "per_user"),
+        "ask": "memory_scope",
+        "e_title": lambda c: f"Agent memory shared across {'tenants' if _val(c, 'memory_scope') == 'cross_tenant' else 'users'}",
+        "b_title": "Agent memory — confirm isolation scope",
+        "e_desc": "Memory shared across users/tenants enables cross-boundary data leakage and memory poisoning, "
+                  "where one party's injected content influences another's session (OWASP LLM / Agentic).",
+        "b_desc": "Shared agent memory/embeddings can leak across users/tenants and be poisoned so one party's "
+                  "content influences another's session (OWASP LLM / Agentic). Confirm the memory isolation scope.",
+        "mitigations": ["Scope memory per user/session/tenant",
+                        "Sanitize and validate what is written to memory",
+                        "Isolate and access-control memory reads"],
+    },
+    {
+        "id": "rag_poisoning", "category": "Tampering", "severity": "High", "owasp": "LLM04",
+        "types": {"retriever", "knowledge_base"},
+        "risky": lambda c: _val(c, "content_source_trust") in ("web_scraped", "user_uploaded"),
+        "cleared": lambda c: _val(c, "content_source_trust") == "curated",
+        "ask": "content_source_trust",
+        "e_title": "Untrusted grounding source",
+        "b_title": "Grounding/RAG source — confirm content provenance",
+        "e_desc": "Grounding/RAG content from untrusted sources can carry indirect prompt injection and poisoned "
+                  "data that the model treats as instructions (OWASP LLM04 Data Poisoning / LLM01).",
+        "b_desc": "Retrieved/grounding content can carry indirect prompt injection and data poisoning that the "
+                  "model treats as instructions (OWASP LLM04 / LLM01). Confirm how trusted the content source is.",
+        "mitigations": ["Vet and sanitize ingested content",
+                        "Isolate retrieved content from instructions",
+                        "Track provenance; filter content"],
+    },
+    {
+        "id": "unbounded_spawn", "category": "Denial of Service", "severity": "Medium", "owasp": "LLM10",
+        "types": {"ai_agent", "agent_orchestrator"},
+        "risky": lambda c: _yn_yes(c, "can_spawn_agents") and _val(c, "autonomy_level") == "autonomous",
+        "cleared": lambda c: _yn_no(c, "can_spawn_agents"),
+        "ask": "can_spawn_agents / autonomy_level",
+        "e_title": "Autonomous agent can spawn agents — unbounded consumption",
+        "b_title": "Agent spawning — confirm recursion/consumption limits",
+        "e_desc": "An autonomous agent that spawns other agents without limits risks runaway loops and cost/resource "
+                  "exhaustion (OWASP LLM10 Unbounded Consumption / Agentic).",
+        "b_desc": "Agents that can spawn other agents risk runaway loops and cost/resource exhaustion (OWASP LLM10 "
+                  "Unbounded Consumption). Confirm whether spawning is possible and how it is bounded.",
+        "mitigations": ["Cap recursion depth and concurrent agents",
+                        "Enforce budgets and timeouts",
+                        "Monitor and kill runaway chains"],
+    },
+]
+
+
 def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> list[dict]:
     name = METHODOLOGIES[methodology_key]["name"]
     out: list[dict] = []
@@ -928,56 +1147,14 @@ def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> 
                  "Low", c, None, ["Return generic errors to clients", "Log details server-side only", "Disable debug modes in production"])
 
         # ---- Agentic AI (OWASP LLM / Agentic) ----
-        autonomy = str(c.get("autonomy_level", "")).strip().lower()
-        tool_acc = str(c.get("tool_access", "")).strip().lower()
-        mem_scope = str(c.get("memory_scope", "")).strip().lower()
-        src_trust = str(c.get("content_source_trust", "")).strip().lower()
-        if autonomy == "autonomous" and tool_acc in ("write", "exec") and _yn_no(c, "human_in_the_loop"):
-            emit("Elevation of Privilege",
-                 f"Excessive agency — autonomous agent, {tool_acc} tools, no human review: {c['name']}",
-                 "A fully autonomous agent that can take write/exec actions with no human-in-the-loop can perform "
-                 "unintended or attacker-induced actions at scale (OWASP LLM Excessive Agency / Agentic).",
-                 "Critical", c, None, ["Require human approval for high-impact actions",
-                 "Scope tools to least privilege (read-only where possible)",
-                 "Add allow-lists, spend/rate caps, and make actions reversible"])
-        if tool_acc == "exec" and _yn_no(c, "sandboxed"):
-            emit("Elevation of Privilege", f"Unsandboxed tool/code execution: {c['name']}",
-                 "An agent that executes code or tools without a sandbox risks remote code execution and host "
-                 "compromise if the model is manipulated (OWASP LLM / Agentic).",
-                 "Critical", c, None, ["Run tools/code in an isolated sandbox",
-                 "Drop privileges; restrict network and filesystem", "Validate and allow-list tool calls"])
-        if _yn_yes(c, "ingests_untrusted_content") and _yn_no(c, "prompt_injection_defense"):
-            emit("Tampering", f"Prompt injection — untrusted content, no defense: {c['name']}",
-                 "This element ingests untrusted content into the model context with no prompt-injection defenses, so "
-                 "attacker-controlled text can override instructions (OWASP LLM01 Prompt Injection).",
-                 "High", c, None, ["Separate trusted instructions from untrusted data",
-                 "Add input filtering / guardrails and constrain outputs",
-                 "Never let raw model output trigger privileged actions"])
-        if _yn_no(c, "output_validated") and c.get("type") in _AI_TYPES:
-            emit("Tampering", f"Model output used without validation: {c['name']}",
-                 "Model output is consumed downstream without validation or encoding, enabling insecure output "
-                 "handling — injection into tools, code, SQL, or the browser (OWASP LLM Insecure Output Handling).",
-                 "High", c, None, ["Treat model output as untrusted",
-                 "Validate/encode before use in tools, queries, or HTML", "Constrain output format; reject anomalies"])
-        if mem_scope in ("cross_user", "cross_tenant"):
-            who = "tenants" if mem_scope == "cross_tenant" else "users"
-            emit("Information Disclosure", f"Agent memory shared across {who}: {c['name']}",
-                 f"Memory shared across {who} enables cross-{who[:-1]} data leakage and memory poisoning, where one "
-                 "party's injected content influences another's session (OWASP LLM / Agentic).",
-                 "High", c, None, [f"Scope memory per user/session/{'tenant' if mem_scope == 'cross_tenant' else 'user'}",
-                 "Sanitize and validate what is written to memory", "Isolate and access-control memory reads"])
-        if src_trust in ("web_scraped", "user_uploaded"):
-            emit("Tampering", f"Untrusted grounding source ({src_trust}): {c['name']}",
-                 "Grounding/RAG content from untrusted sources can carry indirect prompt injection and poisoned data "
-                 "that the model treats as instructions (OWASP LLM01 / Data Poisoning).",
-                 "High", c, None, ["Vet and sanitize ingested content",
-                 "Isolate retrieved content from instructions", "Track provenance; filter content"])
-        if _yn_yes(c, "can_spawn_agents") and autonomy == "autonomous":
-            emit("Denial of Service", f"Autonomous agent can spawn agents — unbounded consumption: {c['name']}",
-                 "An autonomous agent that spawns other agents without limits risks runaway loops and cost/resource "
-                 "exhaustion (OWASP LLM Unbounded Consumption / Agentic).",
-                 "Medium", c, None, ["Cap recursion depth and concurrent agents",
-                 "Enforce budgets and timeouts", "Monitor and kill runaway chains"])
+        # Evidenced findings: the modeller answered a property that PROVES the risk.
+        # The same classes surface as type-driven baseline checks in
+        # _agentic_baseline_threats when the property is left unanswered.
+        for cls in _AGENTIC_CLASSES:
+            if c.get("type") in cls["types"] and cls["risky"](c):
+                e_title = cls["e_title"](c) if callable(cls["e_title"]) else cls["e_title"]
+                emit(cls["category"], f"{e_title}: {c['name']}", cls["e_desc"],
+                     cls["severity"], c, None, cls["mitigations"])
 
     for f in system.get("data_flows", []):
         dst = comp_by_id.get(f.get("to"))
@@ -1017,6 +1194,79 @@ def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> 
                  "Least-privilege tool permissions", "Require approval for high-impact tools"])
 
     return out
+
+
+def _agentic_baseline_threats(system: dict, methodology_key: str) -> list[dict]:
+    """Type-driven agentic standard-checks (OWASP LLM / Agentic).
+
+    For every component whose *type* participates in an agentic threat class, surface
+    that class as a disclosed ``baseline`` check — unless the modeller already answered
+    a property that proves it (an evidenced finding fires instead, in _attribute_threats)
+    or rules it out (nothing to report). This is what makes ANY agentic architecture show
+    its OWASP-LLM risk surface from the component types alone; readiness questions then
+    promote each check to an evidenced finding or clear it as properties are answered."""
+    name = METHODOLOGIES[methodology_key]["name"]
+    out: list[dict] = []
+    for c in system.get("components", []):
+        ctype = c.get("type", "")
+        if ctype not in _AI_TYPES:
+            continue
+        for cls in _AGENTIC_CLASSES:
+            if ctype not in cls["types"]:
+                continue
+            if cls["risky"](c) or cls["cleared"](c):
+                continue  # evidenced finding or safely cleared — not a baseline check
+            b_title = cls["b_title"](c) if callable(cls["b_title"]) else cls["b_title"]
+            out.append({
+                "id": f"t_{uuid.uuid4().hex[:8]}",
+                "methodology": name,
+                "category": cls["category"],
+                "title": f"{b_title}: {c['name']}",
+                "description": cls["b_desc"],
+                "severity": cls["severity"],
+                "component_id": c["id"],
+                "component_name": c["name"],
+                "component_type": ctype,
+                "flow_id": None,
+                "mitigations": cls["mitigations"],
+                "source": "rule-based",
+                "tier": "baseline",
+                "evidence": f"Standard check: '{c['name']}' is a {ctype.replace('_', ' ')} component, which is "
+                            f"subject to {cls['owasp']}. Answer '{cls['ask']}' to confirm this as a finding or clear it.",
+                "dread": _score_dread({"severity": cls["severity"]}, c, None),
+            })
+    return out
+
+
+# Name fragments that signal an agentic/LLM data plane. Generic (any such system),
+# never tied to a particular model's component names.
+_AGENTIC_NAME_HINTS = ("agent", "orchestrat", "llm", " rag", "rag ", "(rag", "retriev",
+                       "mcp", "vector", "embedding", "prompt", "copilot", "assistant",
+                       "model gateway", "guardrail", "langchain", "langgraph", "autogen")
+
+
+def _agentic_typing_hint(system: dict) -> dict | None:
+    """If a system reads as agentic (names mention agents/LLMs/RAG/MCP/…) but uses no
+    agentic component types, disclose it — those components are being treated as generic
+    APIs/datastores, so the OWASP-LLM / agentic threats don't apply. Type-driven, general:
+    it keys off the agentic type set and a keyword signal, not any specific model."""
+    comps = system.get("components", []) or []
+    if any(c.get("type") in _AI_TYPES for c in comps):
+        return None
+    hits = [c.get("name", "") for c in comps
+            if any(h in f" {str(c.get('name','')).lower()} " for h in _AGENTIC_NAME_HINTS)]
+    if not hits:
+        return None
+    sample = ", ".join(hits[:4]) + ("…" if len(hits) > 4 else "")
+    return {
+        "level": "warning", "code": "agentic_untyped", "autofixed": False,
+        "message": (f"This looks like an agentic/LLM system ({sample}) but no agentic component "
+                    f"types are used, so these are treated as generic APIs/datastores and the "
+                    f"OWASP-LLM / agentic threats don't apply. Retype them (ai_agent, "
+                    f"agent_orchestrator, llm, llm_tool, mcp_server, retriever, agent_memory, "
+                    f"knowledge_base, vector_db, guardrail) to surface prompt-injection, "
+                    f"excessive-agency, tool-execution, memory-poisoning and RAG-poisoning risks."),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1224,6 +1474,11 @@ def _rule_based_threats(system: dict, methodology_key: str) -> list[dict]:
     # threats. Only fires on explicitly-answered properties, so attribute-less
     # models are unaffected until the user answers them and re-analyzes.
     threats.extend(_attribute_threats(system, methodology_key, comp_by_id))
+
+    # Type-driven agentic standard-checks: surface the OWASP-LLM risk surface for
+    # every agentic component from its type alone (unanswered properties only, so
+    # they never double up with the evidenced findings emitted just above).
+    threats.extend(_agentic_baseline_threats(system, methodology_key))
 
     # De-duplicate (same title + component)
     seen = set()
@@ -1579,6 +1834,12 @@ def analyze_system(
     from .readiness import compute_readiness
     _untrusted = _untrusted_input_crossings(system, all_threats)
     _readiness = compute_readiness(system)
+
+    # Nudge: agentic-looking system modelled with only generic types → disclose so the
+    # modeller can retype and unlock the OWASP-LLM / agentic coverage.
+    _hint = _agentic_typing_hint(system)
+    if _hint:
+        model_issues = [*model_issues, _hint]
 
     return {
         "system": system,

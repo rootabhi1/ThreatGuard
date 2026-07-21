@@ -396,37 +396,103 @@
     const svg = container.querySelector('svg.dfd-canvas');
     const sidePanel = container.querySelector('#dfd-side-panel');
 
-    // ---- Focus mode: dim unrelated flows when hovering a component -----------
-    // Only engages on a busy diagram (a handful of flows is already clear) and
-    // never while dragging/connecting, so it helps at scale without nagging.
+    // ---- Focus & trace ------------------------------------------------------
+    // Hover = a transient peek at a node's DIRECT flows (only on a busy diagram).
+    // Click = pin a TRACE of the node's complete journey: every component up- and
+    // down-stream that the node can reach or be reached from (graph traversal), so
+    // a 30-component system can be followed one lineage at a time. A pinned trace
+    // survives hovering elsewhere; click empty canvas (or the node again) to clear.
     const FOCUS_MIN_FLOWS = 8;
-    function focusNode(id) {
-      if (dragging || flowDrawing) return;
-      const fl = svg.querySelector('.dfd-flows-layer');
-      const cl = svg.querySelector('.dfd-components-layer');
+    let tracedNode = null;
+
+    function _layers() {
+      return [svg.querySelector('.dfd-flows-layer'), svg.querySelector('.dfd-components-layer')];
+    }
+    function _paint(nodeIds, flowPred) {
+      const [fl, cl] = _layers();
       if (!fl || !cl) return;
-      const flows = [...fl.querySelectorAll('.dfd-flow')];
-      if (flows.length < FOCUS_MIN_FLOWS) return;
-      const neighbours = new Set([id]);
-      flows.forEach(gf => {
-        const on = gf.dataset.from === id || gf.dataset.to === id;
-        gf.classList.toggle('dfd-flow-focus', on);
-        if (on) { neighbours.add(gf.dataset.from); neighbours.add(gf.dataset.to); }
-      });
+      fl.querySelectorAll('.dfd-flow').forEach(gf =>
+        gf.classList.toggle('dfd-flow-focus', flowPred(gf.dataset.from, gf.dataset.to)));
       cl.querySelectorAll('.dfd-component').forEach(n =>
-        n.classList.toggle('dfd-node-focus', neighbours.has(n.dataset.componentId)));
+        n.classList.toggle('dfd-node-focus', nodeIds.has(n.dataset.componentId)));
       fl.classList.add('dfd-focusing');
       cl.classList.add('dfd-focusing');
     }
-    function clearFocus() {
-      const fl = svg.querySelector('.dfd-flows-layer');
-      const cl = svg.querySelector('.dfd-components-layer');
-      [fl, cl].forEach(layer => {
+    function _clearPaint() {
+      _layers().forEach(layer => {
         if (!layer) return;
         layer.classList.remove('dfd-focusing');
         layer.querySelectorAll('.dfd-flow-focus, .dfd-node-focus')
           .forEach(e => e.classList.remove('dfd-flow-focus', 'dfd-node-focus'));
       });
+    }
+    // Full up- and down-stream reachable set from `id` over the directed flow graph.
+    function _journey(id) {
+      const fwd = new Map(), rev = new Map();
+      (system.data_flows || []).forEach(f => {
+        if (!fwd.has(f.from)) fwd.set(f.from, []);
+        if (!rev.has(f.to)) rev.set(f.to, []);
+        fwd.get(f.from).push(f.to);
+        rev.get(f.to).push(f.from);
+      });
+      const walk = (start, adj) => {
+        const seen = new Set(), stack = [start];
+        while (stack.length) {
+          const cur = stack.pop();
+          for (const nxt of (adj.get(cur) || [])) if (!seen.has(nxt)) { seen.add(nxt); stack.push(nxt); }
+        }
+        return seen;
+      };
+      const nodes = new Set([id, ...walk(id, fwd), ...walk(id, rev)]);
+      return nodes;
+    }
+    function focusNode(id) {
+      if (dragging || flowDrawing || tracedNode) return;   // a pinned trace wins over hover
+      const [fl] = _layers();
+      if (!fl || fl.querySelectorAll('.dfd-flow').length < FOCUS_MIN_FLOWS) return;
+      const nb = new Set([id]);
+      fl.querySelectorAll('.dfd-flow').forEach(gf => {
+        if (gf.dataset.from === id || gf.dataset.to === id) { nb.add(gf.dataset.from); nb.add(gf.dataset.to); }
+      });
+      _paint(nb, (a, b) => a === id || b === id);
+    }
+    function clearFocus() {
+      if (tracedNode) { applyTrace(tracedNode); return; }   // don't wipe a pinned trace
+      _clearPaint();
+    }
+    function _traceBadge(nNodes, nFlows) {
+      let b = container.querySelector('.dfd-trace-badge');
+      if (nNodes == null) { if (b) b.remove(); return; }
+      if (!b) {
+        b = document.createElement('div');
+        b.className = 'dfd-trace-badge';
+        container.querySelector('.dfd-canvas-wrap')?.appendChild(b) || container.appendChild(b);
+      }
+      b.innerHTML = `<strong>Trace</strong> · ${nNodes} component${nNodes !== 1 ? 's' : ''} · ` +
+                    `${nFlows} flow${nFlows !== 1 ? 's' : ''} <span class="dfd-trace-clear">clear ✕</span>`;
+      b.querySelector('.dfd-trace-clear')?.addEventListener('click', (e) => { e.stopPropagation(); clearTrace(); });
+    }
+    function applyTrace(id) {
+      const nodes = _journey(id);
+      let nFlows = 0;
+      _paint(nodes, (a, b) => {
+        const on = nodes.has(a) && nodes.has(b);
+        if (on) nFlows++;
+        return on;
+      });
+      _traceBadge(nodes.size, nFlows);
+    }
+    function traceNode(id) {
+      tracedNode = id;
+      applyTrace(id);
+    }
+    function clearTrace() {
+      tracedNode = null;
+      _clearPaint();
+      _traceBadge(null);
+    }
+    function toggleTrace(id) {
+      if (tracedNode === id) clearTrace(); else traceNode(id);
     }
 
     // Auto-layout for any components without positions
@@ -669,12 +735,15 @@
         `;
         componentsLayer.appendChild(g);
 
-        // Focus mode: hovering a component fades every unrelated flow so a dense
-        // diagram becomes "trace one node at a time". Works in read-only view too.
+        // Hover fades unrelated flows (quick peek); click pins the full-journey
+        // trace. Both work in read-only report view too.
         g.addEventListener('mouseenter', () => focusNode(c.id));
         g.addEventListener('mouseleave', clearFocus);
 
-        if (!opts.readOnly) {
+        if (opts.readOnly) {
+          g.style.cursor = 'pointer';
+          g.addEventListener('click', (e) => { e.stopPropagation(); toggleTrace(c.id); });
+        } else {
           g.style.touchAction = 'none';
           // Drag the connect handle → draw a flow to whatever component you release on.
           const handle = g.querySelector('.dfd-connect-handle');
@@ -682,11 +751,12 @@
           g.addEventListener('pointerdown', (e) => beginDrag(e, c.id));
           g.addEventListener('click', (e) => {
             e.stopPropagation();
-            // Click without drag selects
+            // Click without drag: complete a connection, else pin the journey trace + select.
             if (!dragging || !dragging.moved) {
               if (flowDrawing) {
                 completeFlow(c.id);
               } else {
+                toggleTrace(c.id);
                 selectComponent(c.id);
               }
             }
@@ -715,6 +785,13 @@
           line.style.pointerEvents = 'none';
           overlayLayer.appendChild(line);
         }
+      }
+
+      // Re-apply a pinned journey trace after a re-render (drops it if the traced
+      // component was removed) so the highlight and badge never go stale.
+      if (tracedNode) {
+        if ((system.components || []).some(c => c.id === tracedNode)) applyTrace(tracedNode);
+        else clearTrace();
       }
     }
 
@@ -1375,7 +1452,7 @@
       if (svg._suppressClick) { svg._suppressClick = false; return; }
       if (e.target === svg || e.target.tagName === 'rect' && e.target.parentNode === svg) {
         if (flowDrawing) cancelFlowDrawing();
-        else deselect();
+        else { clearTrace(); deselect(); }
       }
     });
 

@@ -82,12 +82,21 @@ def main():
         got = frameworks_for(res["threats"], sub)
         check(must_have.issubset(got), f"framework map for '{sub}' ⊇ {sorted(must_have)}  (got {sorted(got)})")
 
-    print("=== Only-answered-attributes principle (no noise on a clean agent) ===")
+    print("=== Type-driven baseline vs evidenced findings on a clean agent ===")
     clean_agent = {"name": "C", "components": [{"id": "a", "name": "A", "type": "ai_agent"}],
                    "data_flows": [], "trust_boundaries": []}
     r2 = analyze_system(clean_agent, ["stride"])
-    check(not any("Excessive agency" in t["title"] for t in r2["threats"]),
-          "no excessive-agency threat when attributes are unanswered")
+    # Unanswered attributes never produce an *evidenced* finding (no fabricated proof)...
+    check(not any("Excessive agency" in t["title"] and t.get("tier") == "evidenced" for t in r2["threats"]),
+          "no evidenced excessive-agency FINDING when attributes are unanswered")
+    # ...but the risk surface still appears as a disclosed baseline standard-check,
+    # so an agentic system is never silently empty of agentic threats (type-driven).
+    ex_baseline = [t for t in r2["threats"]
+                   if "excessive agency" in t["title"].lower() and t.get("tier") == "baseline"]
+    check(len(ex_baseline) == 1, "excessive-agency appears as a baseline standard-check from the type alone")
+    check(all(t["tier"] == "baseline" for t in r2["threats"]
+              if any(k in t["title"].lower() for k in ("prompt injection", "excessive agency", "model output"))),
+          "clean agent's agentic threats are all baseline (none miscounted as findings)")
 
     print("=== Multi-value auth: helpers + no silent drop + weak-auth logic ===")
     check(has_strong_auth({"auth": ["none", "mtls"]}), "mtls among auths => strong")

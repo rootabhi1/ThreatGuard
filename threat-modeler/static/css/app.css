@@ -1614,6 +1614,25 @@ button, a, input, select { transition: all 0.15s ease; }
 .tg-disclosure[open] > summary::before { transform: rotate(90deg); }
 .tg-disclosure .tg-disclosure-body { margin-top: var(--sp-3); }
 .tg-disclosure .tg-muted { color: var(--c-text-light); font-weight: 400; }
+
+/* Collapsible analysis sections (data-flow overview, assumptions, …): a
+   consistent rotating chevron so every pre-tab section reads as expand/collapse. */
+.tg-section > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+}
+.tg-section > summary::-webkit-details-marker { display: none; }
+.tg-section > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: var(--sp-2);
+  color: var(--c-text-light);
+  transition: transform .15s ease;
+}
+.tg-section[open] > summary::before { transform: rotate(90deg); }
+.tg-section > .tg-section-body { margin-top: var(--sp-3); }
 .tg-strike { text-decoration: line-through; color: var(--c-text-light); }
 
 /* ==========================================================================
@@ -1659,3 +1678,20 @@ button, a, input, select { transition: all 0.15s ease; }
 .dfd-component { transition: opacity .12s ease; }
 .dfd-components-layer.dfd-focusing .dfd-component { opacity: 0.55; }
 .dfd-components-layer.dfd-focusing .dfd-component.dfd-node-focus { opacity: 1; }
+
+/* Pinned journey trace (click a component): the same fade, plus a badge and a
+   subtle emphasis on the traced subgraph so a full up/down-stream lineage stands
+   out in a large diagram. */
+.dfd-flows-layer.dfd-focusing .dfd-flow.dfd-flow-focus path { stroke-width: 2.4px; }
+.dfd-components-layer.dfd-focusing .dfd-component.dfd-node-focus { filter: drop-shadow(0 0 3px rgba(99,102,241,.45)); }
+.dfd-trace-badge {
+  position: absolute; top: 10px; left: 10px; z-index: 6;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 10px; border-radius: 8px;
+  background: rgba(30,41,59,.92); color: #f8fafc;
+  font-size: .75rem; line-height: 1; box-shadow: 0 2px 8px -2px rgba(0,0,0,.4);
+  pointer-events: auto;
+}
+.dfd-trace-badge strong { font-weight: 700; letter-spacing: .02em; }
+.dfd-trace-clear { cursor: pointer; color: #c7d2fe; text-decoration: underline; }
+.dfd-trace-clear:hover { color: #fff; }

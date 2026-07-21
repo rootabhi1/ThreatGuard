@@ -334,32 +334,46 @@
   const STRUCTURED_TEMPLATE = [
     '# ThreatGuard — structured system template',
     '#',
-    '# Components — one per line:   Name : type',
-    '# Flows      — one per line:   From -> To : protocol, auth, encrypted?',
+    '# Components — one per line:   Name : type [attr=value, flag]',
+    '# Flows      — one per line:   From -> To : protocol, auth, encrypted? [attr=value]',
     '#   protocol : HTTPS, HTTP, TCP, gRPC, WSS, AMQP, ...',
     '#   auth     : session, bearer, mtls, api_key, credentials, none',
     '#   encrypted: encrypted | plaintext',
     '# Lines starting with "#" and blank lines are ignored.',
     '#',
+    '# Optional [attributes] set the same security properties as the diagram editor.',
+    '#   A bare flag means "yes":   [internet_facing]  ==  [internet_facing=yes]',
+    '#   These drive evidenced findings — including the agentic / OWASP-LLM threats.',
+    '#   Component attrs: internet_facing, handles_pii/phi/pci, enforces_authorization,',
+    '#     rate_limited, encrypted_at_rest, ingests_untrusted_content,',
+    '#     prompt_injection_defense, autonomy_level, tool_access, human_in_the_loop,',
+    '#     output_validated, sandboxed, memory_scope, content_source_trust, ...',
+    '#   Flow attrs: validates_input, provides_integrity, replay_protection,',
+    '#     validates_certificates, authorization',
+    '#',
     '# Valid types: user, external_entity, webapp, mobile_app, api, auth_service,',
-    '#              admin_panel, database, datastore, cache, queue, filesystem,',
-    '#              config, payment_service',
+    '#              admin_panel, database, datastore, cache, queue, filesystem, config,',
+    '#              payment_service, api_gateway, load_balancer, cdn, waf, ...',
+    '#   Agentic:   ai_agent, agent_orchestrator, llm, llm_tool, mcp_server, retriever,',
+    '#              agent_memory, knowledge_base, vector_db, guardrail',
     '',
     '# --- Components ---',
     'User               : user',
     'Checkout Service    : api',
-    'Inventory Service   : api',
-    'Pricing Service     : api',
     'Orders DB           : database',
-    'Product Cache       : cache',
     'Event Bus           : queue',
+    '# Agentic slice — attributes unlock prompt-injection / excessive-agency / etc.:',
+    'Support Agent       : ai_agent [ingests_untrusted_content, prompt_injection_defense=no, autonomy_level=autonomous, tool_access=exec, human_in_the_loop=no, output_validated=no]',
+    'Knowledge Base      : retriever [content_source_trust=web_scraped]',
+    'Session Memory      : agent_memory [memory_scope=cross_user]',
     '',
     '# --- Flows ---',
     'User -> Checkout Service        : HTTPS, session, encrypted',
     'Checkout Service -> Orders DB    : TCP, credentials, encrypted',
     'Checkout Service -> Event Bus    : AMQP, mtls, encrypted',
-    'Inventory Service -> Product Cache : TCP, none, plaintext',
-    'Pricing Service -> Orders DB     : TCP, credentials, encrypted',
+    'User -> Support Agent           : HTTPS, session, encrypted',
+    'Support Agent -> Knowledge Base  : HTTPS, bearer, encrypted [validates_input=no]',
+    'Support Agent -> Session Memory  : TCP, credentials, encrypted',
   ].join('\n');
 
   const btnStructExample = document.getElementById('btn-structured-example');
@@ -810,20 +824,20 @@
     const hotspots = (d.hotspots || []).map(h =>
       `${compChip(h.component)}<span class="text-xs text-light" style="margin:0 10px 0 -2px;">${h.critical}C/${h.high}H</span>`).join('');
     return `
-      <div class="card mb-6" style="padding:1rem 1.25rem;background:linear-gradient(135deg,#f8fafc,#fff);">
-        <div class="flex items-center justify-between mb-2" style="gap:.5rem;flex-wrap:wrap;">
-          <div class="text-xs font-semibold text-light" style="text-transform:uppercase;letter-spacing:.05em;">🧭 Data-flow overview</div>
-          <button id="dfo-copy" class="btn btn-sm btn-ghost">Copy</button>
+      <details class="card mb-6 tg-section" open style="padding:1rem 1.25rem;background:linear-gradient(135deg,#f8fafc,#fff);">
+        <summary class="tg-section-summary text-xs font-semibold text-light" style="text-transform:uppercase;letter-spacing:.05em;">🧭 Data-flow overview</summary>
+        <div class="tg-section-body">
+          <div class="flex justify-end mb-1"><button id="dfo-copy" class="btn btn-sm btn-ghost">Copy</button></div>
+          <p class="text-sm" style="line-height:1.5;margin-bottom:.55rem;">${esc(d.narrative || '')}</p>
+          <div style="margin-bottom:.35rem;">${statChip('Boundary crossings', st.crossings || 0)}${statChip('Unencrypted flows', st.unencrypted || 0, true)}</div>
+          ${group('Entry points', d.entry_points)}
+          ${group('Data stores', d.data_stores)}
+          ${group('External', d.external_deps)}
+          ${risky ? `<div style="margin-top:.5rem;"><span style="${labelS}">Riskiest flows</span><ul class="text-sm" style="margin:.2rem 0 0;padding-left:1.1rem;">${risky}</ul></div>` : ''}
+          ${hotspots ? `<div style="margin-top:.5rem;"><span style="${labelS}">Hotspots</span>${hotspots}</div>` : ''}
+          ${d.assumptions ? `<div class="text-xs" style="color:#9a3412;margin-top:.5rem;">⚠ ${esc(d.assumptions)}</div>` : ''}
         </div>
-        <p class="text-sm" style="line-height:1.5;margin-bottom:.55rem;">${esc(d.narrative || '')}</p>
-        <div style="margin-bottom:.35rem;">${statChip('Boundary crossings', st.crossings || 0)}${statChip('Unencrypted flows', st.unencrypted || 0, true)}</div>
-        ${group('Entry points', d.entry_points)}
-        ${group('Data stores', d.data_stores)}
-        ${group('External', d.external_deps)}
-        ${risky ? `<div style="margin-top:.5rem;"><span style="${labelS}">Riskiest flows</span><ul class="text-sm" style="margin:.2rem 0 0;padding-left:1.1rem;">${risky}</ul></div>` : ''}
-        ${hotspots ? `<div style="margin-top:.5rem;"><span style="${labelS}">Hotspots</span>${hotspots}</div>` : ''}
-        ${d.assumptions ? `<div class="text-xs" style="color:#9a3412;margin-top:.5rem;">⚠ ${esc(d.assumptions)}</div>` : ''}
-      </div>`;
+      </details>`;
   }
 
   // Plain-text version of the overview, for the Copy button.
@@ -894,8 +908,8 @@
     if (!items.length) return '';
     const rows = items.map(a => `<li style="margin:.2rem 0;line-height:1.45">${esc(a)}</li>`).join('');
     return `
-      <details class="card mb-6" style="padding:.7rem 1.1rem;background:#f8fafc;border:1px solid #e2e8f0;">
-        <summary style="cursor:pointer;font-size:.72rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.05em;">
+      <details class="card mb-6 tg-section" style="padding:.7rem 1.1rem;background:#f8fafc;border:1px solid #e2e8f0;">
+        <summary class="tg-section-summary" style="font-size:.72rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.05em;">
           💡 Assumptions (${items.length}) — what was inferred, not stated
         </summary>
         <ul style="margin:.5rem 0 0;padding-left:1.1rem;font-size:.85rem;color:#334155;">${rows}</ul>
