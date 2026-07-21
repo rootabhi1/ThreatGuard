@@ -33,6 +33,8 @@ trust boundary" — describe the model rather than a defect, so they recur by de
 """
 from __future__ import annotations
 
+from .component_types import VALID_COMPONENT_TYPES
+
 # Issue levels, most→least severe. "error" = data was broken and we repaired it in a
 # way that changes what the model contains; "warning" = a reference could not be kept;
 # "info" = worth knowing but nothing was lost.
@@ -104,7 +106,6 @@ def normalize_system(system: dict | None) -> tuple[dict, list[dict]]:
     ``trust_boundaries`` with normalized lists. Placeholder components created for
     dangling references are appended to ``components`` and marked ``_placeholder``.
     """
-    from .analyzer import VALID_COMPONENT_TYPES
     valid_types = set(VALID_COMPONENT_TYPES)
 
     system = system if isinstance(system, dict) else {}

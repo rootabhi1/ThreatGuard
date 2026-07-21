@@ -16,9 +16,6 @@ from xml.sax.saxutils import escape as xml_escape
 
 
 # DFD shape category for each component type
-_PROCESS = {"webapp", "mobile_app", "api", "auth_service", "admin_panel", "payment_service",
-            # Agentic AI processes
-            "ai_agent", "agent_orchestrator", "llm_tool", "mcp_server", "retriever", "guardrail"}
 _STORE   = {"database", "datastore", "cache", "filesystem", "queue", "config",
             # Agentic AI / vector data stores
             "vector_db", "agent_memory", "knowledge_base"}

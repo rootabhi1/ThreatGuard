@@ -117,14 +117,7 @@ _KEYWORD_MAP: list[tuple[str, list[tuple[str, str]]]] = [
     ("supply-chain", [("WEB", "A06"), ("LLM", "LLM03")]),
 ]
 
-# Component type -> extra framework whose lens always applies to its threats.
-_TYPE_FRAMEWORK = {
-    "api": "API", "api_gateway": "API", "graphql": "API",
-    "mobile_app": "MOBILE",
-}
 _API_TYPES = {"api", "api_gateway", "graphql"}
-_AI_TYPES = {"llm", "ai_agent", "agent_orchestrator", "llm_tool", "retriever",
-             "guardrail", "mcp_server", "agent_memory", "knowledge_base", "vector_db"}
 
 # Mobile lens. A threat touching a mobile component maps to the OWASP Mobile Top 10
 # by keyword first (precise), then STRIDE category (baseline) if no keyword matched —
