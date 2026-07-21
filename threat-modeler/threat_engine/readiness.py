@@ -25,15 +25,19 @@ _PROCESS_TYPES = {"api", "webapp", "mobile_app", "service", "worker", "serverles
 _DEPLOYABLE_TYPES = {"serverless", "container", "kubernetes", "service", "worker"}
 _AGENTIC_ATTRS = {
     "ai_agent": ["autonomy_level", "tool_access", "human_in_the_loop", "prompt_injection_defense",
-                 "output_validated", "sandboxed", "can_spawn_agents", "ingests_untrusted_content"],
-    "agent_orchestrator": ["autonomy_level", "human_in_the_loop", "can_spawn_agents", "output_validated"],
-    "llm": ["ingests_untrusted_content", "prompt_injection_defense", "output_validated"],
-    "llm_tool": ["tool_access", "sandboxed", "output_validated"],
-    "mcp_server": ["tool_access", "sandboxed"],
-    "retriever": ["content_source_trust", "ingests_untrusted_content"],
-    "knowledge_base": ["content_source_trust"],
+                 "output_validated", "sandboxed", "can_spawn_agents", "ingests_untrusted_content",
+                 "output_filtering", "model_provenance", "system_prompt_hardened", "response_grounding"],
+    "agent_orchestrator": ["autonomy_level", "human_in_the_loop", "can_spawn_agents", "output_validated",
+                           "output_filtering", "system_prompt_hardened", "response_grounding"],
+    "llm": ["ingests_untrusted_content", "prompt_injection_defense", "output_validated",
+            "output_filtering", "model_provenance", "system_prompt_hardened", "response_grounding"],
+    "llm_tool": ["tool_access", "sandboxed", "output_validated", "model_provenance"],
+    "mcp_server": ["tool_access", "sandboxed", "model_provenance"],
+    "retriever": ["content_source_trust", "ingests_untrusted_content", "output_filtering",
+                  "embedding_access_control"],
+    "knowledge_base": ["content_source_trust", "embedding_access_control"],
     "agent_memory": ["memory_scope"],
-    "vector_db": ["memory_scope"],
+    "vector_db": ["memory_scope", "embedding_access_control"],
     "guardrail": ["output_validated"],
 }
 _COMPLIANCE = ["handles_pii", "handles_phi", "handles_pci"]
@@ -59,6 +63,10 @@ _LABELS = {
     "output_validated": "Validates model output before use?", "sandboxed": "Runs sandboxed/isolated?",
     "can_spawn_agents": "Can spawn other agents?", "ingests_untrusted_content": "Ingests untrusted content?",
     "memory_scope": "Memory scope", "content_source_trust": "Content/grounding source",
+    "output_filtering": "Filters/redacts sensitive data from responses?",
+    "model_provenance": "Model/tool provenance", "system_prompt_hardened": "System prompt hardened (no secrets)?",
+    "embedding_access_control": "Per-tenant access control on vector store?",
+    "response_grounding": "Responses grounded in verified sources?",
     "provides_integrity": "Provides integrity (signing/HMAC)?", "replay_protection": "Replay protection?",
     "validates_certificates": "Validates TLS certificates?", "authorization": "Authorization model",
 }
@@ -70,6 +78,7 @@ _CHOICES = {
     "tool_access": ["", "none", "read", "write", "exec"],
     "memory_scope": ["", "session", "per_user", "cross_user", "cross_tenant"],
     "content_source_trust": ["", "curated", "user_uploaded", "web_scraped"],
+    "model_provenance": ["", "first_party", "verified_vendor", "community_hub", "unknown"],
     "authorization": ["", "none", "rbac", "abac", "rebac", "acl", "oauth_scopes", "policy_engine"],
 }
 

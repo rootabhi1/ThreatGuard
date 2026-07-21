@@ -306,16 +306,13 @@ def to_markdown(analysis: dict) -> str:
             lines.append(f"#### {t['title']}{cb}")
             lines.append("")
             cwe = t.get("cwe") or {}
-            c31 = t.get("cvss31") or {}
-            c40 = t.get("cvss40") or {}
+            dread = t.get("dread") or {}
             lines.append(f"- **Methodology / Category:** {t['methodology']} → {t['category']}")
             lines.append(f"- **Affected component:** {t['component_name']} (`{t['component_type']}`)")
+            if dread.get("total") is not None:
+                lines.append(f"- **DREAD:** **{dread.get('total')}/50** ({dread.get('tier','')})")
             if cwe:
                 lines.append(f"- **CWE:** [{cwe.get('id')} — {cwe.get('name')}]({cwe.get('url')})")
-            if c31:
-                lines.append(f"- **CVSS 3.1:** **{c31.get('score')}** ({c31.get('severity')}) — `{c31.get('vector')}`")
-            if c40:
-                lines.append(f"- **CVSS 4.0:** **{c40.get('score')}** ({c40.get('severity')}) — `{c40.get('vector')}`")
             if t.get("cross_boundary"):
                 lines.append(f"- **Boundary crossing:** {t.get('src_zone','?')} → {t.get('dst_zone','?')}")
             lines.append(f"- **Source:** {t['source']} · _{t.get('tier','baseline')}_")
@@ -725,23 +722,14 @@ def to_pdf(analysis: dict) -> bytes:
             )
             story.append(Paragraph(meta, body))
 
-            # CVSS + CWE block
+            # DREAD + CWE block
             cwe = th.get("cwe") or {}
-            c31 = th.get("cvss31") or {}
-            c40 = th.get("cvss40") or {}
+            dread = th.get("dread") or {}
             scoring_lines = []
+            if dread.get("total") is not None:
+                scoring_lines.append(f"<b>DREAD:</b> {dread.get('total')}/50 ({dread.get('tier','')})")
             if cwe:
                 scoring_lines.append(f"<b>CWE:</b> {cwe.get('id')} — {cwe.get('name')}")
-            if c31:
-                scoring_lines.append(
-                    f"<b>CVSS 3.1:</b> {c31.get('score')} ({c31.get('severity')}) "
-                    f"<font size=7 color='#666'>{c31.get('vector')}</font>"
-                )
-            if c40:
-                scoring_lines.append(
-                    f"<b>CVSS 4.0:</b> {c40.get('score')} ({c40.get('severity')}) "
-                    f"<font size=7 color='#666'>{c40.get('vector')}</font>"
-                )
             if scoring_lines:
                 story.append(Paragraph("<font size=8>" + "<br/>".join(scoring_lines) + "</font>", body))
 

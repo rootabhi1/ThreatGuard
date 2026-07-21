@@ -97,6 +97,13 @@ _KEYWORD_MAP: list[tuple[str, list[tuple[str, str]]]] = [
     ("spawn agents", [("LLM", "LLM10"), ("AGENTIC", "T4")]),
     ("unbounded", [("LLM", "LLM10"), ("AGENTIC", "T4")]),
     ("system prompt", [("LLM", "LLM07")]),
+    ("sensitive information", [("LLM", "LLM02")]),
+    ("output not filtered", [("LLM", "LLM02")]),
+    ("supply chain", [("LLM", "LLM03"), ("WEB", "A06")]),
+    ("embedding", [("LLM", "LLM08"), ("AGENTIC", "T1")]),
+    ("vector/embedding", [("LLM", "LLM08"), ("AGENTIC", "T1")]),
+    ("misinformation", [("LLM", "LLM09"), ("AGENTIC", "T5")]),
+    ("overreliance", [("LLM", "LLM09"), ("AGENTIC", "T5")]),
     ("no authorization", [("WEB", "A01"), ("API", "API1"), ("API", "API5")]),
     ("authorization enforcement", [("WEB", "A01"), ("API", "API5")]),
     ("idor", [("WEB", "A01"), ("API", "API1")]),
@@ -181,6 +188,14 @@ def map_threat(threat: dict, component: dict | None = None,
     for kw, refs in _KEYWORD_MAP:
         if kw in text:
             picks.extend(refs)
+
+    # 2b) Authoritative agentic mapping — data-driven threat classes carry an explicit
+    # OWASP-LLM code (and optional Agentic technique), so the mapping never depends on
+    # the threat title wording (evidenced vs baseline phrasings map identically).
+    if threat.get("owasp"):
+        picks.append(("LLM", threat["owasp"]))
+    if threat.get("owasp_agentic"):
+        picks.append(("AGENTIC", threat["owasp_agentic"]))
 
     # 3) API lens — access-control threats on any API-typed endpoint of the flow.
     if types & _API_TYPES and ("WEB", "A01") in picks:

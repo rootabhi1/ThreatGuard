@@ -1,6 +1,6 @@
 # 🛡 ThreatGuard — Automated Threat Modeling
 
-> Threat modeling for engineering teams — the STRIDE, PASTA and LINDDUN methodologies, with DREAD risk scoring and OWASP Top 10 reference mapping, plus CVSS/CWE/MITRE ATT&CK scoring and compliance mapping. Works fully offline; optionally enriched by an LLM (Anthropic **or** any OpenAI-compatible model).
+> Threat modeling for engineering teams — the STRIDE, PASTA and LINDDUN methodologies, with DREAD risk scoring and OWASP (Web / API / LLM) reference mapping, plus CWE/MITRE ATT&CK and compliance mapping. Works fully offline; optionally enriched by an LLM (Anthropic **or** any OpenAI-compatible model).
 
 [![CI](https://github.com/rootabhi1/ThreatGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/rootabhi1/ThreatGuard/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/rootabhi1/ThreatGuard/actions/workflows/codeql.yml/badge.svg)](https://github.com/rootabhi1/ThreatGuard/actions/workflows/codeql.yml)
@@ -43,17 +43,19 @@ a replacement for their judgment.
   headers), and a test that verifies it.
 - **Framework agnostic.** Works offline on rules, or with Anthropic or any
   OpenAI-compatible model — including local ones.
-- **Explainable outputs.** Every threat maps to a methodology, a CWE, CVSS
-  scores, ATT&CK/compliance references, and concrete mitigations — no black box.
+- **Explainable outputs.** Every threat maps to a methodology, a CWE, a DREAD
+  score with a per-axis breakdown, ATT&CK/compliance references, and concrete
+  mitigations — no black box.
 
 ---
 
 ## What it does
 
-ThreatGuard turns a description of a system — typed, drawn on a canvas, or **uploaded as an architecture diagram** — into a structured threat model: identified threats, severity and CVSS scores, CWE and MITRE ATT&CK references, mapped compliance controls, a data-flow diagram with trust boundaries, and exportable reports.
+ThreatGuard turns a description of a system — typed, drawn on a canvas, or **uploaded as an architecture diagram** — into a structured threat model: identified threats, severity and DREAD risk scores, CWE and MITRE ATT&CK references, mapped compliance controls, a data-flow diagram with trust boundaries, and exportable reports.
 
 - **Three threat-modeling methodologies** — STRIDE, PASTA and LINDDUN — applied by a deterministic rule engine (no API key required), plus **DREAD** risk scoring on every threat and **OWASP Top 10** reference mapping on findings. (DREAD is a scoring model and OWASP Top 10 is an awareness reference — neither is a threat-modeling methodology, so neither is selectable as one.)
-- **Rich scoring** — CVSS 3.1 & 4.0, CWE, MITRE ATT&CK technique/tactic, and SOC 2 / ISO 27001 / PCI-DSS control mapping.
+- **Rich scoring** — DREAD risk scoring with a per-axis breakdown (Damage, Reproducibility, Exploitability, Affected users, Discoverability), CWE, MITRE ATT&CK technique/tactic, and SOC 2 / ISO 27001 / PCI-DSS control mapping.
+- **LLM & agentic AI coverage** — the full **OWASP LLM Top 10 (2025)** — prompt injection (LLM01), sensitive information disclosure (LLM02), supply chain (LLM03), data & model poisoning (LLM04), improper output handling (LLM05), excessive agency (LLM06), system-prompt leakage (LLM07), vector & embedding weaknesses (LLM08), misinformation (LLM09) and unbounded consumption (LLM10) — plus **OWASP Agentic Threats**, driven by agent/LLM/tool/memory/RAG component types and their security properties. Type-driven checks surface the risk surface from the architecture alone; answered properties promote each to an evidenced finding or clear it.
 - **Trust boundaries & DFD** — boundaries are auto-inferred when none are defined, cross-boundary flows are flagged, and a labelled data-flow diagram is rendered (in the interactive editor and in every report).
 - **Rich component vocabulary** — ~40 component types spanning the classic set plus cloud-native and modern services (serverless, containers, Kubernetes, object storage, data warehouse, search, LLM, identity provider, WAF, CDN, secrets manager, and more). Plain-English descriptions are auto-mapped to the right type.
 - **Element security attributes** — answer Microsoft Threat Modeling Tool–style security properties on each component and flow (encrypted at rest, stores credentials, enforces authorization, validates input, MFA, handles PII/PHI/PCI, TLS-certificate validation, replay protection, …). A risky answer generates a specific, scored threat on re-analysis.
@@ -67,11 +69,11 @@ ThreatGuard turns a description of a system — typed, drawn on a canvas, or **u
 
 ## Sample output
 
-A full generated report is checked in at **[`docs/sample-report.html`](docs/sample-report.html)** — 227 threats across STRIDE, LINDDUN and PASTA for a sample retail platform (92 evidenced by a fact in the model, 135 baseline type-based checks), each with a DREAD score, CVSS, CWE, MITRE ATT&CK and OWASP Top 10 references, plus class-aware compliance mapping and a data-flow diagram with automatically inferred trust boundaries.
+A full generated report is checked in at **[`docs/sample-report.html`](docs/sample-report.html)** — 227 threats across STRIDE, LINDDUN and PASTA for a sample retail platform (92 evidenced by a fact in the model, 135 baseline type-based checks), each with a DREAD score, CWE, MITRE ATT&CK and OWASP Top 10 references, plus class-aware compliance mapping and a data-flow diagram with automatically inferred trust boundaries.
 
-For **LLM and agentic systems**, see two worked references mapped to the OWASP LLM Top 10 (2025) and OWASP Agentic Threats:
-- **[`docs/agentic-threat-model-reference.html`](docs/agentic-threat-model-reference.html)** — a single-agent AI customer-support copilot (agent, RAG, tools, MCP, memory): 37 evidenced findings, 28 baseline checks, 4 suppressed by answered controls.
-- **[`docs/multi-agent-threat-model-reference.html`](docs/multi-agent-threat-model-reference.html)** — a multi-agent automation swarm (a supervisor delegating to research / coder / action workers over a shared blackboard): 51 findings covering agent-to-agent trust, cascading prompt injection, cross-agent memory poisoning, and unbounded spawning.
+For **LLM and agentic systems**, see two worked references spanning the full OWASP LLM Top 10 (2025) and OWASP Agentic Threats:
+- **[`docs/agentic-threat-model-reference.html`](docs/agentic-threat-model-reference.html)** — a single-agent AI customer-support copilot (agent, RAG, tools, MCP, memory): 85 evidenced findings, 109 baseline checks, 5 suppressed by answered controls, covering nine of the ten LLM categories (misinformation is cleared by grounded responses).
+- **[`docs/multi-agent-threat-model-reference.html`](docs/multi-agent-threat-model-reference.html)** — a multi-agent automation swarm (a supervisor delegating to research / coder / action workers over a shared blackboard): 133 findings across all ten OWASP LLM categories — agent-to-agent trust, cascading prompt injection, cross-agent memory poisoning, supply-chain/provenance, vector-embedding weakness, and unbounded spawning.
 
 | Dashboard | New threat model |
 |---|---|

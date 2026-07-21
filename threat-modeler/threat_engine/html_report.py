@@ -5,7 +5,7 @@ Includes:
   - Embedded DFD as inline SVG (always renders, no external assets)
   - Severity dashboard with hover/animation
   - Filter chips (severity, methodology, cross-boundary, component)
-  - Expandable threat cards with CVSS bars, CWE, attack scenario, mitigations
+  - Expandable threat cards with DREAD risk breakdown, CWE, attack scenario, mitigations
   - Dedicated 'Untrusted input crossings' section
   - Trust Boundary Analysis with ingress/egress per zone
 
@@ -413,33 +413,26 @@ def to_html(analysis: dict) -> str:
   .detail-section ol, .detail-section ul {{ padding-left: 20px; margin-top: 4px; }}
   .detail-section li {{ margin-bottom: 4px; }}
 
-  .cvss-grid {{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }}
-  .cvss-block {{
+  .dread-panel {{
     background: #f8fafc;
-    border-radius: 6px;
-    padding: 10px;
     border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
   }}
-  .cvss-block .header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }}
-  .cvss-block .name {{ font-weight: 600; font-size: 0.85rem; color: #475569; }}
-  .cvss-block .score {{
-    font-size: 1.4rem; font-weight: 700;
-    padding: 2px 10px; border-radius: 6px;
+  .dread-head {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }}
+  .dread-label {{ font-weight: 600; font-size: 0.85rem; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; }}
+  .dread-total {{ font-size: 1.3rem; font-weight: 700; color: #0f172a; }}
+  .dread-total small {{ font-size: 0.75rem; font-weight: 600; color: #94a3b8; }}
+  .dread-meter {{
+    height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-bottom: 10px;
   }}
-  .cvss-block .score.sev-crit  {{ background: #fee2e2; color: #7c1d1d; }}
-  .cvss-block .score.sev-high  {{ background: #ffedd5; color: #b45309; }}
-  .cvss-block .score.sev-med   {{ background: #fef3c7; color: #a16207; }}
-  .cvss-block .score.sev-low   {{ background: #dcfce7; color: #15803d; }}
-  .cvss-block .score.sev-none  {{ background: #f1f5f9; color: #64748b; }}
-  .cvss-block .vector {{ font-family: monospace; font-size: 0.72rem; color: #64748b; word-break: break-all; }}
-  .cvss-meter {{
-    height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-top: 6px;
-  }}
-  .cvss-meter > div {{ height: 100%; transition: width 0.5s ease-out; }}
+  .dread-meter > div {{ height: 100%; background: linear-gradient(90deg,#16a34a,#eab308,#dc2626); transition: width 0.5s ease-out; }}
+  .dread-axes {{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }}
+  .dread-axis {{ display: flex; flex-direction: column; align-items: center; text-align: center; }}
+  .dread-axis-name {{ font-size: 0.68rem; color: #64748b; margin-bottom: 2px; }}
+  .dread-axis-val {{ font-size: 1rem; font-weight: 700; color: #334155; }}
+  .dread-axis-val small {{ font-size: 0.6rem; font-weight: 600; color: #94a3b8; }}
 
   .mitigations-list .mitigation {{
     background: #f0fdf4;
@@ -617,7 +610,7 @@ def to_html(analysis: dict) -> str:
   <section class="card">
     <h2>Findings ({summary['by_tier']['evidenced']})</h2>
     <p style="color:#64748b;font-size:0.85rem;margin:-6px 0 10px">These <strong>{summary['by_tier']['evidenced']} findings</strong> are proven by your model. A further <strong>{summary['by_tier']['baseline']} standard checks</strong> — generic risks for these component types your model doesn’t yet confirm or rule out — are not counted as findings and stay hidden until you flip the “Standard checks” toggle.</p>
-    <input type="text" id="search" class="search-box" placeholder="Search threats by title, component, category, CWE, or CVSS vector…" oninput="applyFilters()"/>
+    <input type="text" id="search" class="search-box" placeholder="Search threats by title, component, category, or CWE…" oninput="applyFilters()"/>
     <div class="filter-bar">
       <label>Methodology:</label>
       <span class="chip active" data-meth="all" onclick="setMeth('all', this)">All</span>
@@ -663,8 +656,7 @@ def to_html(analysis: dict) -> str:
       if (filterState.cb && !cb) show = false;
       if (filterState.search) {{
         const blob = (t.title + ' ' + (t.component_name || '') + ' ' + t.category + ' ' +
-                      (t.cwe ? t.cwe.id + ' ' + t.cwe.name : '') + ' ' +
-                      (t.cvss31 ? t.cvss31.vector : '')).toLowerCase();
+                      (t.cwe ? t.cwe.id + ' ' + t.cwe.name : '')).toLowerCase();
         if (!blob.includes(filterState.search)) show = false;
       }}
       card.classList.toggle('hidden', !show);
@@ -760,17 +752,10 @@ def to_html(analysis: dict) -> str:
 def _render_threat_card(t: dict, idx: int) -> str:
     sev = t.get("severity", "Medium")
     cwe = t.get("cwe") or {}
-    c31 = t.get("cvss31") or {}
-    c40 = t.get("cvss40") or {}
     cb_badge = '<span class="badge badge-cb">⚡ cross-zone</span>' if t.get("cross_boundary") else ""
     src_label = ""
     if t.get("source") == "llm":
         src_label = '<span class="badge badge-source-llm">🤖 LLM</span>'
-
-    # Score class for CVSS blocks
-    def _sc(sev):
-        return {"Critical": "sev-crit", "High": "sev-high", "Medium": "sev-med",
-                "Low": "sev-low", "None": "sev-none"}.get(sev, "sev-med")
 
     location_html = _esc(t.get("location", "")).replace("**", "<strong>").replace("**", "</strong>")
     # Smarter bold replacement: alternating
@@ -805,14 +790,31 @@ def _render_threat_card(t: dict, idx: int) -> str:
 
     dread = t.get("dread", {})
     dread_html = ""
-    if dread:
+    if dread and dread.get("total") is not None:
+        total = dread.get("total")
+        tier = dread.get("tier", "")
+        axes = [
+            ("Damage", dread.get("D_damage")),
+            ("Reproducibility", dread.get("R_reproducibility")),
+            ("Exploitability", dread.get("E_exploitability")),
+            ("Affected users", dread.get("A_affected_users")),
+            ("Discoverability", dread.get("D_discoverability")),
+        ]
+        axis_cells = "".join(
+            f'<div class="dread-axis"><span class="dread-axis-name">{name}</span>'
+            f'<span class="dread-axis-val">{val if val is not None else "—"}<small>/10</small></span></div>'
+            for name, val in axes
+        )
+        pct = (total / 50) * 100 if isinstance(total, (int, float)) else 0
         dread_html = (
-            f'<div style="font-size:0.85rem;color:#475569;margin-top:6px">'
-            f'<strong>DREAD:</strong> '
-            f'D={dread.get("D_damage")}, R={dread.get("R_reproducibility")}, '
-            f'E={dread.get("E_exploitability")}, A={dread.get("A_affected_users")}, '
-            f'D={dread.get("D_discoverability")} · '
-            f'<strong>{dread.get("total")}/50</strong>'
+            f'<div class="dread-panel">'
+            f'<div class="dread-head">'
+            f'<span class="dread-label">DREAD risk</span>'
+            f'<span class="dread-total">{total}<small>/50</small>'
+            f'{f" · {_esc(tier)}" if tier else ""}</span>'
+            f'</div>'
+            f'<div class="dread-meter"><div style="width:{pct}%"></div></div>'
+            f'<div class="dread-axes">{axis_cells}</div>'
             f'</div>'
         )
 
@@ -847,24 +849,6 @@ def _render_threat_card(t: dict, idx: int) -> str:
     <span class="expand-icon">▼</span>
   </div>
   <div class="threat-detail">
-    <div class="cvss-grid">
-      <div class="cvss-block">
-        <div class="header">
-          <span class="name">CVSS 3.1</span>
-          <span class="score {_sc(c31.get("severity"))}">{c31.get("score","—")}</span>
-        </div>
-        <div class="cvss-meter"><div style="width:{(c31.get("score") or 0) * 10}%;background:#dc2626"></div></div>
-        <div class="vector">{_esc(c31.get("vector",""))}</div>
-      </div>
-      <div class="cvss-block">
-        <div class="header">
-          <span class="name">CVSS 4.0</span>
-          <span class="score {_sc(c40.get("severity"))}">{c40.get("score","—")}</span>
-        </div>
-        <div class="cvss-meter"><div style="width:{(c40.get("score") or 0) * 10}%;background:#7c3aed"></div></div>
-        <div class="vector">{_esc(c40.get("vector",""))}</div>
-      </div>
-    </div>
     {dread_html}
     {cb_zones}
 

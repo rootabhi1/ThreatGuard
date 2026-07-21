@@ -26,7 +26,7 @@ flowchart LR
     A([1. Describe]) -->|"Text description or<br>architecture diagram upload"| B([2. Parse])
     B -->|"Extract components,<br>data flows, trust boundaries"| C([3. Analyze])
     C -->|"Rule engine<br>+ optional LLM enrichment"| D([4. Assess risk])
-    D -->|"CVSS / CWE / ATT&CK<br>scoring & mapping"| E([5. Review])
+    D -->|"DREAD / CWE / ATT&CK<br>scoring & mapping"| E([5. Review])
     E -->|"Validate & refine<br>findings"| F([6. Report])
     F -->|"HTML / PDF / MD / CSV"| G([Done])
 
@@ -36,7 +36,7 @@ flowchart LR
 This mirrors the data-flow sequence in
 [ARCHITECTURE.md](../../ARCHITECTURE.md#data-flow-analyzing-a-system): the rule
 engine always runs, LLM enrichment is additive and optional, and risk scoring
-(CVSS 3.1/4.0, CWE, ATT&CK mappings) happens before a report is rendered.
+(DREAD, CWE, ATT&CK mappings) happens before a report is rendered.
 
 ## Screenshots
 

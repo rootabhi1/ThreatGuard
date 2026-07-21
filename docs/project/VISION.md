@@ -31,7 +31,7 @@ so teams keep control of their data.
 3. **Secure by default**, and provably so (a test enforces it).
 4. **Framework agnostic** — works offline on rules, or with Anthropic or any
    OpenAI-compatible model, including local ones.
-5. **Explainable** — every finding maps to a methodology, CWE, CVSS, ATT&CK, and
+5. **Explainable** — every finding maps to a methodology, CWE, DREAD, ATT&CK, and
    concrete mitigations. No black box.
 
 ## What success looks like
