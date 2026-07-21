@@ -57,7 +57,7 @@ def _dedup_threats(threats):
 # Component-type vocabulary (keyword map + valid-type list) lives in a leaf
 # module so analyzer and model_health can both use it without importing each
 # other (previously an import cycle). Re-exported here for backward compat.
-from .component_types import _TYPE_KEYWORDS, _EXTRA_TYPES, VALID_COMPONENT_TYPES, resolve_component_type  # noqa: F401
+from .component_types import _TYPE_KEYWORDS, VALID_COMPONENT_TYPES, resolve_component_type
 
 # Keywords that should display in their conventional casing rather than Title Case
 # (so "llm" → "LLM", not "Llm"). Maps the lowercase keyword to its display form.
