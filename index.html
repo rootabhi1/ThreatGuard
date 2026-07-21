@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ThreatGuard — Automated threat modeling for engineering teams</title>
-<meta name="description" content="Turn a system description, structured spec, or architecture diagram into a STRIDE / PASTA / LINDDUN threat model with DREAD scoring, CVSS, CWE, MITRE ATT&CK and OWASP mapping. Microsoft-TMT-style element security attributes, ~40 component types, an interactive DFD editor, and exportable reports. Rules-first and offline; optionally enriched by any LLM. Open source, self-hostable."/>
+<meta name="description" content="Turn a system description, structured spec, or architecture diagram into a STRIDE / PASTA / LINDDUN threat model with DREAD scoring, CWE, MITRE ATT&CK and full OWASP (Web / API / LLM) mapping. Microsoft-TMT-style element security attributes, ~40 component types, an interactive DFD editor, and exportable reports. Rules-first and offline; optionally enriched by any LLM. Open source, self-hostable."/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -177,7 +177,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;align-ite
 <section class="hero">
   <div class="hero-badge">🛡 Open source · Self-hostable · Rules-first, any LLM optional</div>
   <h1>Automated<br/><span>threat modeling</span><br/>for engineering teams</h1>
-  <p class="hero-sub">Describe a system in plain English, a structured spec, or an uploaded architecture diagram — ThreatGuard turns it into a prioritized, methodology-backed threat model in seconds: STRIDE / PASTA / LINDDUN with DREAD scoring and CVSS, CWE, MITRE ATT&CK &amp; OWASP mapping. Works fully offline; optionally enriched by any LLM.</p>
+  <p class="hero-sub">Describe a system in plain English, a structured spec, or an uploaded architecture diagram — ThreatGuard turns it into a prioritized, methodology-backed threat model in seconds: STRIDE / PASTA / LINDDUN with DREAD scoring and CWE, MITRE ATT&CK &amp; full OWASP (Web / API / LLM) mapping. Works fully offline; optionally enriched by any LLM.</p>
   <div class="hero-btns">
     <a class="btn-outline" href="sample-report.html" target="_blank">📄 View a sample report</a>
     <a class="btn-outline" href="agentic-report.html" target="_blank">🤖 Agentic / LLM report</a>
@@ -193,8 +193,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;align-ite
   <span class="m-pill m-pasta">PASTA</span>
   <span class="m-pill m-linddun">LINDDUN</span>
   <span class="m-pill m-dread">DREAD · scoring</span>
-  <span class="m-pill m-owasp">OWASP Top 10</span>
-  <span class="m-pill m-ref">CVSS 3.1 / 4.0</span>
+  <span class="m-pill m-owasp">OWASP Web / API / LLM</span>
   <span class="m-pill m-ref">CWE</span>
   <span class="m-pill m-ref">MITRE ATT&amp;CK</span>
   <span class="m-pill m-ref">SOC 2 · ISO 27001 · PCI-DSS</span>
@@ -207,7 +206,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;align-ite
   <p class="section-sub">A deterministic rule engine does the modeling; you refine it; AI is optional enrichment on top. Every output is a draft for a human to review — not a security sign-off.</p>
   <div class="flow">
     <div class="flow-step"><div class="flow-n">01 · DESCRIBE</div><div class="flow-t">Text, structured, or diagram</div><div class="flow-d">Type a plain-English description, enter a precise structured spec, or upload a PNG/JPEG/WebP architecture diagram. Components, flows, and trust boundaries are extracted automatically.</div></div>
-    <div class="flow-step"><div class="flow-n">02 · ANALYZE</div><div class="flow-t">Rules + optional AI</div><div class="flow-d">STRIDE / PASTA / LINDDUN run deterministically with DREAD scoring and CVSS / CWE / ATT&amp;CK / OWASP / compliance mapping. A configured LLM can add context-specific threats on top.</div></div>
+    <div class="flow-step"><div class="flow-n">02 · ANALYZE</div><div class="flow-t">Rules + optional AI</div><div class="flow-d">STRIDE / PASTA / LINDDUN run deterministically with DREAD scoring and CWE / ATT&amp;CK / OWASP / compliance mapping. A configured LLM can add context-specific threats on top.</div></div>
     <div class="flow-step"><div class="flow-n">03 · REFINE</div><div class="flow-t">DFD editor + security attributes</div><div class="flow-d">Arrange the diagram (fit-to-screen, pan, zoom), drag a handle to connect flows, edit components, and answer Microsoft-TMT-style security properties. Re-run to fold your answers into a sharper threat list.</div></div>
     <div class="flow-step"><div class="flow-n">04 · TRACK &amp; SHARE</div><div class="flow-t">Reports, status, diffs</div><div class="flow-d">Track per-threat remediation status, diff releases, export HTML / PDF / Markdown / CSV / executive reports, share read-only links, and file Jira tickets.</div></div>
   </div>
@@ -255,7 +254,7 @@ footer{padding:40px 6%;border-top:1px solid var(--border);display:flex;align-ite
     <div class="feat-card">
       <div class="feat-icon">🎯</div>
       <div class="feat-title">Rich, explainable scoring</div>
-      <div class="feat-desc">Every threat maps to a methodology, a DREAD score, CVSS 3.1 &amp; 4.0, a CWE, a MITRE ATT&amp;CK technique/tactic, an OWASP Top 10 reference, and SOC 2 / ISO 27001 / PCI-DSS controls — with concrete mitigations.</div>
+      <div class="feat-desc">Every threat maps to a methodology, a DREAD score with a per-axis breakdown, a CWE, a MITRE ATT&amp;CK technique/tactic, an OWASP reference (Web / API / LLM Top 10), and SOC 2 / ISO 27001 / PCI-DSS controls — with concrete mitigations.</div>
     </div>
     <div class="feat-card">
       <div class="feat-icon">🤖</div>
