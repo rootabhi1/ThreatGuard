@@ -1614,6 +1614,25 @@ button, a, input, select { transition: all 0.15s ease; }
 .tg-disclosure[open] > summary::before { transform: rotate(90deg); }
 .tg-disclosure .tg-disclosure-body { margin-top: var(--sp-3); }
 .tg-disclosure .tg-muted { color: var(--c-text-light); font-weight: 400; }
+
+/* Collapsible analysis sections (data-flow overview, assumptions, …): a
+   consistent rotating chevron so every pre-tab section reads as expand/collapse. */
+.tg-section > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+}
+.tg-section > summary::-webkit-details-marker { display: none; }
+.tg-section > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: var(--sp-2);
+  color: var(--c-text-light);
+  transition: transform .15s ease;
+}
+.tg-section[open] > summary::before { transform: rotate(90deg); }
+.tg-section > .tg-section-body { margin-top: var(--sp-3); }
 .tg-strike { text-decoration: line-through; color: var(--c-text-light); }
 
 /* ==========================================================================
