@@ -57,7 +57,7 @@ def _dedup_threats(threats):
 # Component-type vocabulary (keyword map + valid-type list) lives in a leaf
 # module so analyzer and model_health can both use it without importing each
 # other (previously an import cycle). Re-exported here for backward compat.
-from .component_types import _TYPE_KEYWORDS, _EXTRA_TYPES, VALID_COMPONENT_TYPES  # noqa: F401
+from .component_types import _TYPE_KEYWORDS, _EXTRA_TYPES, VALID_COMPONENT_TYPES, resolve_component_type  # noqa: F401
 
 # Keywords that should display in their conventional casing rather than Title Case
 # (so "llm" → "LLM", not "Llm"). Maps the lowercase keyword to its display form.
@@ -352,11 +352,18 @@ def parse_structured_system(text: str) -> dict:
         name, _, ctype = line.partition(":")
         # Pull any [attr=value, …] list off the type portion before normalizing.
         ctype, bracket = _extract_bracket(ctype)
-        name, ctype = name.strip(), ctype.strip().lower().replace(" ", "_")
+        name = name.strip()
         if not name:
             _issue("error", f"Line {lineno}: missing a component name before ':'. Skipped.")
             continue
-        if ctype not in valid_types:
+        # Resolve the declared type through the shared alias vocabulary, so a natural
+        # token ('vector store', 'llm agent', 'RAG', 'postgres') maps to its canonical
+        # type instead of being kept verbatim and only attracting generic threats.
+        resolved = resolve_component_type(ctype)
+        if resolved:
+            ctype = resolved
+        else:
+            ctype = ctype.strip().lower().replace(" ", "_")
             _issue("warning", f"Line {lineno}: unrecognized type '{ctype}' for '{name}'. Kept as-is; "
                               f"it will only attract generic threats. Valid types include: "
                               f"{', '.join(sorted(valid_types)[:8])}, …")
