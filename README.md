@@ -69,7 +69,9 @@ ThreatGuard turns a description of a system — typed, drawn on a canvas, or **u
 
 A full generated report is checked in at **[`docs/sample-report.html`](docs/sample-report.html)** — 227 threats across STRIDE, LINDDUN and PASTA for a sample retail platform (92 evidenced by a fact in the model, 135 baseline type-based checks), each with a DREAD score, CVSS, CWE, MITRE ATT&CK and OWASP Top 10 references, plus class-aware compliance mapping and a data-flow diagram with automatically inferred trust boundaries.
 
-For **LLM and agentic systems**, see the worked reference **[`docs/agentic-threat-model-reference.html`](docs/agentic-threat-model-reference.html)** — an AI customer-support copilot (agent, RAG, tools, MCP, memory) mapped to the OWASP LLM Top 10 (2025) and OWASP Agentic Threats: 37 evidenced findings, 28 baseline checks, and 4 suppressed by answered controls.
+For **LLM and agentic systems**, see two worked references mapped to the OWASP LLM Top 10 (2025) and OWASP Agentic Threats:
+- **[`docs/agentic-threat-model-reference.html`](docs/agentic-threat-model-reference.html)** — a single-agent AI customer-support copilot (agent, RAG, tools, MCP, memory): 37 evidenced findings, 28 baseline checks, 4 suppressed by answered controls.
+- **[`docs/multi-agent-threat-model-reference.html`](docs/multi-agent-threat-model-reference.html)** — a multi-agent automation swarm (a supervisor delegating to research / coder / action workers over a shared blackboard): 51 findings covering agent-to-agent trust, cascading prompt injection, cross-agent memory poisoning, and unbounded spawning.
 
 | Dashboard | New threat model |
 |---|---|

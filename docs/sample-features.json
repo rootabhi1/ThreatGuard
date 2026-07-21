@@ -1,8 +1,8 @@
 {
-  "_about": "Sample threat models for ThreatGuard's offline (rules-only, no API key) 'New Threat Model' flow. Ten example features: five you paste into the 'Describe in text' tab (system_text), and five in the 'Structured' tab (structured_input). Optionally group them under a release to exercise the Release -> Feature -> Threat Model hierarchy.",
+  "_about": "Sample threat models for ThreatGuard's offline (rules-only, no API key) 'New Threat Model' flow. Thirteen example features covering classic web/API systems and LLM/agentic systems: paste `system_text` into the 'Describe in text' tab, or `structured_input` into the 'Structured' tab. Optionally group them under a release to exercise the Release -> Feature -> Threat Model hierarchy.",
   "_usage": {
     "text_samples": "New Threat Model -> 'Describe in text' -> paste `system_text` -> Create & analyze. API: POST /api/extract-from-text {\"text\": ...} then POST /api/threat-models.",
-    "structured_samples": "New Threat Model -> 'Structured' -> paste `structured_input` -> Create & analyze. API: POST /api/extract-structured {\"text\": ...}. Grammar: 'Name : type' per line for components; 'A -> B : protocol, auth, encrypted|plaintext' for flows; '#'/blank lines ignored.",
+    "structured_samples": "New Threat Model -> 'Structured' -> paste `structured_input` -> Create & analyze. API: POST /api/extract-structured {\"text\": ...}. Grammar: 'Name : type' per line for components and 'A -> B : protocol, auth, encrypted|plaintext' for flows ('#'/blank lines ignored). Components and flows may carry optional security attributes in brackets, e.g. 'Support Agent : ai_agent [ingests_untrusted_content, tool_access=exec, human_in_the_loop=no]' (a bare flag means yes) — these drive evidenced findings, including the OWASP-LLM / agentic threats.",
     "statuses": "draft | in_review | in_sprint | released | cancelled; target_date is optional (YYYY-MM-DD)."
   },
   "release": {
@@ -91,6 +91,30 @@
       "target_date": "2026-10-31",
       "input_mode": "structured",
       "structured_input": "User : user\nWeb App : webapp\nSearch API : api\nSearch Cluster : search_service\nIndexer : worker\nPrimary DB : database\nEvents Queue : queue\n\nUser -> Web App : https, session, encrypted\nWeb App -> Search API : https, jwt, encrypted\nSearch API -> Search Cluster : https, basic, encrypted\nPrimary DB -> Events Queue : tcp, none, plaintext\nEvents Queue -> Indexer : tcp, none, plaintext\nIndexer -> Search Cluster : https, basic, encrypted"
+    },
+    {
+      "name": "AI Support Copilot (agentic, RAG + tools)",
+      "description": "Threat focus: prompt injection (direct + indirect via RAG), excessive agency, improper output handling, cross-user memory leakage, PII exposure. OWASP LLM Top 10 / Agentic.",
+      "status": "in_sprint",
+      "target_date": "2026-06-30",
+      "input_mode": "text",
+      "system_text": "An AI customer-support copilot. Customers chat through a public web app behind an API gateway; an orchestrator plans and calls a support agent. The agent reads untrusted customer messages and user-uploaded knowledge-base articles, retrieves answers from a vector store through a RAG retriever, calls a ticketing tool and an internal MCP server, keeps short-term session memory, and reads and writes a PostgreSQL CRM that holds customer PII. An output guardrail checks responses before they reach the user, but the agent has no prompt-injection defenses and its output is not validated before it drives tool calls."
+    },
+    {
+      "name": "Autonomous Agent with Tools (structured)",
+      "description": "Threat focus: excessive agency, unsandboxed tool execution, unauthorized tool calls, prompt injection, insecure output handling. Shows the [attr=value] structured syntax.",
+      "status": "in_review",
+      "target_date": "2026-06-30",
+      "input_mode": "structured",
+      "structured_input": "# AI customer-support copilot (single agent). Attributes in [ ] drive the agentic findings.\nCustomer : user\nAPI Gateway : api_gateway [internet_facing, authenticates_users=yes, enforces_authorization=yes, rate_limited=yes]\nSupport Agent : ai_agent [ingests_untrusted_content, prompt_injection_defense=no, autonomy_level=act_with_approval, tool_access=write, human_in_the_loop=yes, output_validated=no]\nLLM Gateway : llm [ingests_untrusted_content, output_validated=no]\nKnowledge Base : retriever [content_source_trust=user_uploaded]\nSession Memory : agent_memory [memory_scope=cross_user]\nTicketing Tool : llm_tool [tool_access=exec, sandboxed=no]\nCRM Database : database [handles_pii, encrypted_at_rest=yes, enforces_authorization=yes]\n\nCustomer -> API Gateway : HTTPS, session, encrypted\nAPI Gateway -> Support Agent : HTTPS, bearer, encrypted [authorization=rbac]\nSupport Agent -> LLM Gateway : HTTPS, api_key, encrypted\nSupport Agent -> Knowledge Base : HTTPS, bearer, encrypted\nSupport Agent -> Session Memory : TCP, credentials, encrypted\nSupport Agent -> Ticketing Tool : HTTPS, api_key, encrypted [authorization=none]\nSupport Agent -> CRM Database : TCP, credentials, encrypted"
+    },
+    {
+      "name": "Multi-Agent Automation Swarm (structured)",
+      "description": "Threat focus: agent-to-agent trust & delegation (confused deputy), cascading prompt injection via a shared blackboard, cross-agent/cross-tenant memory poisoning, unbounded agent spawning, excessive agency across workers.",
+      "status": "draft",
+      "target_date": "2026-09-30",
+      "input_mode": "structured",
+      "structured_input": "# Multi-Agent Research & Automation Swarm — reference agentic threat model\n# A supervisor agent that plans and delegates to specialized worker agents,\n# a shared blackboard/memory, and tools. Demonstrates agent-to-agent trust,\n# cascading prompt injection, and delegation/confused-deputy threats.\n\nUser              : user\nAPI Gateway       : api_gateway [internet_facing, authenticates_users=yes, enforces_authorization=yes, rate_limited=yes]\nSupervisor Agent  : agent_orchestrator [autonomy_level=autonomous, human_in_the_loop=no, can_spawn_agents=yes, output_validated=no]\nResearch Agent    : ai_agent [ingests_untrusted_content, prompt_injection_defense=no, tool_access=read, output_validated=no, autonomy_level=autonomous, human_in_the_loop=no]\nCoder Agent       : ai_agent [tool_access=exec, sandboxed=no, output_validated=no, autonomy_level=autonomous, human_in_the_loop=no]\nAction Agent      : ai_agent [tool_access=write, autonomy_level=autonomous, human_in_the_loop=no, output_validated=no]\nLLM Gateway       : llm [ingests_untrusted_content, output_validated=no]\nShared Blackboard : agent_memory [memory_scope=cross_tenant]\nWeb Retriever     : retriever [content_source_trust=web_scraped, ingests_untrusted_content]\nCode Sandbox      : llm_tool [tool_access=exec, sandboxed=yes]\nExternal APIs     : mcp_server [tool_access=write, sandboxed=no]\nVector Store      : vector_db [memory_scope=cross_tenant]\nAudit Log         : datastore [logs_security_events=yes]\n\nUser -> API Gateway              : HTTPS, session, encrypted\nAPI Gateway -> Supervisor Agent  : HTTPS, bearer, encrypted [authorization=rbac]\nSupervisor Agent -> Research Agent : HTTPS, bearer, encrypted [authorization=none]\nSupervisor Agent -> Coder Agent    : HTTPS, bearer, encrypted [authorization=none]\nSupervisor Agent -> Action Agent   : HTTPS, bearer, encrypted [authorization=none]\nResearch Agent -> Web Retriever    : HTTPS, api_key, encrypted\nResearch Agent -> Shared Blackboard: TCP, credentials, encrypted\nCoder Agent -> Shared Blackboard   : TCP, credentials, encrypted\nAction Agent -> Shared Blackboard  : TCP, credentials, encrypted\nCoder Agent -> Code Sandbox        : HTTPS, api_key, encrypted [authorization=none]\nAction Agent -> External APIs      : HTTPS, api_key, encrypted [authorization=none]\nResearch Agent -> LLM Gateway      : HTTPS, api_key, encrypted\nCoder Agent -> LLM Gateway         : HTTPS, api_key, encrypted\nAction Agent -> LLM Gateway        : HTTPS, api_key, encrypted\nWeb Retriever -> Vector Store      : TCP, credentials, encrypted\nSupervisor Agent -> Audit Log      : HTTPS, bearer, encrypted"
     }
   ]
 }
