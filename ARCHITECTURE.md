@@ -40,8 +40,8 @@ flowchart LR
 
 Inside the engine, the notable modules are `methodologies.py` (STRIDE / PASTA /
 LINDDUN methodologies, plus DREAD risk scoring and OWASP Top 10 reference mapping),
-`analyzer.py` (extraction + rule application +
-boundary inference), `scoring.py` (CVSS 3.1/4.0), `detail.py` (CWE, ATT&CK,
+`analyzer.py` (extraction + rule application + DREAD scoring +
+boundary inference), `scoring.py` (CWE + ATT&CK + compliance mapping), `detail.py` (CWE, ATT&CK,
 mitigations), `trust_boundaries.py`, `dfd.py` (SVG), `diagram_extractor.py`
 (image → model), `llm.py` (provider abstraction), and the report renderers
 (`html_report.py`, `report.py`, `executive_report.py`).
@@ -62,7 +62,7 @@ sequenceDiagram
         Eng->>LLM: Extract model / suggest threats
         LLM-->>Eng: Structured suggestions (or failure → skip)
     end
-    Eng->>Eng: Apply rules, score (CVSS/CWE/ATT&CK),<br>map compliance, infer trust boundaries
+    Eng->>Eng: Apply rules, score (DREAD/CWE/ATT&CK),<br>map compliance, infer trust boundaries
     Eng->>DB: Persist threat model + analysis
     API-->>User: Threats, data-flow diagram, reports
 ```

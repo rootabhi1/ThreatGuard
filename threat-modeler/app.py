@@ -684,15 +684,16 @@ def _risk_register_csv(threats: list, system_name: str = "System") -> bytes:
     buf = _io.StringIO(); writer = _csv.writer(buf)
     # "Tier" distinguishes grounded findings from generic "standard checks" so the
     # register carries every row but the reader can filter/sort by which are proven.
-    writer.writerow(["ID", "Title", "Tier", "Severity", "Methodology", "Component", "Category", "CVSS3.1",
+    writer.writerow(["ID", "Title", "Tier", "Severity", "Methodology", "Component", "Category", "DREAD", "DREAD Tier",
                      "Cross-boundary", "ATT&CK ID", "ATT&CK Tactic", "SOC2", "ISO27001", "PCI-DSS", "Description"])
     # Findings first, then standard checks — a natural risk-register ordering.
     ordered = sorted(threats, key=lambda t: 0 if t.get("tier", "baseline") == "evidenced" else 1)
     for i, t in enumerate(ordered):
-        atk = t.get("attack") or {}; comp = t.get("compliance") or {}
+        atk = t.get("attack") or {}; comp = t.get("compliance") or {}; dread = t.get("dread") or {}
         tier = "Finding" if t.get("tier", "baseline") == "evidenced" else "Standard check"
+        dread_score = f'{dread.get("total")}/50' if dread.get("total") is not None else ""
         writer.writerow([t.get("id", f"T{i+1:03d}"), t.get("title", ""), tier, t.get("severity", ""), (t.get("methodology", "") or "").upper(),
-                         t.get("component_name", ""), t.get("category", ""), (t.get("cvss31", {}) or {}).get("score", ""),
+                         t.get("component_name", ""), t.get("category", ""), dread_score, dread.get("tier", ""),
                          "Yes" if t.get("cross_boundary") else "No", atk.get("id", ""), atk.get("tactic", ""),
                          " ".join(comp.get("soc2", [])), " ".join(comp.get("iso27001", [])), " ".join(comp.get("pci_dss", [])),
                          t.get("description", "")])

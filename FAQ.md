@@ -48,8 +48,8 @@ Quality will depend on the model you run.
 ## How accurate are the results?
 
 The **rule-based** findings are consistent and explainable — each threat maps to
-a methodology, a CWE, CVSS scores, and mitigations. Coverage still depends on how
-completely you describe the system.
+a methodology, a CWE, a DREAD risk score, and mitigations. Coverage still depends
+on how completely you describe the system.
 
 The **AI-generated** parts are assistive and can be wrong, generic, or
 incomplete; their quality depends on the model you choose. Treat all output as a

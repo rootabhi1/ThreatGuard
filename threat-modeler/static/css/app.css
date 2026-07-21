@@ -851,7 +851,7 @@ h3 { font-size: 1.125rem; line-height: 1.3; }
 }
 .threat-meta-tag-cwe { background: #f3e8ff; color: #6b21a8; }
 .threat-meta-tag-owasp { background: #ffedd5; color: #9a3412; }
-.threat-meta-tag-cvss { background: #dbeafe; color: #1e40af; }
+.threat-meta-tag-dread { background: #ffe4e6; color: #9f1239; }
 
 .threat-detail {
   max-height: 0;
@@ -886,8 +886,28 @@ h3 { font-size: 1.125rem; line-height: 1.3; }
   box-shadow: var(--shadow-sm);
 }
 .metric-box-cwe { --accent: #8b5cf6; }
-.metric-box-cvss { --accent: #3b82f6; }
 .metric-box-dread { --accent: #f97316; }
+
+/* Canvas view (app.js) DREAD chip + panel */
+.dread-chip {
+  font-size: 0.6875rem; font-weight: 600; padding: 0.125rem 0.5rem;
+  border-radius: 4px; background: #ffe4e6; color: #9f1239;
+}
+.dread-panel {
+  background: var(--c-surface-2); border: 1px solid var(--c-border);
+  border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem;
+}
+.dread-panel-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+.dread-panel-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--c-text-light); }
+.dread-panel-total { font-size: 1.05rem; font-weight: 700; color: var(--c-text); }
+.dread-panel-total small { font-size: 0.7rem; font-weight: 600; color: var(--c-text-light); }
+.dread-panel-meter { height: 6px; background: var(--c-border); border-radius: 3px; overflow: hidden; margin-bottom: 0.6rem; }
+.dread-panel-meter > div { height: 100%; background: linear-gradient(90deg,#16a34a,#eab308,#dc2626); }
+.dread-panel-axes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; }
+.dread-panel-axis { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.dread-panel-axis-name { font-size: 0.625rem; color: var(--c-text-light); margin-bottom: 0.125rem; }
+.dread-panel-axis-val { font-size: 0.9rem; font-weight: 700; color: var(--c-text); }
+.dread-panel-axis-val small { font-size: 0.55rem; font-weight: 600; color: var(--c-text-light); }
 .metric-box-label {
   font-size: 0.625rem;
   font-weight: 700;

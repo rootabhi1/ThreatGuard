@@ -1256,7 +1256,6 @@
     const cardHTML = (t, i) => {
         const status = (statuses[t.id] && statuses[t.id].status) || 'open';
         const cwe = t.cwe || {};
-        const cvss31 = t.cvss31 || {};
         const owasp = (t.references || []).find(r => /A0\d/.test(r.label || ''));
         const dread = t.dread || {};
         const canEdit = (currentTM.owner_id === me.user.id || me.user.role === 'admin');
@@ -1274,7 +1273,7 @@
                   ${t.severity_original ? `<span class="tg-badge tg-badge--calibrated" title="${esc(t.severity_rationale || '')}">${esc(t.severity_original)}→${esc(t.severity)}</span>` : ''}
                   ${cwe.id ? `<span class="threat-meta-tag threat-meta-tag-cwe">${esc(cwe.id)}</span>` : ''}
                   ${owasp ? `<span class="threat-meta-tag threat-meta-tag-owasp">${esc(owasp.label)}</span>` : ''}
-                  ${cvss31.score !== undefined ? `<span class="threat-meta-tag threat-meta-tag-cvss" title="Estimated from the threat class — refine against a concrete finding">CVSS ${cvss31.score}~</span>` : ''}
+                  ${dread.total != null ? `<span class="threat-meta-tag threat-meta-tag-dread" title="DREAD risk score (Damage, Reproducibility, Exploitability, Affected users, Discoverability)">DREAD ${dread.total}/50</span>` : ''}
                 </div>
               </div>
               <div class="flex items-center gap-2">
@@ -1350,7 +1349,7 @@
                 </div>
               ` : '')}
 
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                 ${cwe.id ? `
                   <div class="metric-box metric-box-cwe">
                     <div class="metric-box-label">CWE</div>
@@ -1360,16 +1359,9 @@
                 ` : ''}
                 ${dread.total !== undefined ? `
                   <div class="metric-box metric-box-dread">
-                    <div class="metric-box-label">DREAD · primary risk score</div>
+                    <div class="metric-box-label">DREAD · risk score</div>
                     <div class="metric-box-value">${dread.total}/50${dread.tier ? ` · ${esc(dread.tier)}` : ''}</div>
                     <div class="metric-box-detail" style="font-family: inherit; word-break: normal;">derived from your model — see breakdown below</div>
-                  </div>
-                ` : ''}
-                ${cvss31.score !== undefined ? `
-                  <div class="metric-box metric-box-cvss">
-                    <div class="metric-box-label" title="Estimated from the threat class, not a measured CVE. Refine against a concrete finding.">CVSS 3.1 · estimated</div>
-                    <div class="metric-box-value">${cvss31.score} · ${esc(cvss31.severity || '')}</div>
-                    <div class="metric-box-detail">${esc(cvss31.vector || '')}</div>
                   </div>
                 ` : ''}
               </div>
@@ -1384,7 +1376,7 @@
                       <span class="text-dim">${meaning}</span>
                     `).join('')}
                   </div>
-                  <p class="text-xs text-light" style="margin-top:.5rem;">DREAD is the primary risk ranking at threat-model stage; CVSS above is an estimate from the threat class.</p>
+                  <p class="text-xs text-light" style="margin-top:.5rem;">DREAD is the risk ranking at threat-model stage — each axis is derived from your model's signals, not a fixed template.</p>
                 </div>
               ` : ''}
 

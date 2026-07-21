@@ -428,7 +428,7 @@ threat-modeler/
 │   ├── llm.py                      # LLM provider layer (Anthropic + OpenAI-compatible)
 │   ├── methodologies.py            # STRIDE / DREAD / PASTA / LINDDUN catalogs
 │   ├── dfd.py                      # SVG data flow diagram renderer
-│   ├── scoring.py                  # CVSS-inspired severity scoring
+│   ├── scoring.py                  # CWE + ATT&CK + compliance mapping
 │   ├── trust_boundaries.py         # Auto-infer Internet/DMZ/App/Data zones
 │   ├── report.py                   # Markdown + PDF export
 │   └── html_report.py              # HTML report export

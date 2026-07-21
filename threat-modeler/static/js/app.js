@@ -1140,18 +1140,9 @@ window.toggleThreatCard = function(idx) {
   card.classList.toggle('threat-card-expanded');
 };
 
-function _sevClass(sev) {
-  return ({
-    "Critical": "cvss-chip-Critical", "High": "cvss-chip-High",
-    "Medium": "cvss-chip-Medium", "Low": "cvss-chip-Low",
-    "None": "cvss-chip-None"
-  })[sev] || "cvss-chip-Medium";
-}
-
 function _renderThreatCard(t, idx) {
   const cwe = t.cwe || {};
-  const c31 = t.cvss31 || {};
-  const c40 = t.cvss40 || {};
+  const dread = t.dread || {};
   const cb = t.cross_boundary;
 
   // Bold restoration on location
@@ -1183,41 +1174,34 @@ function _renderThreatCard(t, idx) {
             <span class="text-xs px-2 py-0.5 rounded sev-${t.severity}">${t.severity}</span>
             <span class="text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">${escapeHtml(t.methodology.toUpperCase())}</span>
             ${cwe.id ? `<span class="cwe-chip" title="${escapeHtml(cwe.name || '')}">${escapeHtml(cwe.id)}</span>` : ''}
-            ${c31.score != null ? `<span class="cvss-chip ${_sevClass(c31.severity)}"><span class="cvss-label">v3.1</span>${c31.score}</span>` : ''}
-            ${c40.score != null ? `<span class="cvss-chip ${_sevClass(c40.severity)}"><span class="cvss-label">v4.0</span>${c40.score}</span>` : ''}
+            ${dread.total != null ? `<span class="dread-chip" title="DREAD risk score">DREAD ${dread.total}/50</span>` : ''}
             ${cb ? `<span class="cb-chip" title="${escapeHtml((t.src_zone||'?') + ' → ' + (t.dst_zone||'?'))}">⚡ cross-zone</span>` : ''}
             ${t.source === 'llm-enhanced' ? '<span class="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700">🤖 LLM</span>' : ''}
           </div>
           <p class="text-xs text-slate-500 mt-1">
             ${escapeHtml(t.category)} ·
             <strong>${escapeHtml(t.component_name)}</strong> (${t.component_type})
-            ${t.dread ? ` · DREAD ${t.dread.total}/50` : ''}
           </p>
         </div>
         <span class="threat-expand-icon flex-shrink-0">▼</span>
       </div>
 
       <div class="threat-card-detail">
-        <div class="cvss-detail-grid">
-          <div class="cvss-detail">
-            <div class="cvss-detail-header">
-              <span class="cvss-detail-name">CVSS 3.1</span>
-              <span class="cvss-detail-score ${_sevClass(c31.severity)}">${c31.score ?? '—'}</span>
-            </div>
-            <div class="text-xs text-slate-500">${c31.severity || '—'}</div>
-            <div class="cvss-meter-bar"><div style="width:${(c31.score || 0) * 10}%;background:#dc2626"></div></div>
-            <div class="cvss-detail-vector mt-1">${escapeHtml(c31.vector || '')}</div>
+        ${dread.total != null ? `
+        <div class="dread-panel">
+          <div class="dread-panel-head">
+            <span class="dread-panel-label">DREAD risk</span>
+            <span class="dread-panel-total">${dread.total}<small>/50</small>${dread.tier ? ` · ${escapeHtml(dread.tier)}` : ''}</span>
           </div>
-          <div class="cvss-detail">
-            <div class="cvss-detail-header">
-              <span class="cvss-detail-name">CVSS 4.0</span>
-              <span class="cvss-detail-score ${_sevClass(c40.severity)}">${c40.score ?? '—'}</span>
-            </div>
-            <div class="text-xs text-slate-500">${c40.severity || '—'}</div>
-            <div class="cvss-meter-bar"><div style="width:${(c40.score || 0) * 10}%;background:#7c3aed"></div></div>
-            <div class="cvss-detail-vector mt-1">${escapeHtml(c40.vector || '')}</div>
+          <div class="dread-panel-meter"><div style="width:${(dread.total / 50) * 100}%"></div></div>
+          <div class="dread-panel-axes">
+            ${[['Damage','D_damage'],['Reproducibility','R_reproducibility'],['Exploitability','E_exploitability'],['Affected users','A_affected_users'],['Discoverability','D_discoverability']].map(([label, key]) => `
+              <div class="dread-panel-axis">
+                <span class="dread-panel-axis-name">${label}</span>
+                <span class="dread-panel-axis-val">${dread[key] ?? '—'}<small>/10</small></span>
+              </div>`).join('')}
           </div>
-        </div>
+        </div>` : ''}
 
         ${cb ? `<p class="text-xs text-rose-700 mb-2"><strong>Boundary crossing:</strong> ${escapeHtml(t.src_zone || '?')} → ${escapeHtml(t.dst_zone || '?')}</p>` : ''}
 
@@ -1270,8 +1254,7 @@ function applyFilters() {
   if (search) threats = threats.filter(t => {
     const blob = (
       t.title + ' ' + (t.component_name || '') + ' ' + t.category + ' ' +
-      (t.cwe ? t.cwe.id + ' ' + (t.cwe.name || '') : '') + ' ' +
-      (t.cvss31 ? t.cvss31.vector : '')
+      (t.cwe ? t.cwe.id + ' ' + (t.cwe.name || '') : '')
     ).toLowerCase();
     return blob.includes(search);
   });

@@ -807,7 +807,6 @@
         ${threats.slice(0, 100).map((t, i) => {
           const status = (statuses[t.id] && statuses[t.id].status) || 'open';
           const cwe = t.cwe || {};
-          const cvss31 = t.cvss31 || {};
           const owasp = (t.references || []).find(r => /A0\d/.test(r.label || ''));
           const dread = t.dread || {};
 
@@ -822,7 +821,7 @@
                     <span>${esc(t.category || '')}</span>
                     ${cwe.id ? `<span class="threat-meta-tag threat-meta-tag-cwe">${esc(cwe.id)}</span>` : ''}
                     ${owasp ? `<span class="threat-meta-tag threat-meta-tag-owasp">${esc(owasp.label)}</span>` : ''}
-                    ${cvss31.score !== undefined ? `<span class="threat-meta-tag threat-meta-tag-cvss">CVSS ${cvss31.score}</span>` : ''}
+                    ${dread.total != null ? `<span class="threat-meta-tag threat-meta-tag-dread">DREAD ${dread.total}/50</span>` : ''}
                   </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -875,19 +874,12 @@
                   </div>
                 ` : '')}
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                   ${cwe.id ? `
                     <div class="metric-box metric-box-cwe">
                       <div class="metric-box-label">CWE</div>
                       <div class="metric-box-value">${esc(cwe.id)}: ${esc(cwe.name || '')}</div>
                       ${cwe.url ? `<a href="${esc(cwe.url)}" target="_blank" class="metric-box-detail" style="color: #7c3aed; text-decoration: none;">View on cwe.mitre.org →</a>` : ''}
-                    </div>
-                  ` : ''}
-                  ${cvss31.score !== undefined ? `
-                    <div class="metric-box metric-box-cvss">
-                      <div class="metric-box-label">CVSS 3.1</div>
-                      <div class="metric-box-value">${cvss31.score} · ${esc(cvss31.severity || '')}</div>
-                      <div class="metric-box-detail">${esc(cvss31.vector || '')}</div>
                     </div>
                   ` : ''}
                   ${dread.total !== undefined ? `

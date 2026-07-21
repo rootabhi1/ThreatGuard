@@ -149,7 +149,7 @@ check(a, "OWASP excluded from methodologies_used", "owasp" not in _used, str(_us
 multi = analyze_system(SYSTEM, ["stride", "linddun"])
 t0 = multi["threats"][0]
 check(a, "dedup merges methodologies", any("+" in (t.get("methodology") or "") for t in multi["threats"]) or len(multi["threats"]) > 0)
-check(a, "CVSS 3.1 present & in range", 0 <= (t0.get("cvss_3_1", {}).get("score", t0.get("cvss31_score", -1))) <= 10 if isinstance(t0.get("cvss_3_1"), dict) else True)
+check(a, "DREAD present & in range", 0 <= (t0.get("dread", {}) or {}).get("total", -1) <= 50 if isinstance(t0.get("dread"), dict) else True)
 check(a, "CWE assigned", any(t.get("cwe") for t in multi["threats"]))
 check(a, "severity classified", all(t.get("severity") in ("Critical", "High", "Medium", "Low", "Info") for t in multi["threats"]))
 # ATT&CK + compliance via scoring
