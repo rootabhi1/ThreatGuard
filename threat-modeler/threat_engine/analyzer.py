@@ -781,6 +781,13 @@ COMPONENT_ATTRIBUTES = {
     "ingests_untrusted_content": ("Ingests untrusted content into context", "yn", None),
     "memory_scope":        ("Memory scope", "choice", ["", "session", "per_user", "cross_user", "cross_tenant"]),
     "content_source_trust": ("Content/grounding source", "choice", ["", "curated", "user_uploaded", "web_scraped"]),
+    # Agentic AI — second wave (completes OWASP LLM Top-10 coverage: LLM02/03/07/08/09).
+    "output_filtering":    ("Filters/redacts sensitive data from responses", "yn", None),
+    "model_provenance":    ("Model/tool provenance", "choice",
+                            ["", "first_party", "verified_vendor", "community_hub", "unknown"]),
+    "system_prompt_hardened": ("System prompt hardened (no embedded secrets)", "yn", None),
+    "embedding_access_control": ("Per-tenant access control on the vector store", "yn", None),
+    "response_grounding":  ("Responses grounded in verified sources", "yn", None),
 }
 FLOW_ATTRIBUTES = {
     "provides_integrity":  ("Provides integrity (signing/HMAC)", "yn", None),
@@ -828,7 +835,7 @@ def _val(d: dict, k: str) -> str:
 # ---------------------------------------------------------------------------
 _AGENTIC_CLASSES = [
     {
-        "id": "prompt_injection", "category": "Tampering", "severity": "High", "owasp": "LLM01",
+        "id": "prompt_injection", "category": "Tampering", "severity": "High", "owasp": "LLM01", "agentic": "T6",
         "types": {"llm", "ai_agent", "agent_orchestrator", "retriever", "guardrail"},
         "risky": lambda c: _yn_yes(c, "ingests_untrusted_content") and _yn_no(c, "prompt_injection_defense"),
         "cleared": lambda c: _yn_no(c, "ingests_untrusted_content") or _yn_yes(c, "prompt_injection_defense"),
@@ -845,7 +852,7 @@ _AGENTIC_CLASSES = [
                         "Never let raw model output trigger privileged actions"],
     },
     {
-        "id": "excessive_agency", "category": "Elevation of Privilege", "severity": "Critical", "owasp": "LLM06",
+        "id": "excessive_agency", "category": "Elevation of Privilege", "severity": "Critical", "owasp": "LLM06", "agentic": "T3",
         "types": {"ai_agent", "agent_orchestrator"},
         "risky": lambda c: _val(c, "autonomy_level") == "autonomous" and _val(c, "tool_access") in ("write", "exec")
                  and _yn_no(c, "human_in_the_loop"),
@@ -864,7 +871,7 @@ _AGENTIC_CLASSES = [
                         "Add allow-lists, spend/rate caps, and make actions reversible"],
     },
     {
-        "id": "unsandboxed_exec", "category": "Elevation of Privilege", "severity": "Critical", "owasp": "LLM06",
+        "id": "unsandboxed_exec", "category": "Elevation of Privilege", "severity": "Critical", "owasp": "LLM06", "agentic": "T2",
         "types": {"ai_agent", "agent_orchestrator", "llm_tool", "mcp_server"},
         "risky": lambda c: _val(c, "tool_access") == "exec" and _yn_no(c, "sandboxed"),
         "cleared": lambda c: _yn_yes(c, "sandboxed") or _val(c, "tool_access") in ("none", "read", "write"),
@@ -896,7 +903,7 @@ _AGENTIC_CLASSES = [
                         "Constrain output format; reject anomalies"],
     },
     {
-        "id": "memory_poisoning", "category": "Information Disclosure", "severity": "High", "owasp": "LLM01",
+        "id": "memory_poisoning", "category": "Information Disclosure", "severity": "High", "owasp": "LLM04", "agentic": "T1",
         "types": {"agent_memory", "vector_db", "knowledge_base"},
         "risky": lambda c: _val(c, "memory_scope") in ("cross_user", "cross_tenant"),
         "cleared": lambda c: _val(c, "memory_scope") in ("session", "per_user"),
@@ -928,7 +935,7 @@ _AGENTIC_CLASSES = [
                         "Track provenance; filter content"],
     },
     {
-        "id": "unbounded_spawn", "category": "Denial of Service", "severity": "Medium", "owasp": "LLM10",
+        "id": "unbounded_spawn", "category": "Denial of Service", "severity": "Medium", "owasp": "LLM10", "agentic": "T4",
         "types": {"ai_agent", "agent_orchestrator"},
         "risky": lambda c: _yn_yes(c, "can_spawn_agents") and _val(c, "autonomy_level") == "autonomous",
         "cleared": lambda c: _yn_no(c, "can_spawn_agents"),
@@ -942,6 +949,87 @@ _AGENTIC_CLASSES = [
         "mitigations": ["Cap recursion depth and concurrent agents",
                         "Enforce budgets and timeouts",
                         "Monitor and kill runaway chains"],
+    },
+    {
+        "id": "sensitive_disclosure", "category": "Information Disclosure", "severity": "High", "owasp": "LLM02",
+        "types": {"llm", "ai_agent", "agent_orchestrator", "retriever"},
+        "risky": lambda c: _yn_no(c, "output_filtering"),
+        "cleared": lambda c: _yn_yes(c, "output_filtering"),
+        "ask": "output_filtering",
+        "e_title": "Sensitive information disclosure — model output not filtered",
+        "b_title": "Sensitive information exposure — confirm output filtering/redaction",
+        "e_desc": "Model responses are returned without filtering or redaction, so training data, context, secrets "
+                  "or other users' data can leak into output (OWASP LLM02 Sensitive Information Disclosure).",
+        "b_desc": "LLM/agent responses can leak training data, context, secrets or PII if not filtered "
+                  "(OWASP LLM02 Sensitive Information Disclosure). Confirm whether output is filtered/redacted.",
+        "mitigations": ["Redact/scrub PII and secrets from responses",
+                        "Keep sensitive data out of the prompt/context where possible",
+                        "Apply output classifiers and least-privilege data access"],
+    },
+    {
+        "id": "supply_chain", "category": "Tampering", "severity": "High", "owasp": "LLM03",
+        "types": {"llm", "llm_tool", "mcp_server", "ai_agent"},
+        "risky": lambda c: _val(c, "model_provenance") in ("community_hub", "unknown"),
+        "cleared": lambda c: _val(c, "model_provenance") in ("first_party", "verified_vendor"),
+        "ask": "model_provenance",
+        "e_title": "Model/tool supply chain — unverified provenance",
+        "b_title": "Supply chain — confirm model/tool provenance",
+        "e_desc": "This element uses a model, plugin or tool from an unverified or community source, exposing it to "
+                  "backdoored weights, tampered dependencies and malicious plugins (OWASP LLM03 Supply Chain).",
+        "b_desc": "Models, plugins and tools can be backdoored or tampered in the supply chain (OWASP LLM03 Supply "
+                  "Chain). Confirm the provenance of the model/tool this element depends on.",
+        "mitigations": ["Source models/tools from verified vendors; pin versions",
+                        "Verify signatures/checksums and scan dependencies",
+                        "Maintain an SBOM and vet third-party plugins/MCP servers"],
+    },
+    {
+        "id": "system_prompt_leak", "category": "Information Disclosure", "severity": "Medium", "owasp": "LLM07",
+        "types": {"llm", "ai_agent", "agent_orchestrator"},
+        "risky": lambda c: _yn_no(c, "system_prompt_hardened"),
+        "cleared": lambda c: _yn_yes(c, "system_prompt_hardened"),
+        "ask": "system_prompt_hardened",
+        "e_title": "System prompt leakage — secrets/instructions extractable",
+        "b_title": "System prompt leakage — confirm prompt hardening",
+        "e_desc": "The system prompt is not hardened, so embedded instructions, credentials or business logic can be "
+                  "extracted via prompt injection and treated as non-secret (OWASP LLM07 System Prompt Leakage).",
+        "b_desc": "System prompts can be extracted and must never carry secrets or be relied on as a security control "
+                  "(OWASP LLM07 System Prompt Leakage). Confirm the system prompt is hardened and secret-free.",
+        "mitigations": ["Keep credentials and secrets out of the system prompt",
+                        "Never treat the prompt as confidential or as an access control",
+                        "Enforce authorization outside the model, not in prompt text"],
+    },
+    {
+        "id": "embedding_weakness", "category": "Information Disclosure", "severity": "High", "owasp": "LLM08", "agentic": "T1",
+        "types": {"vector_db", "retriever", "knowledge_base"},
+        "risky": lambda c: _yn_no(c, "embedding_access_control"),
+        "cleared": lambda c: _yn_yes(c, "embedding_access_control"),
+        "ask": "embedding_access_control",
+        "e_title": "Vector/embedding weakness — no per-tenant access control",
+        "b_title": "Vector/embedding store — confirm access control",
+        "e_desc": "The vector store enforces no per-tenant access control, so retrieval can return another tenant's "
+                  "embeddings and is open to embedding inversion and poisoning (OWASP LLM08 Vector & Embedding "
+                  "Weaknesses).",
+        "b_desc": "Vector/embedding stores can leak across tenants and be inverted or poisoned without access control "
+                  "(OWASP LLM08 Vector & Embedding Weaknesses). Confirm per-tenant access control on retrieval.",
+        "mitigations": ["Enforce per-tenant/per-user access control on retrieval",
+                        "Partition or namespace embeddings by tenant",
+                        "Validate ingested content and monitor for poisoning"],
+    },
+    {
+        "id": "misinformation", "category": "Tampering", "severity": "Medium", "owasp": "LLM09", "agentic": "T5",
+        "types": {"llm", "ai_agent", "agent_orchestrator"},
+        "risky": lambda c: _yn_no(c, "response_grounding") and _yn_no(c, "human_in_the_loop"),
+        "cleared": lambda c: _yn_yes(c, "response_grounding") or _yn_yes(c, "human_in_the_loop"),
+        "ask": "response_grounding / human_in_the_loop",
+        "e_title": "Misinformation / overreliance — ungrounded output drives decisions",
+        "b_title": "Misinformation risk — confirm grounding/oversight",
+        "e_desc": "Responses are neither grounded in verified sources nor reviewed by a human, so hallucinated or "
+                  "wrong output can be relied on for decisions and cascade downstream (OWASP LLM09 Misinformation).",
+        "b_desc": "Ungrounded model output can be hallucinated and over-relied upon (OWASP LLM09 Misinformation). "
+                  "Confirm whether responses are grounded in verified sources or reviewed by a human.",
+        "mitigations": ["Ground responses with retrieval/citations",
+                        "Add human review for high-stakes outputs",
+                        "Communicate uncertainty and cross-check critical facts"],
     },
 ]
 
@@ -1065,6 +1153,11 @@ def _attribute_threats(system: dict, methodology_key: str, comp_by_id: dict) -> 
                 e_title = cls["e_title"](c) if callable(cls["e_title"]) else cls["e_title"]
                 emit(cls["category"], f"{e_title}: {c['name']}", cls["e_desc"],
                      cls["severity"], c, None, cls["mitigations"])
+                # Authoritative OWASP-LLM / Agentic codes (map_threat honours these
+                # directly, so the framework mapping never depends on title wording).
+                out[-1]["owasp"] = cls["owasp"]
+                if cls.get("agentic"):
+                    out[-1]["owasp_agentic"] = cls["agentic"]
 
     for f in system.get("data_flows", []):
         dst = comp_by_id.get(f.get("to"))
@@ -1144,6 +1237,9 @@ def _agentic_baseline_threats(system: dict, methodology_key: str) -> list[dict]:
                 "evidence": f"Standard check: '{c['name']}' is a {ctype.replace('_', ' ')} component, which is "
                             f"subject to {cls['owasp']}. Answer '{cls['ask']}' to confirm this as a finding or clear it.",
                 "dread": _score_dread({"severity": cls["severity"]}, c, None),
+                # Authoritative framework codes — baseline phrasing maps identically.
+                "owasp": cls["owasp"],
+                **({"owasp_agentic": cls["agentic"]} if cls.get("agentic") else {}),
             })
     return out
 
@@ -1653,7 +1749,7 @@ def analyze_system(
     exposed_ids, blast_by_id = _dread_context(system)
     sensitive_ids = _evidence_context(system).get("sensitive_ids", set())
 
-    # Enrich each threat with CVSS, CWE, and per-threat detail
+    # Enrich each threat with CWE / MITRE ATT&CK / compliance mapping, and per-threat detail
     for t in all_threats:
         component = comp_by_id.get(t.get("component_id"))
         flow = flow_by_id.get(t.get("flow_id")) if t.get("flow_id") else None

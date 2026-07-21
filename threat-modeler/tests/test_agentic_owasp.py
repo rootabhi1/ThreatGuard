@@ -45,8 +45,11 @@ AGENTIC = {
         {"id": "ag", "name": "Agent", "type": "ai_agent", "autonomy_level": "autonomous",
          "tool_access": "exec", "human_in_the_loop": "no", "sandboxed": "no",
          "ingests_untrusted_content": "yes", "prompt_injection_defense": "no",
-         "output_validated": "no", "can_spawn_agents": "yes"},
-        {"id": "kb", "name": "KB", "type": "knowledge_base", "content_source_trust": "web_scraped"},
+         "output_validated": "no", "can_spawn_agents": "yes",
+         "output_filtering": "no", "model_provenance": "unknown",
+         "system_prompt_hardened": "no", "response_grounding": "no"},
+        {"id": "kb", "name": "KB", "type": "knowledge_base", "content_source_trust": "web_scraped",
+         "embedding_access_control": "no"},
         {"id": "mem", "name": "Memory", "type": "agent_memory", "memory_scope": "cross_tenant"},
         {"id": "tool", "name": "Shell", "type": "llm_tool"},
     ],
@@ -81,6 +84,35 @@ def main():
         check(any(sub.lower() in t.lower() for t in titles), f"threat present: {sub}")
         got = frameworks_for(res["threats"], sub)
         check(must_have.issubset(got), f"framework map for '{sub}' ⊇ {sorted(must_have)}  (got {sorted(got)})")
+
+    print("=== Full OWASP-LLM Top 10 coverage (all 10 categories reachable) ===")
+    # A single risky agentic model must exercise every LLM0x category — no gaps, no
+    # caveats. Each new category (LLM02/03/07/08/09) maps authoritatively, independent
+    # of title wording.
+    covered = {fr["id"] for t in res["threats"] for fr in t.get("frameworks", [])
+               if fr["framework"] == "LLM"}
+    all_llm = {f"LLM0{i}" for i in range(1, 10)} | {"LLM10"}
+    check(covered == all_llm, f"all 10 OWASP-LLM categories fire (missing {sorted(all_llm - covered)})")
+    new_titles = {
+        "Sensitive information disclosure": ("LLM", "LLM02"),
+        "supply chain": ("LLM", "LLM03"),
+        "System prompt leakage": ("LLM", "LLM07"),
+        "Vector/embedding weakness": ("LLM", "LLM08"),
+        "Misinformation": ("LLM", "LLM09"),
+    }
+    for sub, ref in new_titles.items():
+        check(any(sub.lower() in t.lower() for t in titles), f"new category threat present: {sub}")
+        check(ref in frameworks_for(res["threats"], sub), f"'{sub}' maps to {ref[1]}")
+
+    print("=== New-category baseline mapping is title-independent ===")
+    # A bare agent's baseline standard-checks must still map to their LLM code even
+    # though the baseline phrasing differs from the evidenced phrasing.
+    bare = analyze_system({"name": "B", "components": [{"id": "a", "name": "A", "type": "ai_agent"}],
+                           "data_flows": [], "trust_boundaries": []}, ["stride"])
+    bare_llm = {fr["id"] for t in bare["threats"] if t.get("tier") == "baseline"
+                for fr in t.get("frameworks", []) if fr["framework"] == "LLM"}
+    for code in ("LLM02", "LLM03", "LLM05", "LLM07", "LLM09"):
+        check(code in bare_llm, f"bare-agent baseline surfaces {code}")
 
     print("=== Type-driven baseline vs evidenced findings on a clean agent ===")
     clean_agent = {"name": "C", "components": [{"id": "a", "name": "A", "type": "ai_agent"}],

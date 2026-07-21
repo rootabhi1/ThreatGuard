@@ -131,21 +131,26 @@
     ingests_untrusted_content: { label: 'Ingests untrusted content into context', opts: YN },
     memory_scope:         { label: 'Memory scope', opts: ['', 'session', 'per_user', 'cross_user', 'cross_tenant'] },
     content_source_trust: { label: 'Content/grounding source', opts: ['', 'curated', 'user_uploaded', 'web_scraped'] },
+    output_filtering:     { label: 'Filters/redacts sensitive data from responses', opts: YN },
+    model_provenance:     { label: 'Model/tool provenance', opts: ['', 'first_party', 'verified_vendor', 'community_hub', 'unknown'] },
+    system_prompt_hardened: { label: 'System prompt hardened (no embedded secrets)', opts: YN },
+    embedding_access_control: { label: 'Per-tenant access control on the vector store', opts: YN },
+    response_grounding:   { label: 'Responses grounded in verified sources', opts: YN },
   };
   const STORE_TYPES = ['database', 'datastore', 'cache', 'queue', 'filesystem', 'object_storage', 'data_warehouse', 'vector_db', 'secrets_manager', 'search_service', 'agent_memory', 'knowledge_base'];
   const PROCESS_TYPES = ['api', 'webapp', 'mobile_app', 'service', 'worker', 'serverless', 'auth_service', 'admin_panel', 'api_gateway', 'container', 'kubernetes', 'llm', 'identity_provider', 'data_pipeline', 'scheduler', 'service_mesh', 'bastion', 'ai_agent', 'agent_orchestrator', 'llm_tool', 'mcp_server', 'retriever', 'guardrail'];
   const DEPLOYABLE_TYPES = ['serverless', 'container', 'kubernetes', 'service', 'worker'];
   // Which agentic attributes to show on which agentic component types.
   const AGENTIC_ATTRS = {
-    ai_agent:           ['autonomy_level', 'tool_access', 'human_in_the_loop', 'prompt_injection_defense', 'output_validated', 'sandboxed', 'can_spawn_agents', 'ingests_untrusted_content'],
-    agent_orchestrator: ['autonomy_level', 'human_in_the_loop', 'can_spawn_agents', 'output_validated'],
-    llm:                ['ingests_untrusted_content', 'prompt_injection_defense', 'output_validated'],
-    llm_tool:           ['tool_access', 'sandboxed', 'output_validated'],
-    mcp_server:         ['tool_access', 'sandboxed'],
-    retriever:          ['content_source_trust', 'ingests_untrusted_content'],
-    knowledge_base:     ['content_source_trust'],
+    ai_agent:           ['autonomy_level', 'tool_access', 'human_in_the_loop', 'prompt_injection_defense', 'output_validated', 'sandboxed', 'can_spawn_agents', 'ingests_untrusted_content', 'output_filtering', 'model_provenance', 'system_prompt_hardened', 'response_grounding'],
+    agent_orchestrator: ['autonomy_level', 'human_in_the_loop', 'can_spawn_agents', 'output_validated', 'output_filtering', 'system_prompt_hardened', 'response_grounding'],
+    llm:                ['ingests_untrusted_content', 'prompt_injection_defense', 'output_validated', 'output_filtering', 'model_provenance', 'system_prompt_hardened', 'response_grounding'],
+    llm_tool:           ['tool_access', 'sandboxed', 'output_validated', 'model_provenance'],
+    mcp_server:         ['tool_access', 'sandboxed', 'model_provenance'],
+    retriever:          ['content_source_trust', 'ingests_untrusted_content', 'output_filtering', 'embedding_access_control'],
+    knowledge_base:     ['content_source_trust', 'embedding_access_control'],
     agent_memory:       ['memory_scope'],
-    vector_db:          ['memory_scope'],
+    vector_db:          ['memory_scope', 'embedding_access_control'],
     guardrail:          ['output_validated'],
   };
 
